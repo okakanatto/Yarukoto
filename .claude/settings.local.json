@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(dir /s \"C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\TaskManager\\\\task-manager\")",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run lint)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\TaskManager\\\\task-manager\\\\app\\\\input\")",
+      "Bash(cmd.exe /c \"rmdir /s /q \"\"C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\TaskManager\\\\task-manager\\\\app\\\\input\"\"\")",
+      "Bash(cmd.exe /c \"dir \"\"C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\TaskManager\\\\task-manager\\\\app\\\\input\"\"\")",
+      "Bash(powershell.exe -Command \"Remove-Item -Recurse -Force ''C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\TaskManager\\\\task-manager\\\\app\\\\input''\")"
+    ]
+  }
+}
