@@ -13,12 +13,26 @@ This file tracks changes made by AI agents (Antigravity, Claude Code, etc.) to c
 
 ## Log
 
+### 2026-02-24
+- **Agent**: Claude (claude-sonnet-4-5)
+- **Task**: v1.1以降の課題整理・仕様具体化・ロードマップ策定
+- **Details**:
+    - **Docs**: `ISSUES.md` を大幅拡充。v1.0.0リリース後に発見されたバグ2件（BUG-1: タグ継承漏れ, BUG-2: 全削除でルーティン残存）、機能改善11件（IMP-1〜IMP-11）、機能強化5件（ENH-1〜ENH-5）を追加・整理。
+    - **Docs**: 各課題をQAで仕様具体化。キャンセルステータスの視覚仕様（グレーアウト+取り消し線）、アーカイブの基準日（`completed_at`）と親子連動、フィルタUI（完了・キャンセル除外トグル＋チップ方式）、DnD共存方針（ギャップ=並び替え/タスク上=ネスト）、トースト位置（FABの上）などを確定。
+    - **Docs**: UI/UXレビューを実施し、懸念点（DnD競合、完了/キャンセルの視覚区別、フィルタUI方式、FABとトーストの重なり）を課題に反映。
+    - **Docs**: `ROADMAP.md` を新規作成。全課題をv1.1.0→v1.2.0→v2.0.0の3リリース・12プロンプトに分割したロードマップを策定。
+- **Files**:
+    - `ISSUES.md` (Modified: 課題全件追加・仕様具体化)
+    - `ROADMAP.md` (Created: 開発ロードマップ新規作成)
+    - `CLAUDE.md` (Modified: ドキュメント参照先追記)
+
 ### 2026-02-23
 - **Agent**: Antigravity
 - **Task**: v1.0 Release Build & Documentation Setup
 - **Details**:
     - **Release**: Tauriを用いたポータブルアプリ版への本番ビルド(`npm run tauri build`)を正常に完了.
     - **Feature**: `app.exe` を `Yarukoto_Portable.exe` へリネームし、ユーザー向けの詳細マニュアル (`Readme.txt`) を作成して配布用ZIPパッケージ (`Yarukoto_Portable_v1.0.0.zip`) を構築.
+    - **Publish**: GitHubにてリポジトリを手動で開設し、Releases機能を用いて `v1.0.0` のインストーラー(`-setup.exe`)およびポータブル版ZIPをインターネット上に直接公開（Web上でのOSS化の第一歩）。Gitのローカルとリモートの連携設定は現在保留中とし、ソースコード公開が必要になった時点で設定する。
     - **Docs**: `10_Projects/0_Personal/AI_Development_Profile.md` を作成し、今後の別プロジェクトへのAIエージェント引き継ぎ用に「バイブコーディングスタイル」「プログラミングに詳しくない前提での専門用語解説ルール」「過去の実績（YarukotoやDigi-Pet）」などを定義.
     - **Docs**: v1.1移行に向け、`AI_CHANGELOG.md`, `CLAUDE.md`, `ISSUES.md` に今回の経緯やTauriのDB紐づき仕様（identifierによるSQLite一元化）などを反映して整理.
 - **Files**:

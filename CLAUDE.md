@@ -5,6 +5,18 @@
 **TaskFlow** は個人用タスク管理Webアプリ。Next.js (App Router) + SQLite のローカル完結型。
 Tauri v2 デスクトップアプリとして動作する。
 
+**現在のバージョン**: v1.0.0 リリース済み（2026-02-23）
+**次期バージョン**: v1.1.0 開発中（詳細は `ROADMAP.md` 参照）
+
+## 関連ドキュメント
+
+| ファイル | 内容 |
+|---|---|
+| `CLAUDE.md` | 本ファイル。技術仕様・アーキテクチャガイド |
+| `ISSUES.md` | バグ・機能改善・機能強化の課題一覧 |
+| `ROADMAP.md` | v1.1〜v2.0の開発ロードマップ（リリース計画・プロンプト単位） |
+| `AI_CHANGELOG.md` | AIエージェントによる変更履歴 |
+
 ## 技術スタック
 
 - **フレームワーク**: Next.js 16.1.6 (App Router, `use client` ベース)
@@ -34,6 +46,7 @@ npm run lint          # ESLint 実行
 - **起動時の競合防止**: `lib/db.js` と `lib/holidayService.js` の両方に `globalThis` ベースのシングルトン Promise を導入。HMR によるモジュール再評価でも状態が維持され、DB 初期化と祝日キャッシュ更新がそれぞれアプリ起動ライフサイクル全体を通じて厳密に1回のみ実行される。
 - **DBの紐づきとポータビリティ**: SQLiteデータベースの保存先は `tauri.conf.json` の `"identifier": "com.yarukoto.app"` に依存する。これによりプログラムのファイル名（例:`Yarukoto_Portable.exe` など）を変更しても、OSのAppData内にある同一の `tasks.db` ファイルに永続的に紐づくため、1OSユーザー＝1DB の安全な運用が実現されている。
 - **devIndicators 無効**: `next.config.mjs` に `devIndicators: false` を設定済み（開発時の「N」ボタン非表示）。
+- **【AIエージェント向け重要ルール】Gitコミットの全自動化**: このプロジェクトはGitでバージョン管理されている。AIエージェント（Antigravity、Claude Code等）は、機能実装やバグ修正が一段落して安定して動く状態になったタイミング（キリの良いタイミング）で、**必ず自律的・自発的に `git add .` と `git commit` を実行**し、履歴（スナップショット）を残すこと。ユーザーにわざわざコミットの許可を取る必要はない。
 
 ## ディレクトリ構造
 
