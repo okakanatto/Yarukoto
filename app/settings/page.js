@@ -311,6 +311,7 @@ export default function Settings() {
                                     {data.tags.map((t, i) => row(`tag-${t.id}`, t.color, t.name, i, 'tags', {
                                         onColor: c => updTag(t.id, 'color', c),
                                         onLabel: v => updTag(t.id, 'name', v),
+                                        onBlur: () => commitTag(t.id),
                                         onDel: () => delTag(t.id),
                                     }))}
                                 </div>

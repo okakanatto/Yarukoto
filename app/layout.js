@@ -17,6 +17,7 @@ export default function RootLayout({ children }) {
     const [fabOpen, setFabOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [toast, setToast] = useState(null); // { message, type }
+    const [dbError, setDbError] = useState(null);
     const modalRef = useRef(null);
 
     useEffect(() => {
@@ -28,6 +29,16 @@ export default function RootLayout({ children }) {
             }
         }, 0);
     }, []);
+
+    // Global DB Error Listener (Triggers error.js)
+    useEffect(() => {
+        if (!mounted) return;
+        const hd = (e) => setDbError(e.detail || new Error('Database initialization failed'));
+        window.addEventListener('taskflow:dberror', hd);
+        return () => window.removeEventListener('taskflow:dberror', hd);
+    }, [mounted]);
+
+    if (dbError) throw dbError; // Throws during render so Next.js error.js catches it
 
     // Global Toast Listener
     useEffect(() => {
