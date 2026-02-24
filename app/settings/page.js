@@ -368,6 +368,26 @@ export default function Settings() {
                                             <span className="opt-toggle-knob" />
                                         </button>
                                     </div>
+                                    <div className="opt-card">
+                                        <div className="opt-info">
+                                            <span className="opt-icon">⚠️</span>
+                                            <div>
+                                                <strong className="opt-title">期限切れタスクを今日やるタスクに表示する</strong>
+                                                <p className="opt-desc">
+                                                    過去に期限が切れた未完了のタスクを「今日やるタスク」画面に自動表示するかどうかを選択します。
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className={`opt-toggle ${appSettings.show_overdue_in_today !== '0' ? 'on' : ''}`}
+                                            onClick={() => toggleSetting('show_overdue_in_today')}
+                                            role="switch"
+                                            aria-checked={appSettings.show_overdue_in_today !== '0'}
+                                        >
+                                            <span className="opt-toggle-knob" />
+                                        </button>
+                                    </div>
                                 </div>
                             </>
                         )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import StatusCheckbox from '@/components/StatusCheckbox';
+import TaskEditModal from '@/components/TaskEditModal';
 
 function addDays(base, days) {
     const d = new Date(base);
@@ -40,12 +41,14 @@ export default function TodayPage() {
     const [loading, setLoading] = useState(true);
     const [statuses, setStatuses] = useState([]);
     const [justCompletedId, setJustCompletedId] = useState(null);
+    const [editingTask, setEditingTask] = useState(null); // For IMP-1
 
     const [filterStatus, setFilterStatus] = useState('');
     const [filterTag, setFilterTag] = useState('');
     const [sortKey, setSortKey] = useState('priority'); // default sort
 
     const [allTags, setAllTags] = useState([]);
+    const [showOverdue, setShowOverdue] = useState(true);
 
     // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
     const activeRequestId = useRef(0);
@@ -60,6 +63,11 @@ export default function TodayPage() {
 
                 const tagsRows = await db.select('SELECT * FROM tags ORDER BY sort_order, id');
                 setAllTags(tagsRows);
+
+                const settingsRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['show_overdue_in_today']);
+                if (settingsRows.length > 0) {
+                    setShowOverdue(settingsRows[0].value !== '0');
+                }
             } catch (e) { console.error('Failed to load statuses/tags:', e); }
         })();
     }, []);
@@ -181,7 +189,7 @@ export default function TodayPage() {
                 AND (
                   t.today_date = $1
                   OR t.due_date = $2
-                  OR (t.due_date < $3 AND t.status_code != 3)  -- Overdue and not done
+                  ${showOverdue ? 'OR (t.due_date < $3 AND t.status_code != 3)' : ''}
                   OR (t.status_code = 3 AND date(t.completed_at) = $4) -- Completed on this date
                 )
                 ${tConditionStr}
@@ -454,7 +462,15 @@ export default function TodayPage() {
                                 )}
                                 <div className="today-card-title-row">
                                     {isRoutine && <span className="today-routine-badge">🔄</span>}
-                                    <span className={`today-card-title ${isDone ? 'strike' : ''}`}>{task.title}</span>
+                                    <span
+                                        className={`today-card-title ${isDone ? 'strike' : ''} ${!isRoutine ? 'clickable' : ''}`}
+                                        onClick={() => {
+                                            if (!isRoutine) setEditingTask(task);
+                                        }}
+                                        title={!isRoutine ? "クリックして編集" : ""}
+                                    >
+                                        {task.title}
+                                    </span>
                                 </div>
                                 <div className="today-card-meta">
                                     {task.tags && task.tags.map(t => (
@@ -612,6 +628,8 @@ export default function TodayPage() {
         }
         .today-card-title { font-weight: 600; font-size: 0.92rem; color: var(--color-text); display: block; }
         .today-card-title.strike { text-decoration: line-through; color: var(--color-text-disabled); }
+        .today-card-title.clickable { cursor: pointer; transition: color 0.15s; }
+        .today-card-title.clickable:hover { color: var(--color-primary); text-decoration: underline; }
         .today-card-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
         .today-tag { font-size: 0.6rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 8px; color: #fff; }
         .today-meta-item { font-size: 0.75rem; color: var(--color-text-muted); }
@@ -656,6 +674,17 @@ export default function TodayPage() {
         }
         @keyframes celebIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
       `}</style>
+
+            {editingTask && (
+                <TaskEditModal
+                    task={editingTask}
+                    onClose={() => setEditingTask(null)}
+                    onSaved={() => {
+                        setEditingTask(null);
+                        loadTasks(selectedDate);
+                    }}
+                />
+            )}
         </div>
     );
 }
