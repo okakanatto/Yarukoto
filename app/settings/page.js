@@ -330,7 +330,7 @@ export default function Settings() {
                                 {openPalette === 'new-st' && <div className="s-palette s-add-pal"><ColorPalette value={newStatus.color} onChange={c => setNewStatus({ ...newStatus, color: c })} /></div>}
                                 <div className="s-list">
                                     {data.status.map((s, i) => {
-                                        const isSystem = s.code <= 3;
+                                        const isSystem = s.code <= 5;
                                         return row(`st-${s.code}`, s.color, s.label, i, 'status', {
                                             onColor: c => upd('status', s.code, 'code', 'color', c),
                                             onLabel: isSystem ? undefined : v => upd('status', s.code, 'code', 'label', v),
@@ -338,7 +338,7 @@ export default function Settings() {
                                             readOnly: isSystem,
                                         });
                                     })}
-                                    <p className="s-hint">※ 未着手・着手中・完了はシステム必須のため名前・削除の変更はできません</p>
+                                    <p className="s-hint">※ {data.status.filter(s => s.code <= 5).map(s => s.label).join('・')} はシステム必須のため名前・削除の変更はできません</p>
                                 </div>
                             </>
                         )}

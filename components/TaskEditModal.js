@@ -139,6 +139,12 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                                 ))}
                             </select>
                         </div>
+                        {task.completed_at && (
+                            <div className="te-field" style={{ flex: 1, opacity: 0.7 }}>
+                                <label className="te-label">完了日</label>
+                                <input type="text" className="te-input" value={task.completed_at.split(' ')[0]} readOnly disabled />
+                            </div>
+                        )}
                     </div>
 
                     {/* Dates */}

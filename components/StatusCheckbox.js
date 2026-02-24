@@ -7,6 +7,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
     const code = parseInt(statusCode);
 
     const handleMainClick = () => {
+        if (code === 5) return; // キャンセル時は操作不可
         if (code === 3) {
             onChange(1); // 完了 → 未着手
         } else if (code === 2) {
@@ -18,6 +19,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
 
     const handlePlayClick = (e) => {
         e.stopPropagation();
+        if (code === 5) return; // キャンセル時は操作不可
         if (code === 1) onChange(2); // 未着手 → 着手中
     };
 
@@ -30,7 +32,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
             onMouseLeave={() => setHovered(false)}
         >
             <button
-                className={`status-cb-main${code === 3 ? ' checked' : ''}${code === 2 ? ' in-progress' : ''}${sparkle ? ' sparkle' : ''}`}
+                className={`status-cb-main${code === 3 ? ' checked' : ''}${code === 2 ? ' in-progress' : ''}${code === 5 ? ' cancelled' : ''}${sparkle ? ' sparkle' : ''}`}
                 onClick={handleMainClick}
                 title={code === 3 ? '未着手に戻す' : code === 2 ? '完了にする' : '完了にする'}
             >
@@ -70,7 +72,13 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     position: relative;
                     overflow: visible;
                 }
-                .status-cb-main:hover {
+                .status-cb-main.cancelled {
+                    cursor: not-allowed;
+                    opacity: 0.5;
+                    border-color: var(--color-text-disabled);
+                    background: var(--color-surface-hover);
+                }
+                .status-cb-main:not(.cancelled):hover {
                     border-color: var(--color-primary);
                     background: var(--color-primary-subtle);
                 }
@@ -80,7 +88,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     color: white;
                     font-weight: 700;
                 }
-                .status-cb-main.checked:hover {
+                .status-cb-main.checked:not(.cancelled):hover {
                     background: var(--color-success);
                     border-color: var(--color-success);
                     opacity: 0.85;

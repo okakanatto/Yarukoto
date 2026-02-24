@@ -433,6 +433,8 @@ export default function TaskList() {
             .tc-card:hover { border-color:var(--border-color-hover); box-shadow:var(--shadow-card-hover); }
             .tc-card.done { opacity:.55; }
             .tc-card.done:hover { opacity:.75; }
+            .tc-card.cancelled { opacity:.4; filter: grayscale(1); }
+            .tc-card.cancelled:hover { opacity:.6; filter: grayscale(0.8); }
     
             .tc-body { display:flex; align-items:flex-start; gap:.65rem; padding:.85rem 1rem; }
             .tc-handle {
@@ -547,12 +549,13 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
 
     const st = statusMap[task.status_code] || { label: task.status_label || '不明', color: '#94a3b8' };
     const isDone = task.status_code === 3;
+    const isCancelled = task.status_code === 5;
 
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={`tc-card ${isDone ? 'done' : ''} ${isOver && !isDragging ? 'drag-over' : ''}`}
+            className={`tc-card ${isDone ? 'done' : ''} ${isCancelled ? 'cancelled' : ''} ${isOver && !isDragging ? 'drag-over' : ''}`}
         >
             <div className="tc-body">
                 {/* Drag Handle */}
@@ -578,12 +581,13 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
                         <span className="tc-parent-label" style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, color: 'var(--color-text-muted)', marginBottom: '0.15rem', letterSpacing: '0.01em' }}>📌 {task.parent_title} ›</span>
                     )}
                     <div className="tc-title-row">
-                        <span className={`tc-title ${isDone ? 'strike' : ''}`}>{task.title}</span>
+                        <span className={`tc-title ${isDone || isCancelled ? 'strike' : ''}`}>{task.title}</span>
                         {task.tags && task.tags.map(t => <span key={t.id} className="tc-tag" style={{ backgroundColor: t.color }}>{t.name}</span>)}
                     </div>
                     <div className="tc-meta">
-                        {task.start_date && <span className="tc-meta-item">🟢 開始: {task.start_date}</span>}
-                        {task.due_date && (
+                        {isDone && task.completed_at && <span className="tc-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
+                        {task.start_date && !isDone && <span className="tc-meta-item">🟢 開始: {task.start_date}</span>}
+                        {task.due_date && !isDone && (
                             <span className="tc-meta-item" style={{ color: dueMeta.color || 'inherit' }}>
                                 📅 期限: {task.due_date}{dueMeta.badge && <span className={`tc-badge ${dueMeta.cls}`}>{dueMeta.badge}</span>}
                             </span>
