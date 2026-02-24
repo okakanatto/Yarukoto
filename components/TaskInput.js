@@ -9,6 +9,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
     const [title, setTitle] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const isSubmittingRef = useRef(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const titleInputRef = useRef(null);
 
@@ -45,8 +46,9 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!title.trim() || submitting) return;
+        if (!title.trim() || isSubmittingRef.current) return;
 
+        isSubmittingRef.current = true;
         setSubmitting(true);
         const actualParentId = (parentId ? parseInt(parentId) : null) || predefinedParentId || null;
 
@@ -148,6 +150,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
             }));
         } finally {
             setSubmitting(false);
+            isSubmittingRef.current = false;
         }
     };
 

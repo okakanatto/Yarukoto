@@ -195,10 +195,14 @@ export default function Settings() {
         } catch (e) { console.error(e); flash('err', '追加に失敗しました'); }
     };
 
-    const updTag = async (id, field, val) => {
+    const updTag = (id, field, val) => {
         const tags = data.tags.map(t => t.id === id ? { ...t, [field]: val } : t);
         setData(p => ({ ...p, tags }));
-        const tag = tags.find(t => t.id === id);
+    };
+
+    const commitTag = async (id) => {
+        const tag = data.tags.find(t => t.id === id);
+        if (!tag) return;
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
@@ -240,7 +244,7 @@ export default function Settings() {
     };
 
     const row = (key, color, label, index, type, opts = {}) => {
-        const { onColor, onLabel, onDel, readOnly } = opts;
+        const { onColor, onLabel, onBlur, onDel, readOnly } = opts;
         const isOpen = openPalette === key;
         const drag = getDrag(type);
         return (
@@ -257,11 +261,11 @@ export default function Settings() {
                     <div className="s-bar" style={{ backgroundColor: color }} />
                     {readOnly
                         ? <span className="s-label">{label}</span>
-                        : <input className="s-input" type="text" value={label} onChange={e => onLabel?.(e.target.value)} />
+                        : <input className="s-input" type="text" value={label} onChange={e => onLabel?.(e.target.value)} onBlur={onBlur} />
                     }
                     {onDel && <button className="s-del" onClick={onDel} type="button" title="削除">🗑</button>}
                 </div>
-                {isOpen && <div className="s-palette"><ColorPalette value={color} onChange={c => onColor?.(c)} /></div>}
+                {isOpen && <div className="s-palette"><ColorPalette value={color} onChange={c => { onColor?.(c); onBlur?.(); }} /></div>}
             </div>
         );
     };
