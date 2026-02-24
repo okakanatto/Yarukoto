@@ -169,7 +169,13 @@ src-tauri/
 | 祝日キャッシュ機能 | `lib/holidayService.js` | 内閣府CSV取得・SQLiteキャッシュ・インメモリSet最適化 |
 | ルーティン祝日除外 | `lib/holidayService.js` | `holiday_action` (none/skip/forward/backward) 対応 |
 | 毎月末ルーティン | `app/routines/page.js`, `lib/holidayService.js` | `monthly_type: end_of_month` + うるう年対応 |
-| 休日設定 全頻度対応 | `app/routines/page.js` | 日次・週次でも `holiday_action` を UI 設定可能に（daily は skip/none のみ）|
+| 休日設定 全頻度対応 | `app/routines/page.js` | 日次・週次でも `holiday_action` を UI 設定可能に |
+| **【v1.1.0 新機能】** | | |
+| トースト通知 | `app/layout.js` | グローバルな成功/エラー通知を右下(FABの上)に表示 |
+| タスク直接編集 | `app/today/page.js` | 今日やる画面からタスク名クリックで編集モーダル起動 |
+| 完了日の自動記録・表示 | `components/TaskList.js` 他 | 完了(コード3)時に `completed_at` 記録、各画面に表示 |
+| キャンセルステータス | `lib/db.js` 他 | コード5(キャンセル)を追加、グレーアウト+取消線表示 |
+| 期限切れタスク表示設定 | `app/today/page.js` | 過去の未完了タスクを今日タブに表示(設定でトグル可) |
 
 ## バグ修正済み
 

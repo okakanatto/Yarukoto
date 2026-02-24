@@ -13,6 +13,23 @@ This file tracks changes made by AI agents (Antigravity, Claude Code, etc.) to c
 
 ## Log
 
+### 2026-02-25
+- **Agent**: Antigravity (Gemini 3.1)
+- **Task**: v1.1.0 Release Implementation, Regression Fixes & Documentation
+- **Details**:
+    - **Feature**: v1.1.0のロードマップ（1-1〜1-4）すべてを実装・検証・リリース完了。
+    - **Feature**: タスク名クリックでの直接編集 (`IMP-1`)、トースト通知の実装 (`IMP-9`)、キャンセルステータスの追加 (`IMP-10`)、期限切れタスクの表示オプション (`IMP-6`)、完了日の自動記録・各画面への表示 (`IMP-11`)、タスク追加UIのアコーディオン化排除・項目の並び替え (`IMP-5`)。
+    - **Fix (Critical)**: v1.1検証で見つかったバグを修正。設定画面インライン編集の連続発火 (`BUG-V1`)、タスク追加のEnter連打による二重送信 (`BUG-V2`)、DB初期化失敗時のフォールバック白画面フリーズ (`BUG-V3`) を解決。
+    - **Fix (Bug)**: 「＋」ボタンからの子タスク追加時タグ継承漏れ (`BUG-1`)、データ全削除時にルーティンが残る問題 (`BUG-2`) を修正。
+    - **Fix (Regression)**: v1.1.0の実装中に発生した各種デグレ（TaskInputのアコーディオン化によるUI悪化、期限切れ・トースト位置の不具合等）を検知し一括修正。
+    - **Release**: Tauriを用いたポータブルアプリ版およびインストーラー版の `v1.1.0` リリースビルドを完了し、`releases/v1.1.0/` フォルダへ格納。リリースノート作成と各種メタドキュメント（`CLAUDE.md`, `ISSUES.md` 等）の更新を実施。
+- **Files**:
+    - `app/layout.js`, `app/today/page.js`, `app/settings/page.js`, `app/error.js`
+    - `components/TaskInput.js`, `components/TaskList.js`, `components/TaskEditModal.js`
+    - `lib/db.js`
+    - `CLAUDE.md`, `AI_CHANGELOG.md`, `ISSUES.md`, `releases/v1.1.0/RELEASE_NOTES.md`
+
+
 ### 2026-02-24
 - **Agent**: Claude (claude-sonnet-4-5)
 - **Task**: v1.1以降の課題整理・仕様具体化・ロードマップ策定
