@@ -5,8 +5,8 @@
 **TaskFlow** は個人用タスク管理Webアプリ。Next.js (App Router) + SQLite のローカル完結型。
 Tauri v2 デスクトップアプリとして動作する。
 
-**現在のバージョン**: v1.0.0 リリース済み（2026-02-23）
-**次期バージョン**: v1.1.0 開発中（詳細は `ROADMAP.md` 参照）
+**現在のバージョン**: v1.1.0 リリース済み（2026-02-25）
+**次期バージョン**: v1.2.0 以降開発予定（詳細は `ROADMAP.md` 参照）
 
 ## 関連ドキュメント
 
@@ -36,7 +36,13 @@ npm run lint          # ESLint 実行
 ```
 
 > **注意**: `npm run dev` だけでは動かない。ブラウザからは Tauri IPC にアクセスできないため、必ず `npm run tauri dev` で起動すること。
-> **ビルド成果物とリリース運用について**: `npm run tauri build` を実行すると、インストーラ以外にも `src-tauri/target/release/app.exe` (ポータブル版単体exe) が生成される。今後はバージョン管理が煩雑になるのを防ぐため、新しいバージョンをビルドした際はプロジェクトルートに `releases/vX.X.X/` ディレクトリを作成し、そこにZIPや各種インストーラ(`-setup.exe`, `.msi`)等の公開用成果物を一元的に移動・格納する運用とする。
+> **リリースとビルド成果物について（【重要】必ず守ること！）**: 
+> ユーザーから「ビルドしてリリースして」等と言われた場合は、必ず以下の手順でインストーラーとポータブル版を生成・格納すること：
+> 1. `package.json` と `tauri.conf.json` の `version` を新しいバージョンに更新する。
+> 2. `npm run tauri build` を実行する。
+> 3. コマンド完了後、生成された以下の2種類のファイルを対象とし、プロジェクトルートに `releases/vX.X.X/` ディレクトリを作成して一斉にコピーすること（ファイル名のバージョン部分はよしなに変更すること）。
+>    - **インストーラー版（Setup.exe）**: `src-tauri/target/release/bundle/nsis/Yarukoto_X.X.X_x64-setup.exe`  → `releases/vX.X.X/` 配下へコピー
+>    - **ポータブル版（単体EXE）**: `src-tauri/target/release/app.exe` → コピーして `releases/vX.X.X/Yarukoto_X.X.X-portable.exe` にリネームして配置
 
 ## アーキテクチャ構成（Tauri デスクトップ版・移行完了済）
 
