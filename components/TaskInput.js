@@ -178,22 +178,16 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                         value={title}
                         ref={titleInputRef}
                         onChange={(e) => setTitle(e.target.value)}
+                        onFocus={() => setIsExpanded(true)}
                     />
                     <button
-                        type="button"
-                        className={`btn-details-toggle ${isExpanded ? 'active' : ''}`}
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        title={isExpanded ? '詳細設定を閉じる' : '詳細設定を開く'}
+                        type={isExpanded ? 'button' : 'submit'}
+                        className={`btn-add ${submitting ? 'submitting' : ''} ${isExpanded ? 'expanded' : ''}`}
+                        disabled={!isExpanded && (!title.trim() || submitting)}
+                        title={isExpanded ? '閉じる' : '追加'}
+                        onClick={isExpanded ? (e) => { e.preventDefault(); setIsExpanded(false); } : undefined}
                     >
-                        {isExpanded ? '⚙️' : '⚙️'} {/* Can use different icons if desired */}
-                    </button>
-                    <button
-                        type="submit"
-                        className={`btn-add ${submitting ? 'submitting' : ''}`}
-                        disabled={!title.trim() || submitting}
-                        title="タスクを追加"
-                    >
-                        {submitting ? <span className="spinner-sm"></span> : '+'}
+                        {submitting ? <span className="spinner-sm"></span> : isExpanded ? '−' : '+'}
                     </button>
                 </div>
 
@@ -331,14 +325,6 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
         }
         .task-title-input::placeholder { color: var(--color-text-disabled); }
         .task-title-input:focus { border-bottom-color: var(--color-primary); }
-        .btn-details-toggle {
-          background: transparent; border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); color: var(--color-text-muted);
-          width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
-          cursor: pointer; transition: all 0.2s; font-size: 1.1rem;
-        }
-        .btn-details-toggle:hover { background: var(--color-surface-hover); color: var(--color-text); }
-        .btn-details-toggle.active { background: var(--color-primary-subtle); border-color: var(--color-primary); color: var(--color-primary); }
         .btn-add {
           width: 38px; height: 38px; border-radius: 50%; border: none;
           background: var(--color-primary); color: white; font-size: 1.4rem;
