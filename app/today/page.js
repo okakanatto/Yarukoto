@@ -77,7 +77,7 @@ export default function TodayPage() {
         const handleTaskAdded = () => loadTasks(selectedDate);
         window.addEventListener('taskflow:taskAdded', handleTaskAdded);
         return () => window.removeEventListener('taskflow:taskAdded', handleTaskAdded);
-    }, [selectedDate, filterStatus, filterTag, sortKey]);
+    }, [selectedDate, filterStatus, filterTag, sortKey, showOverdue]);
 
     const loadTasks = async (date) => {
         const currentReq = ++activeRequestId.current;
@@ -90,6 +90,8 @@ export default function TodayPage() {
             const dayOfWeek = dObj.getDay();
             const dayOfMonth = dObj.getDate();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            const todayStr = new Date().toLocaleDateString('sv-SE');
+            const isViewingToday = (date === todayStr);
 
             // Build condition strings
             const tConditions = [];
@@ -189,7 +191,7 @@ export default function TodayPage() {
                 AND (
                   t.today_date = $1
                   OR t.due_date = $2
-                  ${showOverdue ? 'OR (t.due_date < $3 AND t.status_code != 3)' : ''}
+                  ${showOverdue && isViewingToday ? 'OR (t.due_date < $3 AND t.status_code != 3)' : ''}
                   OR (t.status_code = 3 AND date(t.completed_at) = $4) -- Completed on this date
                 )
                 ${tConditionStr}
@@ -476,7 +478,8 @@ export default function TodayPage() {
                                     {task.tags && task.tags.map(t => (
                                         <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
                                     ))}
-                                    {task.due_date && <span className="today-meta-item">📅 {task.due_date}</span>}
+                                    {isDone && task.completed_at && <span className="today-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
+                                    {task.due_date && !isDone && <span className="today-meta-item">📅 {task.due_date}</span>}
                                     {task.estimated_hours > 0 && (
                                         <span className="today-meta-item">⏱ {formatMin(task.estimated_hours)}</span>
                                     )}

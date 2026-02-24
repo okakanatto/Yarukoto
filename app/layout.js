@@ -355,9 +355,8 @@ export default function RootLayout({ children }) {
 
                     .global-toast {
                         position: fixed;
-                        bottom: 1.5rem;
-                        left: 50%;
-                        transform: translateX(-50%);
+                        bottom: calc(1.75rem + 52px + 0.75rem);
+                        right: 1.75rem;
                         padding: 0.75rem 1.25rem;
                         border-radius: var(--radius-md);
                         font-size: 0.85rem;
@@ -365,12 +364,13 @@ export default function RootLayout({ children }) {
                         z-index: 10000;
                         box-shadow: 0 8px 24px rgba(0,0,0,0.1);
                         animation: gtIn 0.3s cubic-bezier(0.16,1,0.3,1);
+                        white-space: nowrap;
                     }
                     .toast-ok  { background: #ecfdf5; border: 1px solid #bbf7d0; color: #15803d; }
                     .toast-err { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
                     @keyframes gtIn { 
-                        from { opacity: 0; transform: translate(-50%, 16px); } 
-                        to   { opacity: 1; transform: translate(-50%, 0); } 
+                        from { opacity: 0; transform: translateY(16px); } 
+                        to   { opacity: 1; transform: translateY(0); } 
                     }
                 `}</style>
             </body>

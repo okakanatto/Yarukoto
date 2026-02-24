@@ -193,19 +193,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
 
                 {isExpanded && (
                     <div className="details-panel">
-                        {/* Dates with CalendarPicker */}
-                        <div className="form-row">
-                            <div className="form-field">
-                                <label>開始日</label>
-                                <CalendarPicker value={startDate} onChange={setStartDate} />
-                            </div>
-                            <div className="form-field">
-                                <label>終了期限</label>
-                                <CalendarPicker value={dueDate} onChange={setDueDate} alignRight={true} />
-                            </div>
-                        </div>
-
-                        {/* Parent task selector - only when not in inline child creation mode */}
+                        {/* 1. 親タスク - only when not in inline child creation mode */}
                         {!predefinedParentId && (
                             <div className="form-field">
                                 <label>親タスク</label>
@@ -218,6 +206,45 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                             </div>
                         )}
 
+                        {/* 2. 終了期限 */}
+                        <div className="form-field">
+                            <label>終了期限</label>
+                            <CalendarPicker value={dueDate} onChange={setDueDate} />
+                        </div>
+
+                        {/* 3. タグ */}
+                        {allTags.length > 0 && (
+                            <div className="form-field">
+                                <label>タグ</label>
+                                <TagSelect
+                                    allTags={allTags}
+                                    selectedTagIds={selectedTags}
+                                    onChange={setSelectedTags}
+                                />
+                            </div>
+                        )}
+
+                        {/* 4. 開始日 + 想定工数 */}
+                        <div className="form-row">
+                            <div className="form-field">
+                                <label>開始日</label>
+                                <CalendarPicker value={startDate} onChange={setStartDate} />
+                            </div>
+                            <div className="form-field form-field--narrow">
+                                <label>想定工数（分）</label>
+                                <input
+                                    type="number"
+                                    step="5"
+                                    min="0"
+                                    max="99999"
+                                    value={estimatedMinutes}
+                                    onChange={(e) => setEstimatedMinutes(e.target.value)}
+                                    placeholder="0"
+                                />
+                            </div>
+                        </div>
+
+                        {/* 5. 重要度 + 緊急度 */}
                         <div className="form-row">
                             <div className="form-field">
                                 <label>重要度</label>
@@ -237,32 +264,9 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                                     ))}
                                 </select>
                             </div>
-                            <div className="form-field form-field--narrow">
-                                <label>想定工数（分）</label>
-                                <input
-                                    type="number"
-                                    step="5"
-                                    min="0"
-                                    max="99999"
-                                    value={estimatedMinutes}
-                                    onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                    placeholder="0"
-                                />
-                            </div>
                         </div>
 
-                        {/* Tag selector */}
-                        {allTags.length > 0 && (
-                            <div className="form-field">
-                                <label>タグ</label>
-                                <TagSelect
-                                    allTags={allTags}
-                                    selectedTagIds={selectedTags}
-                                    onChange={setSelectedTags}
-                                />
-                            </div>
-                        )}
-
+                        {/* 6. 備考 */}
                         <div className="form-field">
                             <label>備考</label>
                             <textarea
