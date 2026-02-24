@@ -129,8 +129,12 @@ export default function TaskList() {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
             await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
+            window.dispatchEvent(new CustomEvent('taskflow:toast', { detail: { message: 'タスクを削除しました', type: 'success' } }));
             setRefreshKey(k => k + 1);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('taskflow:toast', { detail: { message: '削除に失敗しました', type: 'error' } }));
+        }
     };
 
     const handleTodayToggle = async (taskId, currentTodayDate) => {

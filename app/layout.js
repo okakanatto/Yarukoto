@@ -16,6 +16,7 @@ export default function RootLayout({ children }) {
     const [todayProgress, setTodayProgress] = useState({ total: 0, completed: 0 });
     const [fabOpen, setFabOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [toast, setToast] = useState(null); // { message, type }
     const modalRef = useRef(null);
 
     useEffect(() => {
@@ -27,6 +28,19 @@ export default function RootLayout({ children }) {
             }
         }, 0);
     }, []);
+
+    // Global Toast Listener
+    useEffect(() => {
+        if (!mounted) return;
+        const handleToast = (e) => {
+            if (e.detail) {
+                setToast(e.detail);
+                setTimeout(() => setToast(null), 3000);
+            }
+        };
+        window.addEventListener('taskflow:toast', handleToast);
+        return () => window.removeEventListener('taskflow:toast', handleToast);
+    }, [mounted]);
 
     // Close FAB modal on Escape key
     useEffect(() => {
@@ -199,6 +213,13 @@ export default function RootLayout({ children }) {
                     </>
                 )}
 
+                {/* Global Toast */}
+                {toast && (
+                    <div className={`global-toast ${toast.type === 'error' ? 'toast-err' : 'toast-ok'}`}>
+                        {toast.type === 'error' ? '❌' : '✅'} {toast.message}
+                    </div>
+                )}
+
                 <style jsx global>{`
                     .fab {
                         position: fixed;
@@ -319,6 +340,26 @@ export default function RootLayout({ children }) {
                     .fab-modal .task-input-wrapper.expanded {
                         box-shadow: none;
                         border: none;
+                    }
+
+                    .global-toast {
+                        position: fixed;
+                        bottom: 1.5rem;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        padding: 0.75rem 1.25rem;
+                        border-radius: var(--radius-md);
+                        font-size: 0.85rem;
+                        font-weight: 500;
+                        z-index: 10000;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+                        animation: gtIn 0.3s cubic-bezier(0.16,1,0.3,1);
+                    }
+                    .toast-ok  { background: #ecfdf5; border: 1px solid #bbf7d0; color: #15803d; }
+                    .toast-err { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+                    @keyframes gtIn { 
+                        from { opacity: 0; transform: translate(-50%, 16px); } 
+                        to   { opacity: 1; transform: translate(-50%, 0); } 
                     }
                 `}</style>
             </body>

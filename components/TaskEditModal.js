@@ -54,7 +54,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
             const db = await getDb();
 
             // Update the main task record
-            await db.execute(`
+            const result = await db.execute(`
                 UPDATE tasks
                 SET title = $1, start_date = $2, due_date = $3,
                 importance_level = $4, urgency_level = $5,
