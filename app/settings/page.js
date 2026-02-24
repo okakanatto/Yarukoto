@@ -468,19 +468,26 @@ export default function Settings() {
                                         <div className="dm-card-info">
                                             <span className="dm-icon">⚠️</span>
                                             <div>
-                                                <strong>全タスク削除</strong>
-                                                <p className="dm-desc">すべてのタスクを完全に削除します。この操作は元に戻せません。</p>
+                                                <strong>全データ削除</strong>
+                                                <p className="dm-desc">すべてのタスクおよびルーティンを完全に削除します。この操作は元に戻せません。</p>
                                             </div>
                                         </div>
                                         <button className="s-btn-danger" onClick={async () => {
-                                            if (!confirm('本当にすべてのタスクを削除しますか？\n\nこの操作は元に戻せません。')) return;
-                                            if (!confirm('最終確認：すべてのタスクが完全に削除されます。よろしいですか？')) return;
+                                            if (!confirm('本当にすべてのタスクとルーティンを削除しますか？\n\nこの操作は元に戻せません。')) return;
+                                            if (!confirm('最終確認：すべてのユーザーデータ（タスク・ルーティン）が完全に削除されます。よろしいですか？')) return;
                                             try {
                                                 const { getDb } = await import('@/lib/db');
                                                 const db = await getDb();
+
+                                                // BUG-2: ルーティンデータも削除対象に含める（子テーブルから先に削除）
+                                                await db.execute('DELETE FROM routine_completions');
+                                                await db.execute('DELETE FROM routine_tags');
+                                                await db.execute('DELETE FROM routines');
+
                                                 await db.execute('DELETE FROM task_tags');
                                                 await db.execute('DELETE FROM tasks');
-                                                flash('ok', 'すべてのタスクを削除しました');
+
+                                                flash('ok', 'すべてのデータを削除しました');
                                             } catch (e) { console.error(e); flash('err', '削除に失敗しました'); }
                                         }}>全削除</button>
                                     </div>

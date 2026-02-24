@@ -48,6 +48,8 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
         if (!title.trim() || submitting) return;
 
         setSubmitting(true);
+        const actualParentId = (parentId ? parseInt(parentId) : null) || predefinedParentId || null;
+
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
@@ -60,7 +62,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             `, [
                 title,
-                (parentId ? parseInt(parentId) : null) || predefinedParentId || null,
+                actualParentId,
                 1, // default status_code
                 importance ? parseInt(importance) : null,
                 urgency ? parseInt(urgency) : null,
@@ -71,6 +73,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
             ]);
 
             const newTaskId = result.lastInsertId;
+            let finalTagIds = [...selectedTags];
 
             // Insert tags if any
             if (selectedTags.length > 0) {
@@ -78,6 +81,34 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                     await db.execute('INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [newTaskId, tagId]);
                 }
             }
+
+            // --- BUG-1 修正: タグ継承ロジック ---
+            if (actualParentId) {
+                try {
+                    const settingRows = await db.select(
+                        "SELECT value FROM app_settings WHERE key = 'inherit_parent_tags'"
+                    );
+                    if (settingRows.length > 0 && settingRows[0].value === '1') {
+                        const parentTags = await db.select(
+                            'SELECT tag_id FROM task_tags WHERE task_id = $1',
+                            [actualParentId]
+                        );
+                        for (const row of parentTags) {
+                            // すでに手動選択済みのタグはスキップ（INSERT OR IGNORE でDB側でもガードされるが念のため）
+                            await db.execute(
+                                'INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES ($1, $2)',
+                                [newTaskId, row.tag_id]
+                            );
+                            if (!finalTagIds.includes(row.tag_id)) {
+                                finalTagIds.push(row.tag_id);
+                            }
+                        }
+                    }
+                } catch (tagErr) {
+                    console.error('Tag inheritance error:', tagErr);
+                }
+            }
+            // ----------------------------------
 
             // Fetch the newly created task to pass to the parent
             const newTasks = await db.select(`
@@ -94,10 +125,10 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
 
             const newTask = newTasks[0];
             // Format tags for the frontend data structure
-            newTask.tags = selectedTags.map(id => {
+            newTask.tags = finalTagIds.map(id => {
                 const tagData = allTags.find(t => t.id === id);
                 return { id, name: tagData?.name, color: tagData?.color };
-            });
+            }).filter(t => t.name); // Filter out any empty tags just in case
 
             setSubmitSuccess(true);
             setTimeout(() => setSubmitSuccess(false), 1200);
