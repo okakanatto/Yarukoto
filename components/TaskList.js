@@ -111,7 +111,12 @@ export default function TaskList() {
     const handleTaskEdited = () => setRefreshKey(k => k + 1);
 
     const handleStatusChange = async (taskId, newStatusCode) => {
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status_code: parseInt(newStatusCode) } : t));
+        const completedNow = new Date().toLocaleDateString('sv-SE') + ' ' + new Date().toLocaleTimeString('sv-SE');
+        setTasks(prev => prev.map(t => t.id === taskId ? {
+            ...t,
+            status_code: parseInt(newStatusCode),
+            completed_at: parseInt(newStatusCode) === 3 ? completedNow : null
+        } : t));
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
@@ -131,11 +136,11 @@ export default function TaskList() {
             // BUG-4: 削除前に子タスクの parent_id を NULL 化して独立させる
             await db.execute('UPDATE tasks SET parent_id = NULL WHERE parent_id = $1', [taskId]);
             await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
-            window.dispatchEvent(new CustomEvent('taskflow:toast', { detail: { message: 'タスクを削除しました', type: 'success' } }));
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'タスクを削除しました', type: 'success' } }));
             setRefreshKey(k => k + 1);
         } catch (e) {
             console.error(e);
-            window.dispatchEvent(new CustomEvent('taskflow:toast', { detail: { message: '削除に失敗しました', type: 'error' } }));
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '削除に失敗しました', type: 'error' } }));
         }
     };
 

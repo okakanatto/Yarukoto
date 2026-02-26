@@ -136,7 +136,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
             setTimeout(() => setSubmitSuccess(false), 1200);
 
             // Dispatch success toast
-            window.dispatchEvent(new CustomEvent('taskflow:toast', {
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', {
                 detail: { message: 'タスクを追加しました', type: 'success' }
             }));
 
@@ -145,7 +145,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
             setTimeout(() => titleInputRef.current?.focus(), 10);
         } catch (err) {
             console.error(err);
-            window.dispatchEvent(new CustomEvent('taskflow:toast', {
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', {
                 detail: { message: 'タスクの追加に失敗しました', type: 'error' }
             }));
         } finally {
@@ -193,23 +193,21 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
 
                 {isExpanded && (
                     <div className="details-panel">
-                        {/* 1. 親タスク - only when not in inline child creation mode */}
-                        {!predefinedParentId && (
-                            <div className="form-field">
-                                <label>親タスク</label>
-                                <select value={parentId} onChange={(e) => setParentId(e.target.value)} disabled={parentOptions.length === 0}>
-                                    <option value="">なし（ルートタスク）</option>
-                                    {parentOptions.map(p => (
-                                        <option key={p.id} value={p.id}>{p.title}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        {/* 2. 終了期限 */}
+                        {/* 1. 終了期限 */}
                         <div className="form-field">
                             <label>終了期限</label>
                             <CalendarPicker value={dueDate} onChange={setDueDate} />
+                        </div>
+
+                        {/* 2. 備考 */}
+                        <div className="form-field">
+                            <label>備考</label>
+                            <textarea
+                                rows="2"
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                placeholder="メモを入力..."
+                            ></textarea>
                         </div>
 
                         {/* 3. タグ */}
@@ -224,7 +222,20 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                             </div>
                         )}
 
-                        {/* 4. 開始日 + 想定工数 */}
+                        {/* 4. 親タスク - only when not in inline child creation mode */}
+                        {!predefinedParentId && (
+                            <div className="form-field">
+                                <label>親タスク</label>
+                                <select value={parentId} onChange={(e) => setParentId(e.target.value)} disabled={parentOptions.length === 0}>
+                                    <option value="">なし（ルートタスク）</option>
+                                    {parentOptions.map(p => (
+                                        <option key={p.id} value={p.id}>{p.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* 5. 開始日 + 想定工数 */}
                         <div className="form-row">
                             <div className="form-field">
                                 <label>開始日</label>
@@ -244,7 +255,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                             </div>
                         </div>
 
-                        {/* 5. 重要度 + 緊急度 */}
+                        {/* 6. 重要度 + 緊急度 */}
                         <div className="form-row">
                             <div className="form-field">
                                 <label>重要度</label>
@@ -264,17 +275,6 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                                     ))}
                                 </select>
                             </div>
-                        </div>
-
-                        {/* 6. 備考 */}
-                        <div className="form-field">
-                            <label>備考</label>
-                            <textarea
-                                rows="2"
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                placeholder="メモを入力..."
-                            ></textarea>
                         </div>
 
                         <div className="panel-actions">

@@ -75,8 +75,8 @@ export default function TodayPage() {
     useEffect(() => {
         loadTasks(selectedDate);
         const handleTaskAdded = () => loadTasks(selectedDate);
-        window.addEventListener('taskflow:taskAdded', handleTaskAdded);
-        return () => window.removeEventListener('taskflow:taskAdded', handleTaskAdded);
+        window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
+        return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
     }, [selectedDate, filterStatus, filterTag, sortKey, showOverdue]);
 
     const loadTasks = async (date) => {
@@ -272,7 +272,12 @@ export default function TodayPage() {
             setJustCompletedId(taskId);
             setTimeout(() => setJustCompletedId(null), 700);
         }
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status_code: code } : t));
+        const completedNow = new Date().toLocaleDateString('sv-SE') + ' ' + new Date().toLocaleTimeString('sv-SE');
+        setTasks(prev => prev.map(t => t.id === taskId ? {
+            ...t,
+            status_code: code,
+            completed_at: code === 3 ? completedNow : null
+        } : t));
 
         if (isRoutine) {
             // Toggle routine completion

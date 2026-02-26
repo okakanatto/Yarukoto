@@ -71,7 +71,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     [task.id]
                 );
                 if (childCheck[0]?.cnt > 0) {
-                    window.dispatchEvent(new CustomEvent('taskflow:toast', {
+                    window.dispatchEvent(new CustomEvent('yarukoto:toast', {
                         detail: { message: '子タスクを持つタスクには親タスクを設定できません', type: 'error' }
                     }));
                     setSaving(false);
@@ -134,7 +134,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 </div>
 
                 <div className="te-body">
-                    {/* Title */}
+                    {/* 1. タスク名 */}
                     <div className="te-field">
                         <input
                             type="text"
@@ -146,52 +146,80 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         />
                     </div>
 
-                    {/* Status and Parent */}
-                    <div className="te-row">
-                        <div className="te-field" style={{ flex: 1 }}>
-                            <label className="te-label">ステータス</label>
-                            <select value={statusCode} onChange={(e) => setStatusCode(e.target.value)} className="te-select">
-                                {masters.status && masters.status.map(s => (
-                                    <option key={s.code} value={s.code}>{s.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="te-field" style={{ flex: 1 }}>
-                            <label className="te-label">親タスク</label>
-                            <select
-                                value={hasChildren ? '' : parentId}
-                                onChange={(e) => setParentId(e.target.value)}
-                                className="te-select"
-                                disabled={hasChildren || parentOptions.length === 0}
-                                title={hasChildren ? '子タスクを持つタスクには親タスクを設定できません' : ''}
-                            >
-                                <option value="">{hasChildren ? '設定不可（子タスクあり）' : 'なし（ルート）'}</option>
-                                {!hasChildren && parentOptions.map(p => (
-                                    <option key={p.id} value={p.id}>{p.title}</option>
-                                ))}
-                            </select>
-                        </div>
-                        {task.completed_at && (
-                            <div className="te-field" style={{ flex: 1, opacity: 0.7 }}>
-                                <label className="te-label">完了日</label>
-                                <input type="text" className="te-input" value={task.completed_at.split(' ')[0]} readOnly disabled />
-                            </div>
-                        )}
+                    {/* ステータス（編集画面のみ） */}
+                    <div className="te-field">
+                        <label className="te-label">ステータス</label>
+                        <select value={statusCode} onChange={(e) => setStatusCode(e.target.value)} className="te-select">
+                            {masters.status && masters.status.map(s => (
+                                <option key={s.code} value={s.code}>{s.label}</option>
+                            ))}
+                        </select>
                     </div>
 
-                    {/* Dates */}
+                    {/* 2. 終了期限 */}
+                    <div className="te-field">
+                        <label className="te-label">終了期限</label>
+                        <CalendarPicker value={dueDate} onChange={setDueDate} />
+                    </div>
+
+                    {/* 3. 備考 */}
+                    <div className="te-field">
+                        <label className="te-label">備考</label>
+                        <textarea
+                            rows="3"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            className="te-textarea"
+                            placeholder="メモを入力..."
+                        ></textarea>
+                    </div>
+
+                    {/* 4. タグ */}
+                    <div className="te-field">
+                        <label className="te-label">タグ</label>
+                        <TagSelect
+                            allTags={allTags}
+                            selectedTagIds={selectedTags}
+                            onChange={setSelectedTags}
+                        />
+                    </div>
+
+                    {/* 5. 親タスク */}
+                    <div className="te-field">
+                        <label className="te-label">親タスク</label>
+                        <select
+                            value={hasChildren ? '' : parentId}
+                            onChange={(e) => setParentId(e.target.value)}
+                            className="te-select"
+                            disabled={hasChildren || parentOptions.length === 0}
+                            title={hasChildren ? '子タスクを持つタスクには親タスクを設定できません' : ''}
+                        >
+                            <option value="">{hasChildren ? '設定不可（子タスクあり）' : 'なし（ルート）'}</option>
+                            {!hasChildren && parentOptions.map(p => (
+                                <option key={p.id} value={p.id}>{p.title}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* 6. 開始日 + 想定工数 */}
                     <div className="te-row">
                         <div className="te-field" style={{ flex: 1 }}>
                             <label className="te-label">開始日</label>
                             <CalendarPicker value={startDate} onChange={setStartDate} />
                         </div>
                         <div className="te-field" style={{ flex: 1 }}>
-                            <label className="te-label">終了期限</label>
-                            <CalendarPicker value={dueDate} onChange={setDueDate} alignRight={true} />
+                            <label className="te-label">想定工数（分）</label>
+                            <input
+                                type="number" step="5" min="0"
+                                value={estimatedMinutes}
+                                onChange={(e) => setEstimatedMinutes(e.target.value)}
+                                className="te-input"
+                                placeholder="未設定"
+                            />
                         </div>
                     </div>
 
-                    {/* Details Grid */}
+                    {/* 7. 重要度 + 緊急度 */}
                     <div className="te-row">
                         <div className="te-field" style={{ flex: 1 }}>
                             <label className="te-label">重要度</label>
@@ -211,39 +239,15 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                                 ))}
                             </select>
                         </div>
-                        <div className="te-field" style={{ flex: 1 }}>
-                            <label className="te-label">想定(分)</label>
-                            <input
-                                type="number" step="5" min="0"
-                                value={estimatedMinutes}
-                                onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                className="te-input"
-                                placeholder="未設定"
-                            />
+                    </div>
+
+                    {/* 8. 完了日（手動編集不可、編集画面のみ表示） */}
+                    {task.completed_at && (
+                        <div className="te-field" style={{ opacity: 0.7 }}>
+                            <label className="te-label">完了日</label>
+                            <input type="text" className="te-input" value={task.completed_at.split(' ')[0]} readOnly disabled />
                         </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="te-field">
-                        <label className="te-label">タグ</label>
-                        <TagSelect
-                            allTags={allTags}
-                            selectedTagIds={selectedTags}
-                            onChange={setSelectedTags}
-                        />
-                    </div>
-
-                    {/* Notes */}
-                    <div className="te-field">
-                        <label className="te-label">備考</label>
-                        <textarea
-                            rows="3"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            className="te-textarea"
-                            placeholder="メモを入力..."
-                        ></textarea>
-                    </div>
+                    )}
                 </div>
 
                 <div className="te-footer">

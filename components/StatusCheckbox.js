@@ -23,7 +23,14 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
         if (code === 1) onChange(2); // 未着手 → 着手中
     };
 
+    const handleRevertClick = (e) => {
+        e.stopPropagation();
+        if (code === 5) return; // キャンセル時は操作不可
+        if (code === 2) onChange(1); // 着手中 → 未着手
+    };
+
     const showPlay = code === 1 && hovered && !twoStateOnly;
+    const showRevert = code === 2 && hovered && !twoStateOnly;
 
     return (
         <div
@@ -46,6 +53,15 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     title="着手中にする"
                 >
                     ▶
+                </button>
+            )}
+            {showRevert && (
+                <button
+                    className="status-cb-revert"
+                    onClick={handleRevertClick}
+                    title="未着手に戻す"
+                >
+                    ↩
                 </button>
             )}
             <style jsx>{`
@@ -121,6 +137,27 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                 }
                 .status-cb-play:hover {
                     background: var(--color-primary);
+                    color: white;
+                    transform: scale(1.1);
+                }
+                .status-cb-revert {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    border: 1.5px solid var(--color-text-muted);
+                    background: var(--color-surface-hover);
+                    color: var(--color-text-muted);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.65rem;
+                    transition: all 0.15s;
+                    animation: statusCbFadeIn 0.15s ease;
+                    flex-shrink: 0;
+                }
+                .status-cb-revert:hover {
+                    background: var(--color-text-muted);
                     color: white;
                     transform: scale(1.1);
                 }
