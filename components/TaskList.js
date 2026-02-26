@@ -128,6 +128,8 @@ export default function TaskList() {
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
+            // BUG-4: 削除前に子タスクの parent_id を NULL 化して独立させる
+            await db.execute('UPDATE tasks SET parent_id = NULL WHERE parent_id = $1', [taskId]);
             await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
             window.dispatchEvent(new CustomEvent('taskflow:toast', { detail: { message: 'タスクを削除しました', type: 'success' } }));
             setRefreshKey(k => k + 1);

@@ -18,17 +18,28 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
     const [saving, setSaving] = useState(false);
     const [parentId, setParentId] = useState(task.parent_id || '');
     const [parentOptions, setParentOptions] = useState([]);
+    const [hasChildren, setHasChildren] = useState(false);
 
     const { masters, tags: allTags } = useMasterData();
 
-    // Fetch eligible parent tasks
+    // Fetch eligible parent tasks and check if this task has children
     useEffect(() => {
         let cancelled = false;
         (async () => {
             try {
                 const { getDb } = await import('@/lib/db');
                 const db = await getDb();
+
+                // BUG-6: Check if this task has children
+                const childRows = await db.select(
+                    'SELECT COUNT(*) as cnt FROM tasks WHERE parent_id = $1',
+                    [task.id]
+                );
+                const taskHasChildren = childRows[0]?.cnt > 0;
+                if (!cancelled) setHasChildren(taskHasChildren);
+
                 // Exclude itself. A task cannot be its own parent.
+                // BUG-6: Also exclude tasks that already have a parent (to prevent 3+ levels)
                 const rows = await db.select(
                     'SELECT id, title FROM tasks WHERE parent_id IS NULL AND id != $1 AND status_code != 5 ORDER BY title',
                     [task.id]
@@ -52,6 +63,21 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
+
+            // BUG-6: DB側バリデーション — 子タスクを持つタスクに親を設定させない
+            if (parentId) {
+                const childCheck = await db.select(
+                    'SELECT COUNT(*) as cnt FROM tasks WHERE parent_id = $1',
+                    [task.id]
+                );
+                if (childCheck[0]?.cnt > 0) {
+                    window.dispatchEvent(new CustomEvent('taskflow:toast', {
+                        detail: { message: '子タスクを持つタスクには親タスクを設定できません', type: 'error' }
+                    }));
+                    setSaving(false);
+                    return;
+                }
+            }
 
             // Update the main task record
             const result = await db.execute(`
@@ -132,9 +158,15 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         </div>
                         <div className="te-field" style={{ flex: 1 }}>
                             <label className="te-label">親タスク</label>
-                            <select value={parentId} onChange={(e) => setParentId(e.target.value)} className="te-select" disabled={parentOptions.length === 0}>
-                                <option value="">なし（ルート）</option>
-                                {parentOptions.map(p => (
+                            <select
+                                value={hasChildren ? '' : parentId}
+                                onChange={(e) => setParentId(e.target.value)}
+                                className="te-select"
+                                disabled={hasChildren || parentOptions.length === 0}
+                                title={hasChildren ? '子タスクを持つタスクには親タスクを設定できません' : ''}
+                            >
+                                <option value="">{hasChildren ? '設定不可（子タスクあり）' : 'なし（ルート）'}</option>
+                                {!hasChildren && parentOptions.map(p => (
                                     <option key={p.id} value={p.id}>{p.title}</option>
                                 ))}
                             </select>
