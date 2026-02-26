@@ -119,6 +119,9 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
             onClose();
         } catch (err) {
             console.error(err);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', {
+                detail: { message: '保存に失敗しました', type: 'error' }
+            }));
         } finally {
             setSaving(false);
         }
