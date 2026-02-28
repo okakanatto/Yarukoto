@@ -1,5 +1,5 @@
 /* ============================================
-   TaskFlow — Design System & Global Styles
+   Yarukoto — Design System & Global Styles
    Clean Light Theme
    ============================================ */
 
@@ -492,6 +492,118 @@ select option {
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   display: inline-block;
+}
+
+/* ============================================
+   Filter Components (Chips & Toggle)
+   ============================================ */
+
+/* Filter toggle (iOS-style switch) */
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-toggle input {
+  display: none;
+}
+
+.filter-toggle-switch {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.filter-toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  top: 1px;
+  left: 1px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.filter-toggle input:checked+.filter-toggle-switch {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.filter-toggle input:checked+.filter-toggle-switch::after {
+  transform: translateX(16px);
+}
+
+.filter-toggle-text {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* Filter chip (pill toggle) */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  border-color: var(--border-color-hover);
+  background: var(--color-surface-hover);
+}
+
+.filter-chip.active {
+  color: #fff;
+  border-color: transparent;
+}
+
+.filter-chip.active:hover {
+  opacity: 0.85;
+}
+
+/* Filter chip color dot */
+.filter-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Filter chip row */
+.filter-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.filter-chip-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  min-width: 3.5em;
 }
 
 /* Layout Toast */

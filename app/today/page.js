@@ -43,12 +43,26 @@ export default function TodayPage() {
     const [justCompletedId, setJustCompletedId] = useState(null);
     const [editingTask, setEditingTask] = useState(null); // For IMP-1
 
-    const [filterStatus, setFilterStatus] = useState('');
-    const [filterTag, setFilterTag] = useState('');
+    const [excludeDone, setExcludeDone] = useState(false);
+    const [filterTags, setFilterTags] = useState([]);
+    const [filterImportance, setFilterImportance] = useState([]);
+    const [filterUrgency, setFilterUrgency] = useState([]);
     const [sortKey, setSortKey] = useState('priority'); // default sort
 
     const [allTags, setAllTags] = useState([]);
+    const [allImportance, setAllImportance] = useState([]);
+    const [allUrgency, setAllUrgency] = useState([]);
     const [showOverdue, setShowOverdue] = useState(true);
+
+    const toggleFilterTag = (tagId) => {
+        setFilterTags(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
+    };
+    const toggleFilterImportance = (level) => {
+        setFilterImportance(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
+    };
+    const toggleFilterUrgency = (level) => {
+        setFilterUrgency(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
+    };
 
     // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
     const activeRequestId = useRef(0);
@@ -64,6 +78,11 @@ export default function TodayPage() {
                 const tagsRows = await db.select('SELECT * FROM tags ORDER BY sort_order, id');
                 setAllTags(tagsRows);
 
+                const importanceRows = await db.select('SELECT * FROM importance_master ORDER BY level');
+                setAllImportance(importanceRows);
+                const urgencyRows = await db.select('SELECT * FROM urgency_master ORDER BY level');
+                setAllUrgency(urgencyRows);
+
                 const settingsRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['show_overdue_in_today']);
                 if (settingsRows.length > 0) {
                     setShowOverdue(settingsRows[0].value !== '0');
@@ -77,7 +96,7 @@ export default function TodayPage() {
         const handleTaskAdded = () => loadTasks(selectedDate);
         window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
         return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
-    }, [selectedDate, filterStatus, filterTag, sortKey, showOverdue]);
+    }, [selectedDate, excludeDone, filterTags, filterImportance, filterUrgency, sortKey, showOverdue]);
 
     const loadTasks = async (date) => {
         const currentReq = ++activeRequestId.current;
@@ -99,35 +118,43 @@ export default function TodayPage() {
             const sqlParams = [date, date, date, date];
             let paramIndex = 5;
 
-            if (filterStatus) {
-                const codes = filterStatus.split(',').map(Number).filter(n => !isNaN(n));
-                if (codes.length > 0) {
-                    const placeholders = codes.map(() => `$${paramIndex++}`).join(',');
-                    tConditions.push(`t.status_code IN (${placeholders})`);
-
-                    // For routines, completion_date presence determines status (3 if present, 1 if not)
-                    if (codes.includes(3) && !codes.includes(1)) {
-                        rConditions.push(`rc.completion_date IS NOT NULL`);
-                    } else if (codes.includes(1) && !codes.includes(3)) {
-                        rConditions.push(`rc.completion_date IS NULL`);
-                    } else if (!codes.includes(1) && !codes.includes(3)) {
-                        // If filtered by status 2, 4, 5 etc, routines NEVER match
-                        rConditions.push(`1 = 0`);
-                    }
-                    sqlParams.push(...codes);
-                }
+            if (excludeDone) {
+                tConditions.push(`t.status_code NOT IN (3, 5)`);
+                rConditions.push(`rc.completion_date IS NULL`);
             }
 
             // Routine SQL uses standard args first
             const rSqlParams = [date, date];
             let rParamIndex = 3;
 
-            if (filterTag) {
-                tConditions.push(`t.id IN (SELECT task_id FROM task_tags WHERE tag_id = $${paramIndex++})`);
-                sqlParams.push(filterTag);
+            if (filterTags.length > 0) {
+                const tPlaceholders = filterTags.map(() => `$${paramIndex++}`).join(',');
+                tConditions.push(`t.id IN (SELECT task_id FROM task_tags WHERE tag_id IN (${tPlaceholders}))`);
+                sqlParams.push(...filterTags);
 
-                rConditions.push(`r.id IN (SELECT routine_id FROM routine_tags WHERE tag_id = $${rParamIndex++})`);
-                rSqlParams.push(filterTag);
+                const rPlaceholders = filterTags.map(() => `$${rParamIndex++}`).join(',');
+                rConditions.push(`r.id IN (SELECT routine_id FROM routine_tags WHERE tag_id IN (${rPlaceholders}))`);
+                rSqlParams.push(...filterTags);
+            }
+
+            if (filterImportance.length > 0) {
+                const tPlaceholders = filterImportance.map(() => `$${paramIndex++}`).join(',');
+                tConditions.push(`t.importance_level IN (${tPlaceholders})`);
+                sqlParams.push(...filterImportance);
+
+                const rPlaceholders = filterImportance.map(() => `$${rParamIndex++}`).join(',');
+                rConditions.push(`r.importance_level IN (${rPlaceholders})`);
+                rSqlParams.push(...filterImportance);
+            }
+
+            if (filterUrgency.length > 0) {
+                const tPlaceholders = filterUrgency.map(() => `$${paramIndex++}`).join(',');
+                tConditions.push(`t.urgency_level IN (${tPlaceholders})`);
+                sqlParams.push(...filterUrgency);
+
+                const rPlaceholders = filterUrgency.map(() => `$${rParamIndex++}`).join(',');
+                rConditions.push(`r.urgency_level IN (${rPlaceholders})`);
+                rSqlParams.push(...filterUrgency);
             }
 
             const tConditionStr = tConditions.length > 0 ? ' AND ' + tConditions.join(' AND ') : '';
@@ -375,36 +402,72 @@ export default function TodayPage() {
 
             {/* Filter Toolbar */}
             <div className="today-toolbar">
-                <div className="tl-filter">
-                    <label>ステータス</label>
-                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                        <option value="">すべて</option>
-                        {statuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
-                    </select>
-                </div>
-                {allTags.length > 0 && (
-                    <div className="tl-filter">
-                        <label>タグ</label>
-                        <select value={filterTag} onChange={e => setFilterTag(e.target.value)}>
-                            <option value="">すべて</option>
-                            {allTags.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <div className="today-toolbar-main">
+                    <label className="filter-toggle">
+                        <input type="checkbox" checked={excludeDone} onChange={e => setExcludeDone(e.target.checked)} />
+                        <span className="filter-toggle-switch" />
+                        <span className="filter-toggle-text">完了・キャンセルを除く</span>
+                    </label>
+                    <div className="tl-filter" style={{ marginLeft: 'auto' }}>
+                        <label>並び順</label>
+                        <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
+                            <option value="priority">優先度順（デフォルト）</option>
+                            <option value="status">ステータス順</option>
+                            <option value="tag">タグ順</option>
+                            <option value="due_asc">期限日（近い順）</option>
+                            <option value="due_desc">期限日（遠い順）</option>
+                            <option value="created_desc">作成日（新しい順）</option>
+                            <option value="created_asc">作成日（古い順）</option>
+                            <option value="importance">重要度（高い順）</option>
+                            <option value="urgency">緊急度（高い順）</option>
                         </select>
                     </div>
-                )}
-                <div className="tl-filter">
-                    <label>並び順</label>
-                    <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
-                        <option value="priority">優先度順（デフォルト）</option>
-                        <option value="status">ステータス順</option>
-                        <option value="tag">タグ順</option>
-                        <option value="due_asc">期限日（近い順）</option>
-                        <option value="due_desc">期限日（遠い順）</option>
-                        <option value="created_desc">作成日（新しい順）</option>
-                        <option value="created_asc">作成日（古い順）</option>
-                        <option value="importance">重要度（高い順）</option>
-                        <option value="urgency">緊急度（高い順）</option>
-                    </select>
                 </div>
+                {(allTags.length > 0 || allImportance.length > 0 || allUrgency.length > 0) && (
+                    <div className="today-chip-section">
+                        {allTags.length > 0 && (
+                            <div className="filter-chip-row">
+                                <span className="filter-chip-label">タグ</span>
+                                {allTags.map(t => (
+                                    <button key={t.id}
+                                        className={`filter-chip ${filterTags.includes(t.id) ? 'active' : ''}`}
+                                        style={filterTags.includes(t.id) ? { backgroundColor: t.color, borderColor: t.color } : {}}
+                                        onClick={() => toggleFilterTag(t.id)}>
+                                        {t.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {allImportance.length > 0 && (
+                            <div className="filter-chip-row">
+                                <span className="filter-chip-label">重要度</span>
+                                {allImportance.map(i => (
+                                    <button key={i.level}
+                                        className={`filter-chip ${filterImportance.includes(i.level) ? 'active' : ''}`}
+                                        style={filterImportance.includes(i.level) ? { backgroundColor: i.color, borderColor: i.color } : {}}
+                                        onClick={() => toggleFilterImportance(i.level)}>
+                                        <span className="filter-chip-dot" style={{ backgroundColor: filterImportance.includes(i.level) ? 'rgba(255,255,255,0.8)' : i.color }} />
+                                        {i.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {allUrgency.length > 0 && (
+                            <div className="filter-chip-row">
+                                <span className="filter-chip-label">緊急度</span>
+                                {allUrgency.map(u => (
+                                    <button key={u.level}
+                                        className={`filter-chip ${filterUrgency.includes(u.level) ? 'active' : ''}`}
+                                        style={filterUrgency.includes(u.level) ? { backgroundColor: u.color, borderColor: u.color } : {}}
+                                        onClick={() => toggleFilterUrgency(u.level)}>
+                                        <span className="filter-chip-dot" style={{ backgroundColor: filterUrgency.includes(u.level) ? 'rgba(255,255,255,0.8)' : u.color }} />
+                                        {u.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Mini Dashboard */}
@@ -578,6 +641,14 @@ export default function TodayPage() {
           margin-bottom: 1.5rem; padding: 0.65rem 0.85rem;
           background: var(--color-surface); border: 1px solid var(--border-color);
           border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+        }
+        .today-toolbar-main {
+          display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;
+        }
+        .today-chip-section {
+          display: flex; flex-direction: column; gap: 0.4rem;
+          margin-top: 0.6rem; padding-top: 0.6rem;
+          border-top: 1px solid var(--border-color);
         }
         .tl-filter { display: flex; align-items: center; gap: 0.4rem; }
         .tl-filter label { font-size: 0.78rem; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; }
