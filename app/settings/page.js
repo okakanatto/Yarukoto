@@ -285,8 +285,18 @@ export default function Settings() {
         }
     };
 
+    const moveStatus = (index, direction) => {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= data.status.length) return;
+        setData(p => {
+            const arr = [...p.status];
+            [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
+            return { ...p, status: arr };
+        });
+    };
+
     const row = (key, color, label, index, type, opts = {}) => {
-        const { onColor, onLabel, onBlur, onDel, readOnly } = opts;
+        const { onColor, onLabel, onBlur, onDel, readOnly, onMoveUp, onMoveDown } = opts;
         const isOpen = openPalette === key;
         const drag = getDrag(type);
         return (
@@ -299,6 +309,12 @@ export default function Settings() {
             >
                 <div className="s-row">
                     <span className="s-grip" title="ドラッグして並べ替え">⠿</span>
+                    {(onMoveUp || onMoveDown) && (
+                        <div className="s-move-btns">
+                            <button className="s-move-btn" onClick={onMoveUp} disabled={!onMoveUp} type="button" title="上に移動">▲</button>
+                            <button className="s-move-btn" onClick={onMoveDown} disabled={!onMoveDown} type="button" title="下に移動">▼</button>
+                        </div>
+                    )}
                     <button className="s-swatch" style={{ backgroundColor: color }} onClick={() => tp(key)} type="button" title="色を変更" />
                     <div className="s-bar" style={{ backgroundColor: color }} />
                     {readOnly
@@ -405,7 +421,7 @@ export default function Settings() {
                                 <div className="s-head-row">
                                     <h3 className="s-heading">ステータスの設定</h3>
                                     <button className="s-btn-primary" onClick={() => saveMaster('status')} disabled={saving}>
-                                        {saving ? '保存中...' : '保存'}
+                                        {saving ? '保存中...' : '並び順を保存'}
                                     </button>
                                 </div>
                                 <div className="s-add-row">
@@ -422,9 +438,11 @@ export default function Settings() {
                                             onLabel: isSystem ? undefined : v => upd('status', s.code, 'code', 'label', v),
                                             onDel: isSystem ? undefined : () => delStatus(s.code),
                                             readOnly: isSystem,
+                                            onMoveUp: i > 0 ? () => moveStatus(i, -1) : undefined,
+                                            onMoveDown: i < data.status.length - 1 ? () => moveStatus(i, 1) : undefined,
                                         });
                                     })}
-                                    <p className="s-hint">※ {data.status.filter(s => s.code <= 5).map(s => s.label).join('・')} はシステム必須のため名前・削除の変更はできません</p>
+                                    <p className="s-hint">※ {data.status.filter(s => s.code <= 5).map(s => s.label).join('・')} はシステム必須のため名前・削除の変更はできません（並び順は変更可能）</p>
                                 </div>
                             </>
                         )}
@@ -644,6 +662,25 @@ export default function Settings() {
           transition:color .15s;
         }
         .s-row:hover .s-grip { color:var(--color-text-muted); }
+
+        /* ---- Move up/down buttons ---- */
+        .s-move-btns {
+          display:flex; flex-direction:column; gap:1px; flex-shrink:0;
+        }
+        .s-move-btn {
+          background:transparent; border:1px solid transparent;
+          color:var(--color-text-disabled); cursor:pointer;
+          width:22px; height:14px; border-radius:3px;
+          display:flex; align-items:center; justify-content:center;
+          font-size:.55rem; line-height:1; padding:0;
+          transition:all .15s; font-family:inherit;
+        }
+        .s-move-btn:hover:not(:disabled) {
+          background:var(--color-surface-hover); border-color:var(--border-color);
+          color:var(--color-primary);
+        }
+        .s-move-btn:active:not(:disabled) { transform:scale(.9) }
+        .s-move-btn:disabled { opacity:.2; cursor:default }
 
         .s-swatch {
           width:34px; height:34px; min-width:34px;
