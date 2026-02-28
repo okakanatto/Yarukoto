@@ -15,7 +15,12 @@
       "Bash(cmd.exe /c \"dir \"\"C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\TaskManager\\\\task-manager\\\\app\\\\input\"\"\")",
       "Bash(powershell.exe -Command \"Remove-Item -Recurse -Force ''C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\TaskManager\\\\task-manager\\\\app\\\\input''\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(ls \"C:/Users/okdtk/OneDrive/ドキュメント/10_Projects/Yarukoto/\"*.md)",
+      "Bash(ls \"C:/Users/okdtk/OneDrive/ドキュメント/10_Projects/Yarukoto/\"*walk* \"C:/Users/okdtk/OneDrive/ドキュメント/10_Projects/Yarukoto/\"*work* \"C:/Users/okdtk/OneDrive/ドキュメント/10_Projects/Yarukoto/\"*through*)",
+      "Bash(ls \"C:/Users/okdtk/OneDrive/ドキュメント/10_Projects/Yarukoto/\"*hand* \"C:/Users/okdtk/OneDrive/ドキュメント/10_Projects/Yarukoto/\"*guide*)",
+      "Bash(ls \"C:\\\\Users\\\\okdtk\\\\OneDrive\\\\ドキュメント\\\\10_Projects\\\\Yarukoto\"/*.md)",
+      "Bash(git status -u)"
     ]
   }
 }

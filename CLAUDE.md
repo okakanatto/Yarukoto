@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-**TaskFlow** は個人用タスク管理Webアプリ。Next.js (App Router) + SQLite のローカル完結型。
+**Yarukoto** は個人用タスク管理Webアプリ。Next.js (App Router) + SQLite のローカル完結型。
 Tauri v2 デスクトップアプリとして動作する。
 
 **現在のバージョン**: v1.1.0 リリース済み（2026-02-25）
@@ -15,7 +15,12 @@ Tauri v2 デスクトップアプリとして動作する。
 | `CLAUDE.md` | 本ファイル。技術仕様・アーキテクチャガイド |
 | `ISSUES.md` | バグ・機能改善・機能強化の課題一覧 |
 | `ROADMAP.md` | v1.1〜v2.0の開発ロードマップ（リリース計画・プロンプト単位） |
+| `dev-flow-guide.md` | 開発ワークフローガイド（フェーズ1〜8のプロンプト集） |
+| `WORK-LOG.md` | 作業ログ（枝番単位の実装記録・申し送り） |
+| `qa-report.md` | QAレポート（検証STEP結果の蓄積、バージョンごとにリセット） |
+| `RELEASE_NOTES.md` | リリースノート（バージョンごとに追記） |
 | `AI_CHANGELOG.md` | AIエージェントによる変更履歴 |
+| `archives/` | アーカイブフォルダ（リリース済みバージョンの qa-report・ROADMAP セクションを保存） |
 
 ## 技術スタック
 
@@ -94,7 +99,7 @@ src-tauri/
 
 ### テーブル
 
-- **tasks**: id, title, parent_id (自己参照FK, CASCADE削除), status_code, importance_level, urgency_level, start_date, due_date, estimated_hours (実際は分単位で保存), today_date, notes, created_at, updated_at, completed_at
+- **tasks**: id, title, parent_id (自己参照FK, CASCADE定義あり。ただしアプリ側で削除前に子の parent_id を NULL 化して独立させるため、実質 CASCADE は発動しない), status_code, importance_level, urgency_level, start_date, due_date, estimated_hours (実際は分単位で保存), today_date, notes, created_at, updated_at, completed_at
 - **importance_master**: level (PK), label, color
 - **urgency_master**: level (PK), label, color
 - **status_master**: code (PK), label, color, sort_order
@@ -111,11 +116,12 @@ src-tauri/
 | key | value | 説明 |
 |-----|-------|------|
 | `inherit_parent_tags` | `'0'` | DnDで子タスク化した際、親のタグを自動付与するか |
+| `show_overdue_in_today` | `'0'` | 期限切れの未完了タスクを「今日やるタスク」に表示するか |
 
 ### 注意点
 
 - `estimated_hours` カラム名だが、実際の値は **分** 単位で保存されている（マイグレーションで時間→分に変換済み）
-- status_code 1〜3 はシステム必須ステータス（削除・名前変更不可）
+- status_code 1（未着手）・2（着手中）・3（完了）はシステム必須ステータス（削除・名前変更不可）。code=4（保留）・code=5（キャンセル）もシード済み
 - `today_date` フィールドで「今日やるタスク」をマーク（YYYY-MM-DD文字列）
 - マイグレーションは `lib/db.js` の `initDb()` 内で起動時に自動実行
 - `app_settings` は `INSERT OR IGNORE` でシード済みのため、手動 INSERT 不要
@@ -144,7 +150,7 @@ src-tauri/
 - **タグ継承 (DnD)**: DnDでネストが成立した際、`app_settings.inherit_parent_tags = '1'` なら親のタグを `INSERT OR IGNORE INTO task_tags` で子に付与（`TaskList.js` の `handleDragEnd` 内）
 - **親タスク選択ドロップダウン** (`TaskInput.js`): フォーム展開時、未完了のルートタスク一覧を取得して `<select>` で表示。`predefinedParentId` が渡されている場合（インライン子タスク作成）は非表示。
 - **app_settings**: 設定ページの「オプション」タブで管理。`toggleSetting(key)` で楽観的更新 + DB保存（エラー時ロールバック）。
-- **FABボタン**: layout.js に固定配置（右下）、クリックでTaskInputモーダルが開く。タスク追加後は `taskflow:taskAdded` カスタムイベントを dispatch してページに通知
+- **FABボタン**: layout.js に固定配置（右下）、クリックでTaskInputモーダルが開く。タスク追加後は `yarukoto:taskAdded` カスタムイベントを dispatch してページに通知
 - **レイアウト**: サイドバーナビ固定 (5項目: 今日/ルーティン/タスク一覧/ダッシュボード/設定) + メインコンテンツ領域
 
 ## 開発時の注意

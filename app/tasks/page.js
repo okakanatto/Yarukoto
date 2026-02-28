@@ -10,8 +10,8 @@ export default function TasksPage() {
   // Refresh task list when a task is added from the global FAB
   useEffect(() => {
     const handleTaskAdded = () => setRefreshKey(k => k + 1);
-    window.addEventListener('taskflow:taskAdded', handleTaskAdded);
-    return () => window.removeEventListener('taskflow:taskAdded', handleTaskAdded);
+    window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
+    return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
   }, []);
 
   return (

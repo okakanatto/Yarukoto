@@ -7,6 +7,7 @@ import TaskInput from './TaskInput';
 import TaskEditModal from './TaskEditModal';
 import StatusCheckbox from './StatusCheckbox';
 import { useMasterData } from '../hooks/useMasterData';
+import MultiSelectFilter from './MultiSelectFilter';
 
 const SORT_OPTIONS = [
     { key: 'created_desc', label: '作成日（新しい順）' },
@@ -23,7 +24,7 @@ const SORT_OPTIONS = [
 export default function TaskList() {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [excludeDone, setExcludeDone] = useState(false);
+    const [filterStatuses, setFilterStatuses] = useState([]);
     const [filterTags, setFilterTags] = useState([]);
     const [filterImportance, setFilterImportance] = useState([]);
     const [filterUrgency, setFilterUrgency] = useState([]);
@@ -38,15 +39,10 @@ export default function TaskList() {
     const allImportance = useMemo(() => masters.importance || [], [masters.importance]);
     const allUrgency = useMemo(() => masters.urgency || [], [masters.urgency]);
 
-    const toggleFilterTag = (tagId) => {
-        setFilterTags(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
-    };
-    const toggleFilterImportance = (level) => {
-        setFilterImportance(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
-    };
-    const toggleFilterUrgency = (level) => {
-        setFilterUrgency(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
-    };
+    const statusOptions = useMemo(() => allStatuses.map(s => ({ value: s.code, label: s.label, color: s.color })), [allStatuses]);
+    const tagOptions = useMemo(() => allTags.map(t => ({ value: t.id, label: t.name, color: t.color })), [allTags]);
+    const importanceOptions = useMemo(() => allImportance.map(i => ({ value: i.level, label: i.label, color: i.color })), [allImportance]);
+    const urgencyOptions = useMemo(() => allUrgency.map(u => ({ value: u.level, label: u.label, color: u.color })), [allUrgency]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -84,8 +80,10 @@ export default function TaskList() {
             const params = [];
             let paramIndex = 1;
 
-            if (excludeDone) {
-                conditions.push(`t.status_code NOT IN (3, 5)`);
+            if (filterStatuses.length > 0) {
+                const placeholders = filterStatuses.map(() => `$${paramIndex++}`).join(',');
+                conditions.push(`t.status_code IN (${placeholders})`);
+                params.push(...filterStatuses);
             }
 
             if (filterTags.length > 0) {
@@ -133,7 +131,7 @@ export default function TaskList() {
                 setLoading(false);
             }
         }
-    }, [excludeDone, filterTags, filterImportance, filterUrgency]);
+    }, [filterStatuses, filterTags, filterImportance, filterUrgency]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
 
@@ -326,64 +324,16 @@ export default function TaskList() {
             <div className="tl-root">
                 {/* Toolbar */}
                 <div className="tl-toolbar">
-                    <div className="tl-toolbar-main">
-                        <label className="filter-toggle">
-                            <input type="checkbox" checked={excludeDone} onChange={e => setExcludeDone(e.target.checked)} />
-                            <span className="filter-toggle-switch" />
-                            <span className="filter-toggle-text">完了・キャンセルを除く</span>
-                        </label>
-                        <div className="tl-filter" style={{ marginLeft: 'auto' }}>
-                            <label>並び順</label>
-                            <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
-                                {SORT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-                            </select>
-                        </div>
+                    <MultiSelectFilter label="ステータス" options={statusOptions} selected={filterStatuses} onChange={setFilterStatuses} />
+                    {tagOptions.length > 0 && <MultiSelectFilter label="タグ" options={tagOptions} selected={filterTags} onChange={setFilterTags} />}
+                    <MultiSelectFilter label="重要度" options={importanceOptions} selected={filterImportance} onChange={setFilterImportance} />
+                    <MultiSelectFilter label="緊急度" options={urgencyOptions} selected={filterUrgency} onChange={setFilterUrgency} />
+                    <div className="tl-filter" style={{ marginLeft: 'auto' }}>
+                        <label>並び順</label>
+                        <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
+                            {SORT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                        </select>
                     </div>
-                    {(allTags.length > 0 || allImportance.length > 0 || allUrgency.length > 0) && (
-                        <div className="tl-chip-section">
-                            {allTags.length > 0 && (
-                                <div className="filter-chip-row">
-                                    <span className="filter-chip-label">タグ</span>
-                                    {allTags.map(t => (
-                                        <button key={t.id}
-                                            className={`filter-chip ${filterTags.includes(t.id) ? 'active' : ''}`}
-                                            style={filterTags.includes(t.id) ? { backgroundColor: t.color, borderColor: t.color } : {}}
-                                            onClick={() => toggleFilterTag(t.id)}>
-                                            {t.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {allImportance.length > 0 && (
-                                <div className="filter-chip-row">
-                                    <span className="filter-chip-label">重要度</span>
-                                    {allImportance.map(i => (
-                                        <button key={i.level}
-                                            className={`filter-chip ${filterImportance.includes(i.level) ? 'active' : ''}`}
-                                            style={filterImportance.includes(i.level) ? { backgroundColor: i.color, borderColor: i.color } : {}}
-                                            onClick={() => toggleFilterImportance(i.level)}>
-                                            <span className="filter-chip-dot" style={{ backgroundColor: filterImportance.includes(i.level) ? 'rgba(255,255,255,0.8)' : i.color }} />
-                                            {i.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {allUrgency.length > 0 && (
-                                <div className="filter-chip-row">
-                                    <span className="filter-chip-label">緊急度</span>
-                                    {allUrgency.map(u => (
-                                        <button key={u.level}
-                                            className={`filter-chip ${filterUrgency.includes(u.level) ? 'active' : ''}`}
-                                            style={filterUrgency.includes(u.level) ? { backgroundColor: u.color, borderColor: u.color } : {}}
-                                            onClick={() => toggleFilterUrgency(u.level)}>
-                                            <span className="filter-chip-dot" style={{ backgroundColor: filterUrgency.includes(u.level) ? 'rgba(255,255,255,0.8)' : u.color }} />
-                                            {u.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 {/* Task list - Droppable 'root' area */}
@@ -444,14 +394,6 @@ export default function TaskList() {
               border-radius:var(--radius-md); box-shadow:var(--shadow-sm);
             }
             .tl-filter { display:flex; align-items:center; gap:.4rem; }
-            .tl-toolbar-main {
-              display:flex; align-items:center; gap:.85rem; flex-wrap:wrap;
-            }
-            .tl-chip-section {
-              display:flex; flex-direction:column; gap:.4rem;
-              margin-top:.6rem; padding-top:.6rem;
-              border-top:1px solid var(--border-color);
-            }
             .tl-filter label { font-size:.78rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
             .tl-spin { display:inline-block; animation:spin .8s linear infinite; }
             .tl-items { display:flex; flex-direction:column; gap:.6rem; }

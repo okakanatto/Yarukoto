@@ -34,8 +34,8 @@ export default function RootLayout({ children }) {
     useEffect(() => {
         if (!mounted) return;
         const hd = (e) => setDbError(e.detail || new Error('Database initialization failed'));
-        window.addEventListener('taskflow:dberror', hd);
-        return () => window.removeEventListener('taskflow:dberror', hd);
+        window.addEventListener('yarukoto:dberror', hd);
+        return () => window.removeEventListener('yarukoto:dberror', hd);
     }, [mounted]);
 
     if (dbError) throw dbError; // Throws during render so Next.js error.js catches it
@@ -49,8 +49,8 @@ export default function RootLayout({ children }) {
                 setTimeout(() => setToast(null), 3000);
             }
         };
-        window.addEventListener('taskflow:toast', handleToast);
-        return () => window.removeEventListener('taskflow:toast', handleToast);
+        window.addEventListener('yarukoto:toast', handleToast);
+        return () => window.removeEventListener('yarukoto:toast', handleToast);
     }, [mounted]);
 
     // Close FAB modal on Escape key
@@ -215,7 +215,7 @@ export default function RootLayout({ children }) {
                                         onTaskAdded={() => {
                                             setFabOpen(false);
                                             // Dispatch custom event so pages can refresh their list
-                                            window.dispatchEvent(new CustomEvent('taskflow:taskAdded'));
+                                            window.dispatchEvent(new CustomEvent('yarukoto:taskAdded'));
                                         }}
                                     />
                                 </div>

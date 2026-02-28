@@ -313,3 +313,45 @@
 - **問題箇所**: `components/TaskList.js:125`
 - **内容**: フィルタの複数選択チップ連打により、複数回の SQLite select クエリが非同期に発行される。レスポンス順序が保証されないため、最新のフィルタ状態と異なる古いデータで画面が上書きされる可能性がある。
 - **推奨**: `today/page.js` と同様に `activeRequestId` (useRef) を導入し、現在のリクエストIDと一致する場合のみ `setTasks(parsedTasks)` を実行するように変更する。
+
+---
+
+## STEP R：リグレッションテスト（v1.2.0 枝番2-3 2026-02-28）
+
+**検証日**: 2026-02-28
+**検証方法**: 静的分析（ソースコードリーディング）
+**対象**: WORK-LOG.md の変更サマリー（枝番2-3 STEP B 指摘全件修正）に基づくリグレッションテスト
+
+### 影響範囲の洗い出し
+
+変更サマリーの「影響が想定される箇所」を起点に、コード上の参照元を追跡した結果：
+
+| # | 変更ファイル | 変更内容 | 影響が想定されるファイル・関数 | 確認対象の理由 |
+|---|---|---|---|---|
+| 1 | `TaskList.js` | useRefの導入とfetchTasks関数におけるactiveRequestIdガードの追加 | `tasks/page.js`（TaskList使用）、`TaskEditModal.js`からの再読み込み呼び出し | TaskList.js を利用する画面やコンポーネントにおけるデータ取得の正常性確認 |
+| 2 | `TaskList.js` | 未使用CSS `.tl-btn-icon` の削除 | リスト内の他要素のレイアウトへの副作用 | グローバルCSSの一部削除による予期せぬレイアウト崩れの確認 |
+| 3 | `today/page.js` | クラス名 `.tl-filter` → `.today-filter` への変更 | JSXおよび `<style jsx>` スコープ内でのCSS適用 | todays画面のフィルタ部分のレイアウト崩れ確認 |
+
+### 第1段階：変更箇所の直接テスト
+
+| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|---|
+| 1 | 直接 | Race Condition 対策（TaskList.js） | `fetchTasks` 実行完了時に `activeRequestId` と一致するか判定する | 最新のリクエストに対応するレスポンスのみが `setTasks` / `setLoading` をトリガーする | `TaskList.js:127-135` — `currentReq === activeRequestId.current` のガードが正常に機能する。`today/page.js` と同一パターン。 | OK |
+| 2 | 直接 | クラス名統一（today/page.js） | `today-filter` クラスの適用箇所の確認 | フィルタコンテナのスタイル（display:flex等）とlabelのスタイルが正常に適用される | `today/page.js:411`（JSX）と `653-654`（CSS定義）において `.today-filter` が一貫して使用されておりスコープが一致。 | OK |
+| 3 | 直接 | デッドコード削除（TaskList.js） | `<style jsx global>` 内の不要CSS削除 | 既存UIに影響を与えずに `.tl-btn-icon` の定義が存在しないこと | 残存していた7行のデッドコードが削除されており、他に依存するJSX要素は既に存在しないため副作用なし。 | OK |
+
+### 第2段階：影響範囲のテスト
+
+| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|---|
+| 4 | 影響範囲 | タスク一覧の初期表示（TaskList.js） | `tasks/page.js` からのTaskList描画 | `activeRequestId` の初期化と初回 `fetchTasks` が正常に完了しタスクが表示される | useRef は `fetchTasks` 実行毎にインクリメントされ、初回も正しく一致して `setTasks` が行われる。 | OK |
+| 5 | 影響範囲 | タスク一覧からの編集再起フェッチ | タスク編集後にコールバックで `fetchTasks` が走る | 正常に最新データで一覧が更新される | `refreshKey` のインクリメントによってフックが呼ばれる際も、新しいリクエストIDで非同期処理が完結する。 | OK |
+| 6 | 影響範囲 | today画面の別コンポーネント | today画面でのタスク表示・編集操作 | `.today-filter` への変更がフィルタ以外のレイアウト（タスクリスト等）に影響を与えない | styled-jsx 内のスコープ付き変更であり、他セレクタ（.today-list 等）への干渉はない。 | OK |
+| 7 | 影響範囲 | 他画面でのTaskList使用（tasks/page.js） | tasks ページでの一覧表示 | プロパティやコンポーネントIFに変更がないため正常表示される | `tasks/page.js` からの呼び出し(`TaskList`)にIFの変更はなく影響なし。 | OK |
+
+### 結果サマリー
+
+- **直接テスト**: 3件 / 全件 OK
+- **影響範囲テスト**: 4件 / 全件 OK
+- **合計**: 7件 / 全件 OK / NG: 0件
+
