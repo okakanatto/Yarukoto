@@ -1,43 +1,37 @@
 # Work Log
 
-## 最新の作業（2026-02-28 --:--）
+## 最新の作業（2026-02-28 23:30）
 
-- **フェーズ**: バグ修正
-- **対象バージョン**: v1.2.0（リリース前修正）
-- **対象枝番**: なし（軽微な不具合修正）
+- **フェーズ**: v1.3.0 実装
+- **対象バージョン**: v1.3.0
+- **対象枝番**: 3-1
 - **ステータス**: ✅ 完了
 - **やったこと**:
-  - ESLint設定で `src-tauri/**` をグローバル除外に追加（Rust自動生成ファイルのパースエラー解消）
-  - `app/today/page.js` の `loadTasks` を `useCallback` でラップし、useEffect の依存配列を修正（React Hook 警告解消）
+  - BUG-3: ステータスの並び順変更機能を実装
+    - 設定画面のステータスタブに上下ボタン（▲▼）を追加
+    - 既存DnDとの2方式で全ステータスの並び替えが可能に
+    - 保存ボタンテキストを「並び順を保存」に統一
+    - ヒントテキストに「並び順は変更可能」の旨を追記
 - **変更したファイル**:
-  - `eslint.config.mjs` — globalIgnores に `src-tauri/**` を追加
-  - `app/today/page.js` — `useCallback` インポート追加、`loadTasks` を `useCallback` でラップ、useEffect 依存配列を `[selectedDate, loadTasks]` に修正
+  - `app/settings/page.js`
 - **次にやるべきこと**:
-  - v1.2.0 リリース手順の実施（リリース前通し検証、変更履歴更新、リリースビルド等）
+  - ROADMAPで指定された検証STEPの実行（STEP A + STEP B + STEP R）
 - **注意事項・申し送り**:
-  - 【変更サマリー】
-  - ■ 変更した機能：
-    - ESLint が src-tauri ディレクトリ内のファイルを lint 対象にしなくなった
-    - `app/today/page.js` の React Hook 依存配列警告が解消された
-  - ■ 変更したファイル：
-    - `eslint.config.mjs` — globalIgnores に `src-tauri/**` パターンを追加
-    - `app/today/page.js` — `useCallback` を import に追加、`loadTasks` 関数を `useCallback` で囲み依存配列 `[filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, showOverdue, statuses]` を指定、useEffect の依存配列を `[selectedDate, loadTasks]` に簡素化
-  - ■ 変更の概要：
-    - ESLint: `src-tauri` は Tauri (Rust) のビルド成果物・自動生成ファイルを含むため、JavaScript の lint 対象から除外するのが正しい。これにより `npm run lint` および `next build` 内部の lint 実行でパースエラーが発生しなくなる。
-    - React Hook: `loadTasks` は useEffect 内で呼ばれているが依存配列に含まれていなかった。`useCallback` でメモ化し useEffect の依存に追加することで、`react-hooks/exhaustive-deps` ルールに準拠。動作への影響なし（元々 useEffect の依存配列に `loadTasks` が使う state 変数が列挙されていたため、再実行タイミングは同一）。
-  - ■ 影響が想定される箇所：
-    - `app/today/page.js` 内の `handleStatusChange`、`handleRemove`、`TaskEditModal.onSaved` から `loadTasks` を呼び出している箇所 → `useCallback` 化しても関数シグネチャは同一のため影響なし
+  - **変更した機能**: 設定画面「ステータス」タブのステータス並び順変更機能（上下ボタン＋DnD）、保存ボタンテキスト「並び順を保存」に統一、ヒントテキストに「並び順は変更可能」追記
+  - **変更したファイル**: `app/settings/page.js` — moveStatus関数追加、row()関数に上下ボタン（▲▼）追加、保存ボタンテキスト変更、ヒントテキスト更新、上下ボタン用CSS追加
+  - **変更の概要**: BUG-3（ステータスの並び順変更ができない）を解決。設定画面のステータスタブに上下ボタン（▲▼）を追加し、既存のDnDと合わせて2つの手段でステータスの並び順を自由に変更できるようにした。システム必須ステータス（未着手・着手中・完了・保留・キャンセル）も含め、全ステータスの並び替えが可能。moveStatus関数で配列内の要素を隣接アイテムとスワップし、「並び順を保存」ボタンでDBのsort_orderを更新する。先頭の項目は▲無効化、末尾の項目は▼無効化。
+  - **影響が想定される箇所**: `app/today/page.js`（sort_orderでソート）、`hooks/useMasterData.js`（同）、`components/TaskList.js`（JOINのみ）、`components/TaskInput.js`（同）、`app/dashboard/page.js`（ステータス分布表示にsort_order順が反映）
 
 ---
 
 ## 過去の作業（直近2件まで保持。3件目以降は削除すること）
 
-### 2026-02-28 --:-- — v1.2.0 枝番2-4 IMP-7 タグのアーカイブ（非表示化）
+### 2026-02-28 22:42 — v1.2.0 リリース後片付け作業
 - ステータス: ✅ 完了
-- やったこと: tags テーブルに `archived` カラム追加マイグレーション、設定画面にアーカイブ/解除UI追加、TagSelectからアーカイブ済み除外、フィルタからアーカイブ済み除外
-- 変更したファイル: `lib/db.js`, `app/settings/page.js`, `components/TagSelect.js`, `components/TaskList.js`, `app/today/page.js`
+- やったこと: `archives/` フォルダ作成、`qa-report.md` のアーカイブ移動、`ROADMAP.md` から v1.2.0 セクション切り出し、`ISSUES.md` から完了済み課題の仕様詳細削除
+- 変更したファイル: `qa-report.md` → `archives/qa-report-v1.2.0.md`, `archives/roadmap-v1.2.0.md`, `ROADMAP.md`, `ISSUES.md`, `WORK-LOG.md`
 
-### 2026-02-28 --:-- — v1.2.0 枝番2-3 IMP-3 フィルタ複数選択（Excelライクドロップダウン）
+### 2026-02-28 22:31 — v1.2.0 ビルドおよびリリースノート生成
 - ステータス: ✅ 完了
-- やったこと: フィルタUIをExcelライクなマルチセレクトドロップダウンに全面変更、MultiSelectFilter 新規作成、4フィルタ統一UI実装
-- 変更したファイル: `components/MultiSelectFilter.js`（新規）, `components/TaskList.js`, `app/today/page.js`, `app/globals.css`
+- やったこと: v1.2.0 のビルド、リリースノート生成、バージョン番号更新と関連ドキュメントの更新
+- 変更したファイル: `package.json`, `src-tauri/tauri.conf.json`, `RELEASE_NOTES.md`, `AI_CHANGELOG.md`, `CLAUDE.md`, `WORK-LOG.md`
