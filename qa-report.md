@@ -160,3 +160,73 @@
 **#11 — 親タスク候補フィルタの不統一** ✅ 修正済み
 - `TaskEditModal.js:43-44` のクエリに `AND status_code != 3` を追加して TaskInput と統一
 - 既に完了した親を持つタスクの編集時は、現在の親タスクが候補に含まれるよう `OR id = $2` 条件を追加
+
+---
+
+## STEP R：リグレッションテスト（v1.2.0 枝番2-2 2026-02-28）
+
+**検証日**: 2026-02-28
+**検証方法**: 静的分析（ソースコードリーディング）
+**対象**: WORK-LOG.md の変更サマリー（STEP B 品質レビュー指摘全件修正）に基づくリグレッションテスト
+
+### 影響範囲の洗い出し
+
+変更サマリーの「影響が想定される箇所」を起点に、コード上の参照元を追跡した結果：
+
+| # | 変更ファイル | 変更内容 | 影響が想定されるファイル・関数 | 確認対象の理由 |
+|---|---|---|---|---|
+| 1 | `TaskList.js` handleStatusChange catch | エラートースト追加 | `StatusCheckbox onChange`（TaskList.js:584-586）、`tc-status-select onChange`（TaskList.js:622）、`layout.js:46-53` トーストリスナー | handleStatusChange の呼び出し元すべてに影響 |
+| 2 | `today/page.js` handleStatusChange catch×2 | エラートースト追加 | `StatusCheckbox onChange`（today/page.js:470-471）、`today-status select onChange`（today/page.js:503）、`layout.js:46-53` トーストリスナー | 同上 |
+| 3 | `TaskEditModal.js` 文言・CSS・クエリ変更 | 親選択肢文言、CSS統一、max属性、親候補フィルタ、useEffect依存配列 | `TaskList.js:370`（タスク一覧から編集モーダル表示）、`today/page.js:694-702`（今日やるから編集モーダル表示） | TaskEditModal を使用する全画面 |
+| 4 | `TaskInput.js` プレースホルダ・rows変更 | placeholder="未設定"、rows="3" | `tasks/page.js:20`（タスク一覧ページ）、`TaskList.js:638`（子タスクインライン追加）、`layout.js:214-219`（FABモーダル） | TaskInput を使用する全画面 |
+| 5 | — | — | `dashboard/page.js` | DB値に直接依存。今回の変更はUI/エラーハンドリングのみのため影響なし |
+| 6 | — | — | `components/StatusCheckbox.js` | IMP-12 の実装ファイル。今回の変更で StatusCheckbox 自体は未変更 |
+
+### 第1段階：変更箇所の直接テスト
+
+| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|---|
+| 1 | 直接 | エラートースト（TaskList.js） | タスク一覧でステータス変更がDB書き込みエラーになった場合 | エラートースト「ステータスの変更に失敗しました」が表示され、楽観的更新がロールバックされる | `TaskList.js:130` — トースト dispatch 後に `fetchTasks()` でロールバック。`handleDelete`（行147）と同じパターン。layout.js:46-53 のリスナーが受信し3秒後に自動消去 | OK |
+| 2 | 直接 | エラートースト（today/page.js ルーティン） | 今日やる画面でルーティンの完了トグルがDBエラーになった場合 | エラートースト表示 + loadTasks で再読込 | `today/page.js:299` — トースト dispatch + `loadTasks(selectedDate)` でロールバック。パターン統一 | OK |
+| 3 | 直接 | エラートースト（today/page.js 通常タスク） | 今日やる画面で通常タスクのステータス変更がDBエラーになった場合 | エラートースト表示 + loadTasks で再読込 | `today/page.js:314` — 同上パターン | OK |
+| 4 | 直接 | 親タスク選択肢文言（TaskEditModal） | タスク編集モーダルの親タスクデフォルト選択肢を確認 | 「なし（ルートタスク）」と表示（TaskInput と統一） | `TaskEditModal.js:202` — `'なし（ルートタスク）'`。`TaskInput.js:230` と一致 | OK |
+| 5 | 直接 | 想定工数プレースホルダ（TaskInput） | タスク追加フォームの想定工数フィールド | placeholder="未設定"（TaskEditModal と統一） | `TaskInput.js:253` — `placeholder="未設定"`。`TaskEditModal.js:222` と一致 | OK |
+| 6 | 直接 | CSS統一（TaskEditModal ラベル色） | 編集モーダルのラベルスタイル確認 | `var(--color-text-muted)` + uppercase + letter-spacing 0.04em | `TaskEditModal.js:292` — `color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em;`。TaskInput.js:364-366 と一致 | OK |
+| 7 | 直接 | CSS統一（TaskEditModal 入力背景色） | 編集モーダルのinput/select/textarea背景色 | `var(--color-surface-hover)` | `TaskEditModal.js:301` — `background: var(--color-surface-hover);`。TaskInput.js:368 と一致 | OK |
+| 8 | 直接 | CSS統一（TaskEditModal padding・font-size） | 編集モーダルのinput padding と font-size | padding: 0.55rem 0.65rem、font-size: 0.875rem | `TaskEditModal.js:300,302` — 値一致。TaskInput.js:369-370 と同一 | OK |
+| 9 | 直接 | CSS統一（TaskEditModal タイトルfont-size） | 編集モーダルのタイトル入力 font-size | 1.05rem | `TaskEditModal.js:296` — `font-size: 1.05rem;`。TaskInput.js:327 と一致 | OK |
+| 10 | 直接 | CSS統一（TaskEditModal border-radius） | 編集モーダルのボタン border-radius | `var(--radius-sm)` | `TaskEditModal.js:318,323` — `border-radius: var(--radius-sm);`。TaskInput.js:388 と一致。CSS変数は globals.css で定義済み（TaskInput で使用実績あり） | OK |
+| 11 | 直接 | CSS統一（TaskEditModal フォーカス効果） | 編集モーダルの入力フィールドフォーカス時 | box-shadow + 背景色変更 | `TaskEditModal.js:305-309` — `box-shadow: 0 0 0 3px var(--color-primary-glow); background: var(--color-surface);`。TaskInput.js:374-376 と一致 | OK |
+| 12 | 直接 | max属性（TaskEditModal 想定工数） | 編集モーダルの想定工数input | max="99999" が設定されている | `TaskEditModal.js:218` — `max="99999"`。TaskInput.js:249 と一致 | OK |
+| 13 | 直接 | textarea rows（TaskInput 備考） | タスク追加フォームの備考 textarea | rows="3" | `TaskInput.js:206` — `rows="3"`。TaskEditModal.js:174 と一致 | OK |
+| 14 | 直接 | 親候補フィルタ（TaskEditModal） | 編集モーダルの親タスク候補クエリ | 完了タスク(status_code=3)が候補から除外される | `TaskEditModal.js:44-47` — `AND status_code != 3 AND status_code != 5`。TaskInput.js:37 と統一 | OK |
+| 15 | 直接 | 親候補フィルタ（現在の親が完了の場合） | 完了済み親タスクを持つタスクの編集 | 現在の親は OR 条件で候補に含まれる | `TaskEditModal.js:44-45` — `task.parent_id` truthy 時 `OR id = $2` で現在の親を保持。params: `[task.id, task.parent_id]` | OK |
+| 16 | 直接 | useEffect依存配列（TaskEditModal） | 親候補取得の useEffect 依存配列 | `[task.id, task.parent_id]` | `TaskEditModal.js:53` — `[task.id, task.parent_id]`。task.parent_id の有無でクエリ分岐するため正しい依存 | OK |
+
+### 第2段階：影響範囲のテスト
+
+| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|---|
+| 17 | 影響範囲 | StatusCheckbox → handleStatusChange（タスク一覧） | タスク一覧で StatusCheckbox をクリックしてステータス変更 | onChange コールバック経由で handleStatusChange が正常に呼ばれ、楽観的更新 + DB更新が実行される | `TaskList.js:584-586` — `onChange={(newCode) => onStatusChange(task.id, newCode)}`。関数シグネチャ・呼び出しパターン変更なし。catch にトースト追加のみで正常パスに影響なし | OK |
+| 18 | 影響範囲 | ステータスselect → handleStatusChange（タスク一覧） | タスク一覧のステータスドロップダウンで変更 | select onChange 経由で handleStatusChange が正常動作 | `TaskList.js:622` — `onChange={e => onStatusChange(task.id, e.target.value)}`。正常パスに変更なし | OK |
+| 19 | 影響範囲 | StatusCheckbox → handleStatusChange（今日やる） | 今日やる画面で StatusCheckbox をクリック | handleStatusChange(taskId, newCode, isRoutine) が正常動作 | `today/page.js:470-471` — `onChange={(newCode) => handleStatusChange(task.id, newCode, isRoutine)}`。正常パスに変更なし | OK |
+| 20 | 影響範囲 | ステータスselect → handleStatusChange（今日やる） | 今日やる画面のステータスドロップダウンで変更 | handleStatusChange(taskId, value, false) が正常動作 | `today/page.js:503` — `onChange={e => handleStatusChange(task.id, e.target.value, false)}`。正常パスに変更なし | OK |
+| 21 | 影響範囲 | タスク一覧からの編集モーダル表示 | タスク一覧でタスクカードをクリック→編集モーダル | TaskEditModal に task オブジェクト（id, parent_id 含む全カラム）が渡され、正常にレンダリング | `TaskList.js:370` — `editingTask`（fetchTasks で取得した task オブジェクト）を渡す。task.parent_id は DB の `parent_id` カラム（null or integer）。useEffect 依存配列変更の影響なし | OK |
+| 22 | 影響範囲 | 今日やるからの編集モーダル表示 | 今日やる画面でタスク名クリック→編集モーダル | TaskEditModal が正常にレンダリング。ルーティンは編集対象外 | `today/page.js:481-483` — `if (!isRoutine) setEditingTask(task)`。タスクオブジェクトは `t.*` SELECT で parent_id 含む。ルーティンは guard で除外 | OK |
+| 23 | 影響範囲 | タスク一覧ページの TaskInput | タスク一覧ページ上部のタスク追加フォーム | placeholder="未設定"、rows="3" で正常レンダリング。predefinedParentId なしで親候補ドロップダウン表示 | `tasks/page.js:20` — `<TaskInput onTaskAdded={...} />`。cosmetic変更のみで動作への影響なし | OK |
+| 24 | 影響範囲 | 子タスクインライン追加の TaskInput | タスク一覧で「＋」ボタンから子タスク追加 | predefinedParentId が設定されており、親候補ドロップダウンは非表示。placeholder と rows の変更は正常 | `TaskList.js:638` — `<TaskInput onTaskAdded={...} predefinedParentId={task.id} />`。predefinedParentId ガード（TaskInput.js:30）により親候補クエリは実行されず影響なし | OK |
+| 25 | 影響範囲 | FABモーダルの TaskInput | layout.js の FABボタンから新規タスク追加 | FABモーダル内で TaskInput が正常レンダリング。`.fab-modal .task-input-wrapper` CSS オーバーライド（layout.js:341-354）が引き続き適用 | `layout.js:214-219` — `<TaskInput onTaskAdded={...} />`。TaskInput の外観変更は placeholder と rows のみ。FABモーダルのCSSオーバーライドは border, shadow, padding, background に限定されており、rows・placeholder には干渉しない | OK |
+| 26 | 影響範囲 | トーストリスナー（layout.js） | エラートースト dispatch が正常に受信・表示される | layout.js のグローバルトーストリスナーが `yarukoto:toast` イベントを受信し、3秒後に自動消去 | `layout.js:46-53` — `handleToast` リスナーは `e.detail` から `{message, type}` を取得。`type: 'error'` の場合 `.toast-err` クラス適用（行229）。今回追加されたトーストの payload は既存パターン（`{message: string, type: 'error'}`) と一致 | OK |
+| 27 | 影響範囲 | BUG-4 親タスク削除時の子タスク独立 | 親タスクを削除 | 子タスクの parent_id が NULL 化され独立する（CASCADE は発動しない） | `TaskList.js:140-142` — `UPDATE tasks SET parent_id = NULL WHERE parent_id = $1` + `DELETE FROM tasks WHERE id = $1`。今回の変更は handleStatusChange の catch のみで、handleDelete は未変更 | OK |
+| 28 | 影響範囲 | BUG-6 2階層制限バリデーション | 子タスクを持つタスクに親タスクを設定しようとする | 編集モーダルで select が disabled、handleSave で DB 側バリデーションが拒否 | `TaskEditModal.js:199` — `disabled={hasChildren \|\| parentOptions.length === 0}`。`TaskEditModal.js:70-82` — BUG-6 バリデーション。これらのコード行は今回未変更 | OK |
+| 29 | 影響範囲 | IMP-12 着手中→未着手戻し | 着手中タスクにホバー→↩ボタンクリック | ステータスが未着手(1)に遷移 | `StatusCheckbox.js` は今回未変更。handleStatusChange の正常パス（newStatusCode=1）は変更なし。catch のトースト追加は正常パスに影響しない | OK |
+| 30 | 影響範囲 | ENH-6 完了日即時UI反映 | タスクを完了(3)にする | リロードなしで完了日が即座に表示 | `TaskList.js:114-119` / `today/page.js:275-280` の楽観的更新ロジックは未変更。catch のトースト追加は正常パスに影響しない | OK |
+| 31 | 影響範囲 | DnD（タスクのネスト/アンネスト） | タスクをドラッグ&ドロップで子タスク化/独立化 | DnD 操作が正常に動作し、parent_id の更新とタグ継承が機能する | `TaskList.js:166-249` — handleDragEnd は今回未変更。handleStatusChange への変更とは無関係 | OK |
+| 32 | 影響範囲 | タグ継承（DnD時） | タグ継承設定ONで DnD ネスト | 親タスクのタグが子タスクに INSERT OR IGNORE で付与される | `TaskList.js:221-244` — タグ継承ロジックは今回未変更 | OK |
+| 33 | 影響範囲 | ダッシュボード | ダッシュボード画面を表示 | 完了率リング、7日間チャート、ステータス分布が正常表示 | `dashboard/page.js` は DB から直接 SELECT。今回の変更（UI/エラーハンドリング/CSSのみ）はダッシュボードのデータ取得に影響なし | OK |
+
+### 結果サマリー
+
+- **直接テスト**: 16件 / 全件 OK
+- **影響範囲テスト**: 17件 / 全件 OK
+- **合計**: 33件 / 全件 OK / NG: 0件
