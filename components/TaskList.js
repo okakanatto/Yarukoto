@@ -40,7 +40,7 @@ export default function TaskList() {
     const allUrgency = useMemo(() => masters.urgency || [], [masters.urgency]);
 
     const statusOptions = useMemo(() => allStatuses.map(s => ({ value: s.code, label: s.label, color: s.color })), [allStatuses]);
-    const tagOptions = useMemo(() => allTags.map(t => ({ value: t.id, label: t.name, color: t.color })), [allTags]);
+    const tagOptions = useMemo(() => allTags.filter(t => !t.archived).map(t => ({ value: t.id, label: t.name, color: t.color })), [allTags]);
     const importanceOptions = useMemo(() => allImportance.map(i => ({ value: i.level, label: i.label, color: i.color })), [allImportance]);
     const urgencyOptions = useMemo(() => allUrgency.map(u => ({ value: u.level, label: u.label, color: u.color })), [allUrgency]);
 

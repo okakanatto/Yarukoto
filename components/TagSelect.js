@@ -19,7 +19,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
     }, [open]);
 
     const filtered = allTags.filter(t =>
-        t.name.toLowerCase().includes(query.toLowerCase())
+        !t.archived && t.name.toLowerCase().includes(query.toLowerCase())
     );
 
     const toggle = (tagId) => {
@@ -42,7 +42,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
                 <div className="ts-pills">
                     {selectedTags.length === 0 && <span className="ts-placeholder">タグを選択...</span>}
                     {selectedTags.map(tag => (
-                        <span key={tag.id} className="ts-pill" style={{ backgroundColor: tag.color }}>
+                        <span key={tag.id} className={`ts-pill ${tag.archived ? 'ts-pill-archived' : ''}`} style={{ backgroundColor: tag.color }}>
                             {tag.name}
                             <button type="button" className="ts-pill-x" onClick={(e) => remove(tag.id, e)}>×</button>
                         </span>
@@ -108,6 +108,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           cursor: pointer; font-size: 0.8rem; padding: 0; line-height: 1; transition: color 0.15s;
         }
         .ts-pill-x:hover { color: white; }
+        .ts-pill-archived { opacity: 0.6; }
         .ts-chevron { font-size: 0.55rem; color: var(--color-text-muted); flex-shrink: 0; }
 
         .ts-dropdown {

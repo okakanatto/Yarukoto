@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ColorPalette from '@/components/ColorPalette';
 
 const TABS = [
@@ -95,7 +95,17 @@ export default function Settings() {
         setData(p => ({ ...p, [type]: typeof fn === 'function' ? fn(p[type]) : fn }));
     }, []);
 
-    const dragTags = useDragReorder(data.tags, setList('tags'));
+    // Drag reorder for active tags only (archived tags are excluded from drag)
+    const activeTags = useMemo(() => data.tags.filter(t => !t.archived), [data.tags]);
+    const setActiveTags = useCallback((fn) => {
+        setData(p => {
+            const active = p.tags.filter(t => !t.archived);
+            const archived = p.tags.filter(t => t.archived);
+            const newActive = typeof fn === 'function' ? fn(active) : fn;
+            return { ...p, tags: [...newActive, ...archived] };
+        });
+    }, []);
+    const dragTags = useDragReorder(activeTags, setActiveTags);
     const dragStatus = useDragReorder(data.status, setList('status'));
 
     const getDrag = (type) => {
@@ -129,11 +139,20 @@ export default function Settings() {
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
-            for (let i = 0; i < data.tags.length; i++) {
-                const t = data.tags[i];
+            const active = data.tags.filter(t => !t.archived);
+            const archived = data.tags.filter(t => t.archived);
+            for (let i = 0; i < active.length; i++) {
+                const t = active[i];
                 await db.execute(
                     'UPDATE tags SET name = $1, color = $2, sort_order = $3 WHERE id = $4',
                     [t.name, t.color, i, t.id]
+                );
+            }
+            for (let i = 0; i < archived.length; i++) {
+                const t = archived[i];
+                await db.execute(
+                    'UPDATE tags SET sort_order = $1 WHERE id = $2',
+                    [active.length + i, t.id]
                 );
             }
             flash('ok', '保存しました');
@@ -189,7 +208,11 @@ export default function Settings() {
                 [newTag.name, newTag.color, nextSort]
             );
             const newId = result.lastInsertId;
-            setData(p => ({ ...p, tags: [...p.tags, { id: newId, name: newTag.name, color: newTag.color, sort_order: nextSort }] }));
+            setData(p => {
+                const active = p.tags.filter(t => !t.archived);
+                const archived = p.tags.filter(t => t.archived);
+                return { ...p, tags: [...active, { id: newId, name: newTag.name, color: newTag.color, sort_order: nextSort, archived: 0 }, ...archived] };
+            });
             setNewTag({ name: '', color: '#3b82f6' });
             flash('ok', 'タグを追加しました');
         } catch (e) { console.error(e); flash('err', '追加に失敗しました'); }
@@ -219,6 +242,25 @@ export default function Settings() {
             setData(p => ({ ...p, tags: p.tags.filter(t => t.id !== id) }));
             flash('ok', 'タグを削除しました');
         } catch (e) { console.error(e); flash('err', '削除に失敗しました'); }
+    };
+
+    const toggleArchiveTag = async (id) => {
+        const tag = data.tags.find(t => t.id === id);
+        if (!tag) return;
+        const newArchived = tag.archived ? 0 : 1;
+        // Optimistic update
+        setData(p => ({ ...p, tags: p.tags.map(t => t.id === id ? { ...t, archived: newArchived } : t) }));
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+            await db.execute('UPDATE tags SET archived = $1 WHERE id = $2', [newArchived, id]);
+            flash('ok', newArchived ? 'タグをアーカイブしました' : 'タグのアーカイブを解除しました');
+        } catch (e) {
+            console.error(e);
+            // Revert
+            setData(p => ({ ...p, tags: p.tags.map(t => t.id === id ? { ...t, archived: tag.archived } : t) }));
+            flash('err', 'アーカイブの変更に失敗しました');
+        }
     };
 
     const tp = (key) => setOpenPalette(openPalette === key ? null : key);
@@ -290,7 +332,10 @@ export default function Settings() {
                 ) : (
                     <>
                         {/* ── Tags ── */}
-                        {tab === 'tags' && (
+                        {tab === 'tags' && (() => {
+                            const activeTags = data.tags.filter(t => !t.archived);
+                            const archivedTags = data.tags.filter(t => t.archived);
+                            return (
                             <>
                                 <div className="s-head-row">
                                     <h3 className="s-heading">タグ管理</h3>
@@ -307,16 +352,52 @@ export default function Settings() {
                                 </form>
                                 {openPalette === 'new-tag' && <div className="s-palette s-add-pal"><ColorPalette value={newTag.color} onChange={c => setNewTag({ ...newTag, color: c })} /></div>}
                                 <div className="s-list">
-                                    {data.tags.length === 0 && <p className="s-empty">タグがまだありません</p>}
-                                    {data.tags.map((t, i) => row(`tag-${t.id}`, t.color, t.name, i, 'tags', {
-                                        onColor: c => updTag(t.id, 'color', c),
-                                        onLabel: v => updTag(t.id, 'name', v),
-                                        onBlur: () => commitTag(t.id),
-                                        onDel: () => delTag(t.id),
-                                    }))}
+                                    {activeTags.length === 0 && archivedTags.length === 0 && <p className="s-empty">タグがまだありません</p>}
+                                    {activeTags.length === 0 && archivedTags.length > 0 && <p className="s-empty">有効なタグがありません</p>}
+                                    {activeTags.map((t, i) => (
+                                        <div className="s-item" key={`tag-${t.id}`}
+                                            draggable
+                                            onDragStart={dragTags.onDragStart(i)}
+                                            onDragEnd={dragTags.onDragEnd}
+                                            onDragOver={dragTags.onDragOver(i)}
+                                            onDrop={dragTags.onDrop(i)}
+                                        >
+                                            <div className="s-row">
+                                                <span className="s-grip" title="ドラッグして並べ替え">⠿</span>
+                                                <button className="s-swatch" style={{ backgroundColor: t.color }} onClick={() => tp(`tag-${t.id}`)} type="button" title="色を変更" />
+                                                <div className="s-bar" style={{ backgroundColor: t.color }} />
+                                                <input className="s-input" type="text" value={t.name} onChange={e => updTag(t.id, 'name', e.target.value)} onBlur={() => commitTag(t.id)} />
+                                                <button className="s-archive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="アーカイブ">📦</button>
+                                                <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除">🗑</button>
+                                            </div>
+                                            {openPalette === `tag-${t.id}` && <div className="s-palette"><ColorPalette value={t.color} onChange={c => { updTag(t.id, 'color', c); commitTag(t.id); }} /></div>}
+                                        </div>
+                                    ))}
                                 </div>
+                                {archivedTags.length > 0 && (
+                                    <>
+                                        <div className="s-archived-header">
+                                            <span className="s-archived-label">📦 アーカイブ済み（{archivedTags.length}件）</span>
+                                        </div>
+                                        <div className="s-list s-list-archived">
+                                            {archivedTags.map(t => (
+                                                <div className="s-item s-item-archived" key={`tag-${t.id}`}>
+                                                    <div className="s-row">
+                                                        <span className="s-grip" style={{ visibility: 'hidden' }}>⠿</span>
+                                                        <div className="s-swatch" style={{ backgroundColor: t.color, opacity: 0.5 }} />
+                                                        <div className="s-bar" style={{ backgroundColor: t.color, opacity: 0.5 }} />
+                                                        <span className="s-label" style={{ opacity: 0.6 }}>{t.name}</span>
+                                                        <button className="s-archive-btn s-unarchive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="アーカイブ解除">📤</button>
+                                                        <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除">🗑</button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
                             </>
-                        )}
+                            );
+                        })()}
 
                         {/* ── Status ── */}
                         {tab === 'status' && (
@@ -612,6 +693,32 @@ export default function Settings() {
 
         .s-empty { color:var(--color-text-disabled); font-size:.85rem; padding:2rem; text-align:center }
         .s-hint { color:var(--color-text-muted); font-size:.75rem; padding:.75rem 0 0; margin:0; font-style:italic; }
+
+        /* Archive button */
+        .s-archive-btn {
+          background:transparent; border:1px solid transparent;
+          color:var(--color-text-disabled); cursor:pointer;
+          width:28px; height:28px; min-width:28px; border-radius:7px;
+          display:flex; align-items:center; justify-content:center;
+          font-size:.75rem; transition:all .18s; opacity:0;
+        }
+        .s-row:hover .s-archive-btn { opacity:1 }
+        .s-archive-btn:hover { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.2); }
+        .s-unarchive-btn { opacity:1 !important; }
+        .s-unarchive-btn:hover { background:rgba(79,110,247,.1); border-color:rgba(79,110,247,.2); }
+
+        /* Archived section */
+        .s-archived-header {
+          display:flex; align-items:center; gap:.5rem;
+          margin-top:1.25rem; padding:.6rem 0 .4rem;
+          border-top:1px solid var(--border-color);
+        }
+        .s-archived-label { font-size:.82rem; font-weight:600; color:var(--color-text-muted); }
+        .s-list-archived { opacity:.75; }
+        .s-item-archived { cursor:default; }
+        .s-item-archived .s-row { background:var(--color-surface); }
+        .s-item-archived .s-del { opacity:0; }
+        .s-item-archived .s-row:hover .s-del { opacity:1; }
 
         /* Data Management */
         .dm-section { display:flex; flex-direction:column; gap:.75rem }
