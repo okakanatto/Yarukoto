@@ -32,6 +32,7 @@ export default function TaskList() {
     const [refreshKey, setRefreshKey] = useState(0);
     const [editingTask, setEditingTask] = useState(null);
     const [activeId, setActiveId] = useState(null); // For DragOverlay
+    const [showArchived, setShowArchived] = useState(false);
 
     const activeRequestId = useRef(0);
     const { masters, tags: allTags } = useMasterData();
@@ -79,6 +80,13 @@ export default function TaskList() {
             const conditions = [];
             const params = [];
             let paramIndex = 1;
+
+            // Filter by archive status
+            if (showArchived) {
+                conditions.push('t.archived_at IS NOT NULL');
+            } else {
+                conditions.push('t.archived_at IS NULL');
+            }
 
             if (filterStatuses.length > 0) {
                 const placeholders = filterStatuses.map(() => `$${paramIndex++}`).join(',');
@@ -131,7 +139,7 @@ export default function TaskList() {
                 setLoading(false);
             }
         }
-    }, [filterStatuses, filterTags, filterImportance, filterUrgency]);
+    }, [filterStatuses, filterTags, filterImportance, filterUrgency, showArchived]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
 
@@ -185,6 +193,72 @@ export default function TaskList() {
             const db = await getDb();
             await db.execute('UPDATE tasks SET today_date = $1 WHERE id = $2', [newVal, taskId]);
         } catch (e) { console.error(e); fetchTasks(); }
+    };
+
+    const handleArchive = async (taskId) => {
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            // Validate: only completed (3) or cancelled (5)
+            if (task.status_code !== 3 && task.status_code !== 5) {
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '完了またはキャンセル済みのタスクのみアーカイブできます', type: 'error' } }));
+                return;
+            }
+
+            // Parent check: all children must be completed or cancelled
+            if (!task.parent_id) {
+                const children = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [taskId]);
+                const hasInProgress = children.some(c => c.status_code !== 3 && c.status_code !== 5);
+                if (hasInProgress) {
+                    window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '未完了の子タスクがあるためアーカイブできません', type: 'error' } }));
+                    return;
+                }
+                // Archive children together with parent
+                if (children.length > 0) {
+                    const childIds = children.filter(c => !tasks.find(t => t.id === c.id)?.archived_at).map(c => c.id);
+                    if (childIds.length > 0) {
+                        for (const cid of childIds) {
+                            await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [cid]);
+                        }
+                    }
+                }
+            }
+
+            await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
+            setRefreshKey(k => k + 1);
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブに失敗しました', type: 'error' } }));
+        }
+    };
+
+    const handleRestore = async (taskId) => {
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+
+            // If this is a parent task, restore children too
+            const task = tasks.find(t => t.id === taskId);
+            if (task && !task.parent_id) {
+                await db.execute('UPDATE tasks SET archived_at = NULL WHERE parent_id = $1', [taskId]);
+            }
+
+            // If this is a child, also restore the parent
+            if (task && task.parent_id) {
+                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [task.parent_id]);
+            }
+
+            await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '復元しました', type: 'success' } }));
+            setRefreshKey(k => k + 1);
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '復元に失敗しました', type: 'error' } }));
+        }
     };
 
     const handleDragStart = (event) => {
@@ -322,6 +396,16 @@ export default function TaskList() {
     return (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="tl-root">
+                {/* Archive Toggle */}
+                <div className="tl-archive-tabs">
+                    <button className={`tl-archive-tab ${!showArchived ? 'active' : ''}`} onClick={() => setShowArchived(false)}>
+                        📋 タスク
+                    </button>
+                    <button className={`tl-archive-tab ${showArchived ? 'active' : ''}`} onClick={() => setShowArchived(true)}>
+                        📦 アーカイブ済み
+                    </button>
+                </div>
+
                 {/* Toolbar */}
                 <div className="tl-toolbar">
                     <MultiSelectFilter label="ステータス" options={statusOptions} selected={filterStatuses} onChange={setFilterStatuses} />
@@ -341,26 +425,35 @@ export default function TaskList() {
                     {loading && tasks.length === 0 && (
                         <div className="tl-placeholder"><span className="spinner" /> 読み込み中...</div>
                     )}
-                    {!loading && parentTasks.length === 0 && (
+                    {!loading && parentTasks.length === 0 && !showArchived && (
                         <div className="tl-placeholder tl-empty">
                             <span className="tl-empty-icon">🌱</span>
                             <span className="tl-empty-title">最初のタスクを追加して、今日をスタートしましょう！</span>
                             <span className="tl-empty-hint">上のフォームからタスクを追加できます</span>
                         </div>
                     )}
+                    {!loading && parentTasks.length === 0 && showArchived && (
+                        <div className="tl-placeholder tl-empty">
+                            <span className="tl-empty-icon">📦</span>
+                            <span className="tl-empty-title">アーカイブ済みのタスクはありません</span>
+                            <span className="tl-empty-hint">完了・キャンセル済みタスクの📦ボタンでアーカイブできます</span>
+                        </div>
+                    )}
                     {sortedParentTasks.map((task, i) => (
                         <React.Fragment key={task.id}>
-                            {isDraggingChild && i === 0 && (
+                            {!showArchived && isDraggingChild && i === 0 && (
                                 <UnnestGap id={`unnest-gap-top`} />
                             )}
                             <TaskItem task={task} childTasks={getChildTasks(task.id)}
                                 onStatusChange={handleStatusChange} onDelete={handleDelete}
                                 onTaskAdded={handleTaskAdded} onEdit={setEditingTask}
                                 onTodayToggle={handleTodayToggle}
+                                onArchive={handleArchive} onRestore={handleRestore}
                                 index={i} statusMap={statusMap} allStatuses={allStatuses}
-                                isDraggable={getChildTasks(task.id).length === 0}
+                                isDraggable={!showArchived && getChildTasks(task.id).length === 0}
+                                isArchived={showArchived}
                             />
-                            {isDraggingChild && (
+                            {!showArchived && isDraggingChild && (
                                 <UnnestGap id={`unnest-gap-${task.id}`} />
                             )}
                         </React.Fragment>
@@ -510,6 +603,28 @@ export default function TaskList() {
             .tc-act-btn.danger:hover { background:var(--color-danger-bg); color:var(--color-danger); border-color:rgba(220,38,38,.2); }
             .tc-today-btn.active { background:rgba(251,191,36,.15); border-color:rgba(251,191,36,.4); }
             .tc-today-btn.active:hover { background:rgba(251,191,36,.25); }
+            .tc-archive-btn:hover { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.2); color:#b45309; }
+            .tc-restore-btn { opacity:1 !important; }
+            .tc-restore-btn:hover { background:rgba(79,110,247,.1); border-color:rgba(79,110,247,.2); color:var(--color-primary); }
+            .tc-status-label { font-size:.78rem; font-weight:600; white-space:nowrap; }
+
+            /* Archive Tabs */
+            .tl-archive-tabs {
+              display:flex; gap:3px; margin-bottom:1rem; padding:3px;
+              background:var(--color-surface); border:1px solid var(--border-color);
+              border-radius:var(--radius-md); box-shadow:var(--shadow-sm);
+            }
+            .tl-archive-tab {
+              flex:1; padding:.5rem .75rem; border:none; background:transparent;
+              color:var(--color-text-muted); font-size:.85rem; font-weight:500;
+              border-radius:8px; cursor:pointer; transition:all .2s; font-family:inherit;
+              display:flex; align-items:center; justify-content:center; gap:.35rem;
+            }
+            .tl-archive-tab:hover { background:var(--color-surface-hover); color:var(--color-text); }
+            .tl-archive-tab.active {
+              background:var(--color-primary); color:#fff; font-weight:600;
+              box-shadow:0 2px 10px rgba(79,110,247,.18);
+            }
     
             .tc-sub-input { padding:0 1rem .85rem 2.75rem; animation:fadeSlideIn .3s ease; }
             .tc-children { margin-left:2.25rem; padding:.2rem .75rem .6rem 0; border-left:2px solid var(--border-color); }
@@ -532,7 +647,7 @@ function UnnestGap({ id }) {
     );
 }
 
-function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true }) {
+function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false }) {
     const [expanded, setExpanded] = useState(true);
     const [showSub, setShowSub] = useState(false);
 
@@ -610,6 +725,7 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
                     </div>
                     <div className="tc-meta">
                         {isDone && task.completed_at && <span className="tc-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
+                        {task.archived_at && <span className="tc-meta-item">📦 アーカイブ: {task.archived_at.split(' ')[0]}</span>}
                         {task.start_date && !isDone && <span className="tc-meta-item">🟢 開始: {task.start_date}</span>}
                         {task.due_date && !isDone && (
                             <span className="tc-meta-item" style={{ color: dueMeta.color || 'inherit' }}>
@@ -628,19 +744,31 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
                 </div>
 
                 <div className="tc-actions">
-                    <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value)} className="tc-status-select"
-                        style={{ borderColor: st.color, color: st.color, background: `${st.color}10` }}>
-                        {allStatuses.length > 0 ? allStatuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>) : <option value={task.status_code}>{st.label}</option>}
-                    </select>
-                    {onTodayToggle && (
-                        <button
-                            className={`tc-act-btn tc-today-btn ${task.today_date === new Date().toLocaleDateString('sv-SE') ? 'active' : ''}`}
-                            onClick={() => onTodayToggle(task.id, task.today_date)}
-                            title={task.today_date === new Date().toLocaleDateString('sv-SE') ? '今日やるから外す' : '今日やるタスクに追加'}
-                        >☀️</button>
+                    {isArchived ? (
+                        <>
+                            <span className="tc-status-label" style={{ color: st.color }}>{st.label}</span>
+                            <button className="tc-act-btn tc-restore-btn" onClick={() => onRestore(task.id)} title="復元">📤</button>
+                        </>
+                    ) : (
+                        <>
+                            <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value)} className="tc-status-select"
+                                style={{ borderColor: st.color, color: st.color, background: `${st.color}10` }}>
+                                {allStatuses.length > 0 ? allStatuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>) : <option value={task.status_code}>{st.label}</option>}
+                            </select>
+                            {onTodayToggle && (
+                                <button
+                                    className={`tc-act-btn tc-today-btn ${task.today_date === new Date().toLocaleDateString('sv-SE') ? 'active' : ''}`}
+                                    onClick={() => onTodayToggle(task.id, task.today_date)}
+                                    title={task.today_date === new Date().toLocaleDateString('sv-SE') ? '今日やるから外す' : '今日やるタスクに追加'}
+                                >☀️</button>
+                            )}
+                            {(task.status_code === 3 || task.status_code === 5) && onArchive && (
+                                <button className="tc-act-btn tc-archive-btn" onClick={() => onArchive(task.id)} title="アーカイブ">📦</button>
+                            )}
+                            {!isChild && <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加">＋</button>}
+                            <button className="tc-act-btn danger" onClick={() => onDelete(task.id)} title="削除">🗑</button>
+                        </>
                     )}
-                    {!isChild && <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加">＋</button>}
-                    <button className="tc-act-btn danger" onClick={() => onDelete(task.id)} title="削除">🗑</button>
                 </div>
             </div>
 
@@ -652,8 +780,10 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
                         <TaskItem key={c.id} task={c} childTasks={[]} onStatusChange={onStatusChange}
                             onDelete={onDelete} onTaskAdded={() => { }} onEdit={onEdit}
                             onTodayToggle={onTodayToggle}
+                            onArchive={onArchive} onRestore={onRestore}
                             index={i} isChild statusMap={statusMap} allStatuses={allStatuses}
-                            isDraggable={true} // Children can be dragged to un-nest
+                            isDraggable={!isArchived} // Children can be dragged to un-nest (but not in archived view)
+                            isArchived={isArchived}
                         />
                     ))}
                 </div>

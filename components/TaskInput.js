@@ -34,7 +34,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                 const { getDb } = await import('@/lib/db');
                 const db = await getDb();
                 const rows = await db.select(
-                    'SELECT id, title FROM tasks WHERE parent_id IS NULL AND status_code != 3 AND status_code != 5 ORDER BY title'
+                    'SELECT id, title FROM tasks WHERE parent_id IS NULL AND status_code != 3 AND status_code != 5 AND archived_at IS NULL ORDER BY title'
                 );
                 if (!cancelled) setParentOptions(rows);
             } catch (e) {

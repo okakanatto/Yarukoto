@@ -38,12 +38,11 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 const taskHasChildren = childRows[0]?.cnt > 0;
                 if (!cancelled) setHasChildren(taskHasChildren);
 
-                // Exclude itself. A task cannot be its own parent.
-                // BUG-6: Also exclude tasks that already have a parent (to prevent 3+ levels)
+                // Exclude itself, archived tasks, and tasks with parents (BUG-6: prevent 3+ levels)
                 const rows = await db.select(
                     task.parent_id
-                        ? 'SELECT id, title FROM tasks WHERE (parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5) OR id = $2 ORDER BY title'
-                        : 'SELECT id, title FROM tasks WHERE parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5 ORDER BY title',
+                        ? 'SELECT id, title FROM tasks WHERE archived_at IS NULL AND ((parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5) OR id = $2) ORDER BY title'
+                        : 'SELECT id, title FROM tasks WHERE archived_at IS NULL AND parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5 ORDER BY title',
                     task.parent_id ? [task.id, task.parent_id] : [task.id]
                 );
                 if (!cancelled) setParentOptions(rows);

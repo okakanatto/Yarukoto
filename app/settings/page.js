@@ -508,6 +508,52 @@ export default function Settings() {
                                             <span className="opt-toggle-knob" />
                                         </button>
                                     </div>
+                                    <div className="opt-card">
+                                        <div className="opt-info">
+                                            <span className="opt-icon">📦</span>
+                                            <div>
+                                                <strong className="opt-title">完了タスクの自動アーカイブ</strong>
+                                                <p className="opt-desc">
+                                                    完了日から指定日数が経過したタスクを自動的にアーカイブします。0に設定すると自動アーカイブは無効になります。キャンセル済みタスクは対象外です。
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="opt-number-group">
+                                            <input
+                                                type="number"
+                                                className="opt-number-input"
+                                                min="0"
+                                                max="9999"
+                                                value={appSettings.auto_archive_days || '0'}
+                                                onChange={(e) => {
+                                                    setAppSettings(prev => ({ ...prev, auto_archive_days: e.target.value }));
+                                                }}
+                                                onBlur={async () => {
+                                                    const val = String(parseInt(appSettings.auto_archive_days) || 0);
+                                                    setAppSettings(prev => ({ ...prev, auto_archive_days: val }));
+                                                    try {
+                                                        const { getDb } = await import('@/lib/db');
+                                                        const db = await getDb();
+                                                        await db.execute(
+                                                            'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
+                                                            ['auto_archive_days', val]
+                                                        );
+                                                        if (parseInt(val) > 0) {
+                                                            const { runAutoArchive } = await import('@/lib/db');
+                                                            await runAutoArchive(db);
+                                                            flash('ok', `自動アーカイブ設定を保存しました（${val}日）`);
+                                                        } else {
+                                                            flash('ok', '自動アーカイブを無効にしました');
+                                                        }
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                        flash('err', '設定の保存に失敗しました');
+                                                    }
+                                                }}
+                                            />
+                                            <span className="opt-number-unit">日後</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -813,6 +859,22 @@ export default function Settings() {
           transition:transform .25s cubic-bezier(.34,1.56,.64,1);
         }
         .opt-toggle.on .opt-toggle-knob { transform:translateX(22px) }
+
+        .opt-number-group {
+          display:flex; align-items:center; gap:.4rem; flex-shrink:0;
+        }
+        .opt-number-input {
+          width:70px; padding:.4rem .5rem; border:1px solid var(--border-color);
+          border-radius:var(--radius-sm); background:var(--color-surface-hover);
+          color:var(--color-text); font-size:.88rem; font-family:inherit;
+          text-align:center; transition:border-color .2s, box-shadow .2s;
+        }
+        .opt-number-input:focus {
+          outline:none; border-color:var(--color-primary);
+          box-shadow:0 0 0 3px var(--color-primary-glow);
+          background:var(--color-surface);
+        }
+        .opt-number-unit { font-size:.82rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
 
         .s-toast {
           position:fixed; bottom:1.5rem; right:1.5rem;

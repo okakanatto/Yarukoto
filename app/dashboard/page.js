@@ -14,11 +14,11 @@ export default function DashboardPage() {
                 const dateStr = new Date().toLocaleDateString('sv-SE');
 
                 // 1. Overall
-                const overallData = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed FROM tasks WHERE status_code != 5`);
+                const overallData = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed FROM tasks WHERE status_code != 5 AND archived_at IS NULL`);
 
                 // 2. Today
                 // 2a. Tasks
-                const todayTasks = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed, SUM(CASE WHEN status_code != 3 THEN estimated_hours ELSE 0 END) as remainingMinutes FROM tasks WHERE status_code != 5 AND (today_date = $1 OR due_date = $2 OR (due_date < $3 AND status_code != 3) OR (status_code = 3 AND date(completed_at) = $4))`, [dateStr, dateStr, dateStr, dateStr]);
+                const todayTasks = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed, SUM(CASE WHEN status_code != 3 THEN estimated_hours ELSE 0 END) as remainingMinutes FROM tasks WHERE status_code != 5 AND archived_at IS NULL AND (today_date = $1 OR due_date = $2 OR (due_date < $3 AND status_code != 3) OR (status_code = 3 AND date(completed_at) = $4))`, [dateStr, dateStr, dateStr, dateStr]);
 
                 // 2b. Routines
                 const { isRoutineActiveOnDate } = await import('@/lib/holidayService');
@@ -54,7 +54,7 @@ export default function DashboardPage() {
                 const d3 = new Date();
                 d3.setDate(d3.getDate() + 3);
                 const biz3Date = d3.toLocaleDateString('sv-SE');
-                const biz3Tasks = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed FROM tasks WHERE status_code != 5 AND due_date >= $1 AND due_date <= $2`, [dateStr, biz3Date]);
+                const biz3Tasks = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed FROM tasks WHERE status_code != 5 AND archived_at IS NULL AND due_date >= $1 AND due_date <= $2`, [dateStr, biz3Date]);
 
                 // For Biz3 routines, we need to iterate the next 3 days and count matching routines
                 let biz3Total = biz3Tasks[0]?.total || 0;
@@ -78,9 +78,9 @@ export default function DashboardPage() {
 
                 // 4. Daily Completions
                 const dailyData = await db.select(`
-                    SELECT DATE(completed_at) as date, COUNT(*) as count 
-                    FROM tasks 
-                    WHERE status_code = 3 AND completed_at IS NOT NULL AND DATE(completed_at) >= date('now', 'localtime', '-6 days')
+                    SELECT DATE(completed_at) as date, COUNT(*) as count
+                    FROM tasks
+                    WHERE status_code = 3 AND completed_at IS NOT NULL AND archived_at IS NULL AND DATE(completed_at) >= date('now', 'localtime', '-6 days')
                     GROUP BY DATE(completed_at)
                     ORDER BY date ASC
                 `);
@@ -106,16 +106,16 @@ export default function DashboardPage() {
                 const stData = await db.select(`
                     SELECT sm.code, sm.label, sm.color, COUNT(t.id) as count
                     FROM status_master sm
-                    LEFT JOIN tasks t ON sm.code = t.status_code AND t.status_code != 5
+                    LEFT JOIN tasks t ON sm.code = t.status_code AND t.status_code != 5 AND t.archived_at IS NULL
                     GROUP BY sm.code
                     ORDER BY sm.sort_order
                 `);
 
                 // 6. Overdue (Tasks Only)
                 const overdueTasks = await db.select(`
-                    SELECT id, title, due_date 
-                    FROM tasks 
-                    WHERE status_code != 3 AND status_code != 5 AND due_date < $1
+                    SELECT id, title, due_date
+                    FROM tasks
+                    WHERE status_code != 3 AND status_code != 5 AND archived_at IS NULL AND due_date < $1
                     ORDER BY due_date ASC
                 `, [dateStr]);
 

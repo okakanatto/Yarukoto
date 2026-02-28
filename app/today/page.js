@@ -215,7 +215,8 @@ export default function TodayPage() {
               LEFT JOIN tasks p ON t.parent_id = p.id
               LEFT JOIN task_tags tt ON t.id = tt.task_id
               LEFT JOIN tags tg ON tt.tag_id = tg.id
-              WHERE (
+              WHERE t.archived_at IS NULL
+                AND (
                   t.today_date = $1
                   OR t.due_date = $2
                   ${showOverdue && isViewingToday ? 'OR (t.due_date < $3 AND t.status_code NOT IN (3, 5))' : ''}
