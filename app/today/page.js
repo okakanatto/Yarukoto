@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import StatusCheckbox from '@/components/StatusCheckbox';
 import TaskEditModal from '@/components/TaskEditModal';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
@@ -87,14 +87,7 @@ export default function TodayPage() {
         })();
     }, []);
 
-    useEffect(() => {
-        loadTasks(selectedDate);
-        const handleTaskAdded = () => loadTasks(selectedDate);
-        window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
-        return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
-    }, [selectedDate, filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, showOverdue]);
-
-    const loadTasks = async (date) => {
+    const loadTasks = useCallback(async (date) => {
         const currentReq = ++activeRequestId.current;
         setLoading(true);
         try {
@@ -298,7 +291,14 @@ export default function TodayPage() {
                 setLoading(false);
             }
         }
-    };
+    }, [filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, showOverdue, statuses]);
+
+    useEffect(() => {
+        loadTasks(selectedDate);
+        const handleTaskAdded = () => loadTasks(selectedDate);
+        window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
+        return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
+    }, [selectedDate, loadTasks]);
 
     const handleStatusChange = async (taskId, newCode, isRoutine = false) => {
         const code = parseInt(newCode);
