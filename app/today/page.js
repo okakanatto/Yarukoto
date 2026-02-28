@@ -294,7 +294,11 @@ export default function TodayPage() {
                 } else {
                     await db.execute('DELETE FROM routine_completions WHERE routine_id = $1 AND completion_date = $2', [item.routine_id, selectedDate]);
                 }
-            } catch (e) { console.error(e); loadTasks(selectedDate); }
+            } catch (e) {
+                console.error(e);
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
+                loadTasks(selectedDate);
+            }
         } else {
             try {
                 const { getDb } = await import('@/lib/db');
@@ -305,7 +309,11 @@ export default function TodayPage() {
                 } else {
                     await db.execute("UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2", [code, taskId]);
                 }
-            } catch (e) { console.error(e); loadTasks(selectedDate); }
+            } catch (e) {
+                console.error(e);
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
+                loadTasks(selectedDate);
+            }
         }
     };
 

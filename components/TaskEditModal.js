@@ -41,14 +41,16 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 // Exclude itself. A task cannot be its own parent.
                 // BUG-6: Also exclude tasks that already have a parent (to prevent 3+ levels)
                 const rows = await db.select(
-                    'SELECT id, title FROM tasks WHERE parent_id IS NULL AND id != $1 AND status_code != 5 ORDER BY title',
-                    [task.id]
+                    task.parent_id
+                        ? 'SELECT id, title FROM tasks WHERE (parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5) OR id = $2 ORDER BY title'
+                        : 'SELECT id, title FROM tasks WHERE parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5 ORDER BY title',
+                    task.parent_id ? [task.id, task.parent_id] : [task.id]
                 );
                 if (!cancelled) setParentOptions(rows);
             } catch (e) { console.error('Failed to fetch parents:', e); }
         })();
         return () => { cancelled = true; };
-    }, [task.id]);
+    }, [task.id, task.parent_id]);
 
     // Close on Escape
     useEffect(() => {
@@ -197,7 +199,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                             disabled={hasChildren || parentOptions.length === 0}
                             title={hasChildren ? '子タスクを持つタスクには親タスクを設定できません' : ''}
                         >
-                            <option value="">{hasChildren ? '設定不可（子タスクあり）' : 'なし（ルート）'}</option>
+                            <option value="">{hasChildren ? '設定不可（子タスクあり）' : 'なし（ルートタスク）'}</option>
                             {!hasChildren && parentOptions.map(p => (
                                 <option key={p.id} value={p.id}>{p.title}</option>
                             ))}
@@ -213,7 +215,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         <div className="te-field" style={{ flex: 1 }}>
                             <label className="te-label">想定工数（分）</label>
                             <input
-                                type="number" step="5" min="0"
+                                type="number" step="5" min="0" max="99999"
                                 value={estimatedMinutes}
                                 onChange={(e) => setEstimatedMinutes(e.target.value)}
                                 className="te-input"
@@ -287,21 +289,23 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 .te-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; overflow-y: auto; }
                 .te-field { display: flex; flex-direction: column; gap: 0.4rem; }
                 .te-row { display: flex; gap: 1rem; }
-                .te-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.1rem; }
+                .te-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.1rem; text-transform: uppercase; letter-spacing: 0.04em; }
                 .te-input-title {
                     width: 100%; border: none; border-bottom: 2px solid var(--border-color);
-                    font-size: 1.5rem; padding: 0.5rem 0; background: transparent;
+                    font-size: 1.05rem; padding: 0.6rem 0.25rem; background: transparent;
                     color: var(--color-text); transition: border-color 0.2s;
                 }
                 .te-input-title:focus { outline: none; border-color: var(--color-primary); }
                 .te-input, .te-select, .te-textarea {
-                    width: 100%; padding: 0.5rem; border: 1px solid var(--border-color);
-                    border-radius: var(--radius-sm); background: var(--color-surface);
-                    color: var(--color-text); font-size: 0.9rem; transition: border-color 0.2s;
+                    width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--border-color);
+                    border-radius: var(--radius-sm); background: var(--color-surface-hover);
+                    color: var(--color-text); font-size: 0.875rem; transition: border-color 0.2s, box-shadow 0.2s;
                     font-family: inherit;
                 }
                 .te-input:focus, .te-select:focus, .te-textarea:focus {
                     outline: none; border-color: var(--color-primary);
+                    box-shadow: 0 0 0 3px var(--color-primary-glow);
+                    background: var(--color-surface);
                 }
                 .te-textarea { resize: vertical; min-height: 80px; }
                 .te-footer {
@@ -310,13 +314,13 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 }
                 .te-btn-cancel {
                     background: transparent; border: 1px solid var(--border-color);
-                    padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.85rem;
+                    padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-size: 0.85rem;
                     cursor: pointer; color: var(--color-text-secondary); transition: all 0.2s;
                 }
                 .te-btn-cancel:hover { background: var(--color-surface-hover); }
                 .te-btn-save {
                     background: var(--color-primary); color: #fff; border: none;
-                    padding: 0.5rem 1.5rem; border-radius: 4px; font-size: 0.85rem;
+                    padding: 0.5rem 1.5rem; border-radius: var(--radius-sm); font-size: 0.85rem;
                     font-weight: 600; cursor: pointer; transition: all 0.2s;
                 }
                 .te-btn-save:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }

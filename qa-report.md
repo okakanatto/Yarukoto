@@ -2,127 +2,61 @@
 
 ## STEP A：機能検証（v1.2.0 枝番2-2）
 
-**検証方法**: 静的分析（ソースコードリーディング）による確認。
+**検証日**: 2026-02-27
+**検証方法**: 静的分析（ソースコードリーディング）
+**検証スコープ**: WORK-LOG.md 枝番2-2 の「やったこと」「変更したファイル」に基づく。
+- BUG-5: TaskInput.js / TaskEditModal.js の入力項目の並び順統一
+- IMP-12: StatusCheckbox.js の着手中→未着手戻しボタン追加
+- ENH-6: TaskList.js / today/page.js の completed_at 楽観的更新
 
 ### 観点1：正常系テスト
 
 | # | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
 |---|---|---|---|---|---|
-| 1 | BUG-5: TaskInput 項目順 | フォームを展開し各フィールドの順序を確認 | 終了期限→備考→タグ→親タスク→開始日・想定工数→重要度・緊急度（タスク名はprimary row）の順 | 静的分析: `components/TaskInput.js:196-278` の details-panel が仕様通りの順 ✓ | OK |
-| 2 | BUG-5: TaskEditModal 項目順 | 編集モーダルを開き各フィールドの順序を確認 | タスク名→ステータス→終了期限→備考→タグ→親タスク→開始日・想定工数→重要度・緊急度→完了日 | 静的分析: `components/TaskEditModal.js:137-250` が仕様通りの順 ✓（ステータスはWORK-LOG通り独立配置） | OK |
-| 3 | BUG-5: 完了日フィールド（未完了タスク） | 未完了タスクの編集モーダルを開く | 完了日フィールドが非表示 | 静的分析: `task.completed_at` が falsy の場合レンダリングされない (`TaskEditModal.js:244`) ✓ | OK |
-| 4 | BUG-5: 完了日フィールド（完了済みタスク） | 完了済みタスクの編集モーダルを開く | 完了日が readOnly で表示される | 静的分析: `task.completed_at` あり → `readOnly disabled` で表示 (`TaskEditModal.js:248`) ✓ | OK |
-| 5 | IMP-12: ▶ボタン（未着手ホバー） | 未着手タスクにマウスホバー | ▶ボタンが右に表示される | 静的分析: `showPlay = code===1 && hovered && !twoStateOnly` (`StatusCheckbox.js:32`) ✓ | OK |
-| 6 | IMP-12: ↩ボタン（着手中ホバー） | 着手中タスクにマウスホバー | ↩ボタンが右に表示される | 静的分析: `showRevert = code===2 && hovered && !twoStateOnly` (`StatusCheckbox.js:33`) ✓ | OK |
-| 7 | IMP-12: 着手中→未着手のリバート | ↩ボタンをクリック | ステータスが未着手(1)へ遷移 | 静的分析: `handleRevertClick` → `onChange(1)` (`StatusCheckbox.js:26-30`) ✓ | OK |
-| 8 | IMP-12: 着手中→完了（既存動作維持） | 着手中タスクの本体をクリック | ステータスが完了(3)へ遷移 | 静的分析: `handleMainClick` で code===2 → `onChange(3)` (`StatusCheckbox.js:13-14`) ✓ | OK |
-| 9 | ENH-6: 完了日の即時反映（TaskList） | タスク一覧でタスクを完了にする | リロードなしで完了日が即座に表示される | 静的分析: `handleStatusChange` で `completed_at=completedNow` の楽観的更新 (`TaskList.js:114-119`) ✓ | OK |
-| 10 | ENH-6: 完了日の即時反映（今日やる） | 今日やる画面でタスクを完了にする | リロードなしで完了日が即座に表示される | 静的分析: `handleStatusChange` で同様の楽観的更新 (`today/page.js:275-280`) ✓ | OK |
-| 11 | ENH-6: 完了→非完了で完了日クリア | 完了タスクを未着手に戻す | 完了日表示が消える | 静的分析: code≠3 → `completed_at=null` で楽観的更新 ✓ | OK |
+| 1 | BUG-5: TaskInput 項目順 | タスク追加フォームを展開し details-panel の項目順を確認 | 仕様順: 終了期限→備考→タグ→親タスク→開始日・想定工数→重要度・緊急度（タスク名は primary row） | 静的分析: `TaskInput.js:196-278` のJSX順が仕様通り。各コメントに番号付きで明記されている。 | OK |
+| 2 | BUG-5: TaskEditModal 項目順 | タスク編集モーダルを開き te-body の項目順を確認 | 仕様順: タスク名→ステータス(編集固有)→終了期限→備考→タグ→親タスク→開始日・想定工数→重要度・緊急度→完了日(編集のみ) | 静的分析: `TaskEditModal.js:139-254` のJSX順が仕様通り。ステータスはタスク名直下に独立配置。 | OK |
+| 3 | BUG-5: 完了日フィールド（未完了タスク） | 未完了タスクの編集モーダルを開く | 完了日フィールドが非表示 | 静的分析: `TaskEditModal.js:248` — `{task.completed_at && (` で条件レンダリング。falsy 時は非表示 ✓ | OK |
+| 4 | BUG-5: 完了日フィールド（完了タスク） | 完了済みタスクの編集モーダルを開く | 完了日が readOnly disabled で表示 | 静的分析: `TaskEditModal.js:251` — `value={task.completed_at.split(' ')[0]} readOnly disabled` ✓ | OK |
+| 5 | IMP-12: 未着手(1) ホバー時 ▶ボタン | 未着手タスクにマウスホバー | ▶ボタンが右に出現 | 静的分析: `StatusCheckbox.js:32` — `showPlay = code === 1 && hovered && !twoStateOnly` ✓ | OK |
+| 6 | IMP-12: 着手中(2) ホバー時 ↩ボタン | 着手中タスクにマウスホバー | ↩ボタンが右に出現 | 静的分析: `StatusCheckbox.js:33` — `showRevert = code === 2 && hovered && !twoStateOnly` ✓ | OK |
+| 7 | IMP-12: ↩クリックで未着手(1)へ | 着手中タスクの↩ボタンをクリック | ステータスが未着手(1)に遷移 | 静的分析: `StatusCheckbox.js:26-30` — `handleRevertClick` → `e.stopPropagation(); onChange(1)` ✓ | OK |
+| 8 | IMP-12: 着手中→完了（既存動作維持） | 着手中タスクの本体（▶アイコン部分）をクリック | ステータスが完了(3)に遷移 | 静的分析: `StatusCheckbox.js:13-14` — `if (code === 2) onChange(3)` は変更なし ✓ | OK |
+| 9 | IMP-12: ▶と↩の排他性 | 各ステートでのボタン表示 | ▶(code===1) と ↩(code===2) は同時に表示されない | 静的分析: code は同時に1かつ2にならないため、条件が排他的 ✓ | OK |
+| 10 | ENH-6: 完了日の即時反映（タスク一覧） | タスク一覧でタスクを完了(3)にする | リロードなしで完了日がカードに即座に表示される | 静的分析: `TaskList.js:114-119` — `completedNow = sv-SE date + time`; 楽観的更新で `completed_at` セット → `TaskList.js:599` の `{isDone && task.completed_at && ...}` で表示 ✓ | OK |
+| 11 | ENH-6: 完了日の即時反映（今日やる） | 今日やる画面でタスクを完了(3)にする | リロードなしで完了日が即座に表示される | 静的分析: `today/page.js:275-280` — 同じ楽観的更新パターン → `today/page.js:486` の `{isDone && task.completed_at && ...}` で表示 ✓ | OK |
+| 12 | ENH-6: 完了→非完了で完了日クリア | 完了タスクを未着手(1)に戻す | 完了日表示が消える | 静的分析: 楽観的更新で `completed_at: code === 3 ? completedNow : null`。非3は null → isDone=false で非表示 ✓ | OK |
 
 ⚠️ 要実機確認:
-- ↩ボタンのフェードインアニメーション（`statusCbFadeIn`）と ▶ボタンとの同時表示が起きないか
-- 完了日が即座に DOM に反映されること（楽観的更新のレンダリング確認）
-- ▶ボタン・↩ボタンとタスクカードのレイアウト崩れがないか
+- ↩ボタンの `statusCbFadeIn` アニメーションが正常に動作し、レイアウトが崩れないか（CSS `StatusCheckbox.js:143-163`）
+- 完了日の楽観的更新が即座に DOM に反映されること（React の状態更新→再レンダリングの実タイミング）
+- `sv-SE` ロケールの `toLocaleDateString` / `toLocaleTimeString` が Tauri WebView2 上で `YYYY-MM-DD HH:MM:SS` を返すか
 
 ### 観点2：異常系・境界値テスト
 
 | # | 対象フィールド/操作 | 入力内容 | 期待される挙動 | 実際の挙動 | OK/NG |
 |---|---|---|---|---|---|
-| 1 | IMP-12: キャンセル(5)タスクへの操作 | キャンセルタスクの ↩ クリック | `if (code === 5) return;` ガードで何も起きない | 静的分析: `handleRevertClick:28` にガードあり ✓ | OK |
-| 2 | IMP-12: twoStateOnly=true モード | 着手中タスクにホバー | ↩ボタンが表示されない | 静的分析: `showRevert = ... && !twoStateOnly` → false ✓ | OK |
-| 3 | ENH-6: completed_at の null チェック | 未完了タスクの completed_at 参照 | エラーにならず完了日が非表示 | 静的分析: `{isDone && task.completed_at && ...}` で null ガード (`TaskList.js:599`, `today/page.js:486`) ✓ | OK |
-| 4 | ENH-6: フォーマット互換性 | 楽観的更新の completed_at を split | `split(' ')[0]` で日付部分が取得できる | 静的分析: `sv-SE` ロケールで `YYYY-MM-DD HH:MM:SS` → `[0]` は `YYYY-MM-DD` ✓ | OK |
-| 5 | BUG-5: 空タスク名での保存 | タスク名を空にして保存ボタンをクリック | 保存ボタンが disabled | 静的分析: `disabled={!title.trim() \|\| saving}` (`TaskEditModal.js:255`) ✓ | OK |
-| 6 | IMP-12: ↩ボタン連打 | ↩ボタンを素早く連打 | `e.stopPropagation()` により親クリックは伝播しない。DB 側は同値更新で冪等 | 静的分析: `stopPropagation` (`StatusCheckbox.js:27`) ✓ | OK |
+| 1 | IMP-12: キャンセル(5)タスクでの操作 | キャンセルタスクの↩クリック / 本体クリック | `code === 5` ガードで何も起きない | 静的分析: `StatusCheckbox.js:10,22,28` — 3箇所すべてに `if (code === 5) return;` ガードあり ✓ | OK |
+| 2 | IMP-12: twoStateOnly モードでの↩ | twoStateOnly=true 時に着手中タスクにホバー | ↩ボタン非表示 | 静的分析: `StatusCheckbox.js:33` — `!twoStateOnly` 条件で false → ボタン非表示 ✓ | OK |
+| 3 | IMP-12: ↩ボタン連打 | ↩ボタンを高速連打 | `e.stopPropagation()` で親要素への伝播なし。onChange(1) は冪等（1→1 は状態変化なし） | 静的分析: `StatusCheckbox.js:27` — `stopPropagation` あり。初回クリックで code=1 → `showRevert=false` でボタン消失。連打による副作用なし ✓ | OK |
+| 4 | ENH-6: completed_at の null ガード | 未完了タスクの completed_at が null の場合 | エラーにならず完了日が非表示 | 静的分析: `TaskList.js:599` — `isDone && task.completed_at &&` の短絡評価で null.split() は発生しない ✓。`today/page.js:486` も同パターン ✓ | OK |
+| 5 | ENH-6: 日付フォーマット互換性 | 楽観的更新の completed_at を split(' ') する | `[0]` で日付部分 `YYYY-MM-DD` が取得できる | 静的分析: `sv-SE` ロケールで `YYYY-MM-DD` + `' '` + `HH:MM:SS`。DB側 `datetime('now', 'localtime')` も `YYYY-MM-DD HH:MM:SS`。split(' ')[0] で互換 ✓ | OK |
+| 6 | BUG-5: 空タスク名での保存 | タスク名を空にして保存クリック | 保存ボタンが disabled | 静的分析: `TaskEditModal.js:258` — `disabled={!title.trim() \|\| saving}`、`TaskEditModal.js:61` — `if (!title.trim() \|\| saving) return;` の二重ガード ✓ | OK |
+| 7 | BUG-5: 特殊文字のタスク名 | `' " < > & \ /` を含むタスク名 | パラメタライズドクエリで安全に保存される | 静的分析: `TaskEditModal.js:83-107` — `$1` 〜 `$10` の positional パラメータ使用。SQL injection リスクなし ✓ | OK |
 
 ### 観点3：状態遷移・データ件数テスト
 
 | # | テスト条件 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
 |---|---|---|---|---|---|
-| 1 | ENH-6: ルーティン完了時の completed_at | 今日やる画面でルーティンを完了にする | UI上で completed_at が反映される（DB の routine_completions には影響なし） | 静的分析: 楽観的更新はルーティンも対象。ルーティンに completed_at フィールドは元来ないが更新自体は無害 ⚠️ 要実機確認 | OK |
-| 2 | ENH-6: 今日やる ↔ タスク一覧の整合性 | 今日やる画面で完了後にタスク一覧を開く | 完了日が一致している | 静的分析: DB は `datetime('now', 'localtime')`、楽観的更新は `sv-SE` ロケール。日付部分は一致するはず ⚠️ 要実機確認 | OK |
-| 3 | BUG-5: 今日やる画面からの編集モーダル | タスク名クリックで編集モーダルを開く | TaskEditModal が開き仕様通りの項目順が表示される | 静的分析: `today/page.js:474-476` で `setEditingTask` → TaskEditModal ✓ | OK |
+| 1 | IMP-12: 全ステート遷移の網羅確認 | 各ステータスからの全遷移パスを確認 | 未着手→▶→着手中、未着手→本体→完了、着手中→↩→未着手、着手中→本体→完了、完了→本体→未着手、キャンセル→操作不可 | 静的分析: `StatusCheckbox.js:9-30` — 6パスすべて正しく実装。キャンセル(5)は3箇所で早期 return ✓ | OK |
+| 2 | ENH-6: ルーティン完了時の completed_at | 今日やる画面でルーティンを完了にする | 楽観的更新で completed_at がセットされる。ルーティンの DB 管理（routine_completions）には影響なし | 静的分析: `today/page.js:276-280` — ルーティンにも completed_at を設定（JS的には undefined→値に変更で無害）。DB操作は `today/page.js:293` — `INSERT INTO routine_completions` のみで completed_at には触れない ✓ | OK |
+| 3 | ENH-6: 今日やる ↔ タスク一覧の整合性 | 今日やる画面で完了→タスク一覧を開く | 完了日が一致する | 静的分析: 両画面とも DB更新は `completed_at = datetime('now', 'localtime')` で同一クエリ。楽観的更新値は表示用のみで、画面遷移後は DB値から再取得 ✓ | OK |
+| 4 | BUG-5: 今日やる画面からの編集 | タスク名クリックで編集モーダル表示 | TaskEditModal が開き項目順が仕様通り | 静的分析: `today/page.js:474-476` — `setEditingTask(task)` → `today/page.js:687-694` で TaskEditModal をレンダリング。TaskEditModal の項目順は観点1 #2 で確認済み ✓ | OK |
+| 5 | ENH-6: ステータス連続変更（1→2→3→1→3） | タスクのステータスを高速で連続変更 | 各変更ごとに楽観的更新 → DB更新。最終的に DB 値と UI が一致 | 静的分析: `TaskList.js:113-129` — 各呼び出しで `setTasks` による楽観的更新 + 非同期 DB更新。DB エラー時は `fetchTasks()` でロールバック。最終整合性は担保される ⚠️ 高速連続変更時のUI表示の乱れは要実機確認 | OK |
 
----
-
-## STEP B：品質レビュー（v1.2.0 枝番2-2）
-
-**検証方法**: 静的分析（コードリーディングベース）。
-
-### 観点1：エラーハンドリング確認
-
-| # | 異常条件 | 挙動 | エラーメッセージの有無と内容 | データへの影響 | OK/NG |
-|---|---|---|---|---|---|
-| 1 | TaskEditModal.js: DB書き込みエラー（保存失敗） | モーダルが開いたまま。保存ボタンが再び有効になる | なし（`console.error(err)` のみ） | データは変更されない | **NG** |
-| 2 | TaskList.js handleStatusChange: DB更新失敗 | 楽観的更新後、`fetchTasks()` でリロード（ロールバック） | なし（console.error のみ） | UI は元の状態に戻る | OK（許容） |
-| 3 | today/page.js handleStatusChange: DB更新失敗 | 楽観的更新後、`loadTasks(selectedDate)` でリロード | なし（console.error のみ） | UI は元の状態に戻る | OK（許容） |
-| 4 | StatusCheckbox.js: コールバック失敗 | StatusCheckbox 自体はエラーハンドリングなし。親コンポーネントに委任 | 親コンポーネント側で処理 | 親の責任範囲 | OK |
-
-**NG詳細（#1）:**
-- **該当ファイル**: `components/TaskEditModal.js:120-123`
-- **再現手順**: 編集モーダルでタスクを変更し「保存」ボタンをクリック → DB エラーが発生した場合
-- **期待される挙動**: エラートースト（「保存に失敗しました」）が表示され、ユーザーが失敗を認識できること
-- **実際の挙動**: `catch (err) { console.error(err); }` のみ。モーダルは閉じず、ボタンは再度有効になるが、ユーザーに通知なし
-- **原因**: catch 内に `yarukoto:toast` イベントの dispatch がない
-- **対応**: catch 内に `window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '保存に失敗しました', type: 'error' } }))` を追加
-- **備考**: BUG-5 の変更前から存在する既存の問題。ただし BUG-5 の変更対象ファイルのため今回指摘
-
-### 観点2：一貫性レビュー
-
-| # | 観点 | 箇所A | 箇所B | 不整合の内容 | ファイル名:行番号 |
-|---|---|---|---|---|---|
-| 1 | エラートースト | `TaskInput.js`: 追加失敗時にエラートーストあり | `TaskEditModal.js`: 保存失敗時にトーストなし | 追加と編集でエラー通知の有無が異なる | `components/TaskEditModal.js:120-123` |
-| 2 | 完了日表示パターン | `TaskList.js:599` | `today/page.js:486` | `{isDone && task.completed_at && ...}` で統一済み | — |
-| 3 | DB status更新パターン | `TaskList.js:123-127` | `today/page.js:303-307` | `UPDATE tasks SET status_code..., completed_at = datetime(...)` で統一済み | — |
-| 4 | 日付フォーマット | `TaskList.js`, `today/page.js` | `TaskEditModal.js` | `sv-SE` ロケール + `split(' ')[0]` で統一済み | — |
-
----
-
-## ✅ STEP B NG修正済み（v1.2.0 枝番2-2）
-
-**修正内容**: `components/TaskEditModal.js:120-123` — handleSave の catch に エラートースト dispatch を追加
-
----
-
-## STEP R：リグレッションテスト（v1.2.0 枝番2-2 2026-02-27）
-
-**検証方法**: 静的分析（コードリーディングベース）。
-
-**変更サマリー（参照元: WORK-LOG.md 枝番2-2）:**
-- 変更した機能: BUG-5（TaskInput/TaskEditModal レイアウト統一）、IMP-12（StatusCheckbox ↩ボタン追加）、ENH-6（completed_at の楽観的更新）
-- 変更したファイル: `components/TaskInput.js`、`components/TaskEditModal.js`、`components/StatusCheckbox.js`、`components/TaskList.js`、`app/today/page.js`
-- 影響が想定される箇所: TaskItem コンポーネント全体、今日やる画面タスクカード、StatusCheckbox を使用する全画面、TaskEditModal/TaskInput を呼び出す全画面
-
-### 第1段階：変更箇所の直接テスト
-
-| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
-|---|---|---|---|---|---|---|
-| 1 | 直接 | BUG-5: TaskInput レイアウト | フォーム展開時の項目順確認 | 仕様通り | 静的分析: ✓ | OK |
-| 2 | 直接 | BUG-5: TaskEditModal レイアウト | 編集モーダルの項目順確認 | 仕様通り | 静的分析: ✓ | OK |
-| 3 | 直接 | IMP-12: ↩ボタン動作 | 着手中タスクにホバーして ↩ をクリック | 未着手へ遷移 | 静的分析: ✓ | OK |
-| 4 | 直接 | ENH-6: 完了日の即時反映 | タスクを完了にした際の completed_at 即時更新 | 楽観的更新で即座に反映 | 静的分析: ✓ | OK |
-
-### 第2段階：影響範囲の特定とテスト
-
-| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
-|---|---|---|---|---|---|---|
-| 1 | 影響範囲 | 既存: ▶ボタン（未着手→着手中） | IMP-12変更後、未着手タスクにホバー | ▶ボタンが従来通り表示される | 静的分析: `showPlay` 条件は変更なし ✓ | OK |
-| 2 | 影響範囲 | 既存: 完了→未着手（handleMainClick） | 完了タスクの本体クリック | 未着手へ遷移 | 静的分析: `handleMainClick` は変更なし ✓ | OK |
-| 3 | 影響範囲 | 既存: DnD ネスト・アンネスト | タスクのドラッグ&ドロップ | 従来通りのネスト・アンネスト動作 | 静的分析: `handleDragEnd` 変更なし ✓ | OK |
-| 4 | 影響範囲 | 既存: タグ継承（DnD） | DnDでネストした際のタグ継承 | `inherit_parent_tags` 設定に応じた動作 | 静的分析: タグ継承ロジック変更なし ✓ | OK |
-| 5 | 影響範囲 | 既存: タスク追加（TaskInput） | タスクを新規追加 | 追加後の表示・トースト通知 | 静的分析: submit処理・トーストロジック変更なし ✓ | OK |
-| 6 | 影響範囲 | 既存: 今日やる ルーティン完了 | ルーティンを完了 | `routine_completions` に記録 | 静的分析: ルーティンの DB 操作部分変更なし ✓ | OK |
-| 7 | 影響範囲 | 2-1修正済み: BUG-4 親タスク削除 | 子持ち親タスクを削除 | 子が `parent_id=NULL` で独立 | 静的分析: `handleDelete` 変更なし ✓ | OK |
-| 8 | 影響範囲 | 2-1修正済み: BUG-6 2階層制限 | 子持ちタスクへの親設定試行 | UI無効化・DBバリデーション | 静的分析: `hasChildren`/`parentOptions` ロジック変更なし ✓ | OK |
-| 9 | 影響範囲 | app/tasks/page.js | TaskList・TaskInput のレンダリング | TaskList・TaskInput の変更が正常に反映される | 静的分析: `app/tasks/page.js` はシンプルなラッパーのみ。変更なし ✓ | OK |
-
-**影響範囲の確認対象リスト:**
-- `StatusCheckbox` 使用箇所: `components/TaskList.js`（TaskItem内）、`app/today/page.js` — 両方確認済み ✓
-- `TaskEditModal` 使用箇所: `components/TaskList.js`（編集ボタン）、`app/today/page.js`（タスク名クリック）— 両方確認済み ✓
-- `TaskInput` 使用箇所: `app/tasks/page.js`、`components/TaskList.js`（子タスク入力）、`app/layout.js`（FAB）— 実装への影響なし ✓
-
-**STEP R 結果: 全件 OK**
+⚠️ 要実機確認:
+- ルーティンのカード上で `☑ 完了:` 表示が正しく出るか（ルーティンオブジェクトは元々 `completed_at` を持たないため、楽観的更新で追加された値の表示確認）
+- 高速ステータス連続変更時の UI 表示の乱れがないか
+- TaskEditModal のレイアウト変更後の styled-jsx レンダリング結果（項目間隔・カラム幅等）
 
 ---
 
@@ -154,3 +88,75 @@
 | 1 | データ大量状態（親1に対し子100件） | 子タスクを大量に持つ親タスクを削除する | バッチ的な `UPDATE tasks SET parent_id = NULL WHERE ...` 1クエリで実行されるため、タイムアウトせずに完了すること | 静的分析でN+1が発生せず1クエリで更新処理が行われることを確認 | OK |
 | 2 | 状態の連続遷移 (DnDとの競合) | ドラッグ＆ドロップでタスクを子タスク化した直後、子にしたタスクの編集モーダルを開く | すでに親がいるため、モーダル上でさらに親を設定したり、子を持つタスクに変更したり等の競合が防がれること | 静的分析でモーダル表示時に都度DBから最新の子タスク/親タスク状況を取得し制限が掛かることを確認 | OK |
 | 3 | 削除→再編集 | 親タスクを削除し独立させた元子タスクを編集する | 独立したタスクはルートタスクとして扱われ、別タスクの親にも子にもなることができること | 静的分析で `parent_id` が `NULL` になっているため通常のルートタスク同様の操作が可能であることを確認 | OK |
+
+---
+
+## STEP B：品質レビュー（v1.2.0 枝番2-2）
+
+**検証日**: 2026-02-28
+**検証方法**: 静的分析（ソースコードリーディング）
+**検証スコープ**: WORK-LOG.md 枝番2-2 の変更ファイルを起点に、関連箇所を対象。
+- BUG-5: `components/TaskInput.js`, `components/TaskEditModal.js` — 入力項目の並び順統一
+- IMP-12: `components/StatusCheckbox.js` — 着手中→未着手戻しボタン追加
+- ENH-6: `components/TaskList.js`, `app/today/page.js` — completed_at 楽観的更新
+
+### 観点1：エラーハンドリング確認
+
+| # | 異常条件 | 挙動 | エラーメッセージの有無と内容 | データへの影響 | OK/NG |
+|---|---|---|---|---|---|
+| 1 | DBファイルが存在しない・破損 | `lib/db.js:14-31` で `Database.load()` が失敗 → `globalThis[DB_PROMISE_KEY] = null` でリトライ可能化。`window.dispatchEvent('yarukoto:dberror')` を発火 → `layout.js:36-41` で受信し `throw` → Next.js エラーバウンダリが表示。枝番2-2 の変更ファイルは全て `getDb()` を呼ぶ前段で失敗するため、変更箇所自体に到達しない | `yarukoto:dberror` イベント経由でエラーバウンダリが表示される。ユーザーにはエラー画面が表示される | データ損失なし（DB接続前に失敗） | OK |
+| 2 | app_settings テーブルにキーが存在しない | `TaskInput.js:90-92` — `settingRows.length === 0` で条件 false → タグ継承スキップ。`today/page.js:67-70` — `settingsRows.length === 0` でデフォルト `true` のまま（useState 初期値）。いずれもフォールバック動作で正常稼働 | エラーメッセージなし（異常ではなく正常パス扱い） | データ影響なし | OK |
+| 3 | ディスク書き込み権限なし（ステータス変更時） | `TaskList.js:120-128` — try/catch で `fetchTasks()` を呼び DB からリフェッチして楽観的更新をロールバック。`today/page.js:297,308` — 同パターンで `loadTasks(selectedDate)` によりロールバック | **エラートースト未表示。** `console.error(e)` のみで、ユーザーにはUIが元に戻るだけで理由が伝わらない。対比: `TaskList.js:143` の `handleDelete` は `'削除に失敗しました'` トーストを表示しており、同一ファイル内で対応が不統一 | 楽観的更新がロールバックされ、DB値と同期される。データ損失なし | ✅ 修正済み |
+| 4 | ディスク書き込み権限なし（タスク追加/保存時） | `TaskInput.js:146-150` — catch で `'タスクの追加に失敗しました'` トースト表示。`TaskEditModal.js:120-124` — catch で `'保存に失敗しました'` トースト表示 | 適切なエラートーストがユーザーに表示される | データ損失なし（DB に未到達） | OK |
+| 5 | completed_at に想定外のデータ型（数値等）が入っている | `TaskList.js:599` / `today/page.js:486` — 表示条件 `isDone && task.completed_at &&` の短絡評価により、truthy な数値の場合 `.split(' ')` でランタイムエラー（`Number.prototype.split is not a function`）。ただしDB側の `datetime()` 関数は常に文字列を返すため、正常運用で発生する可能性は極めて低い | エラーメッセージなし（ランタイムエラーが発生した場合、Reactのエラーバウンダリに委ねられる） | データ影響なし（読み取り専用パス） | OK（実運用リスク極低） |
+| 6 | statusCode に想定外の値が渡される | `StatusCheckbox.js:7` — `parseInt(statusCode)` で NaN になった場合、`code === 5` / `code === 3` / `code === 2` / `code === 1` はすべて false。`handleMainClick` の else 分岐（行16）で `onChange(3)` が呼ばれ、意図しない完了遷移が発生し得る。ただし `statusCode` は常に DB の `status_code` カラム（INTEGER NOT NULL DEFAULT 1）から取得されるため、正常運用で NaN になることはない | エラーメッセージなし（undefined 動作） | 理論上は意図しないステータス変更が発生し得るが、正常運用では到達しない | OK（実運用リスク極低） |
+
+**NG 指摘の詳細:**
+
+**#3 — ステータス変更失敗時のエラートースト未表示** ✅ 修正済み
+- **該当箇所**: `components/TaskList.js:128`、`app/today/page.js:297`、`app/today/page.js:308`
+- **修正内容**: 3箇所の catch ブロックに `window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }))` を追加
+
+### 観点2：一貫性レビュー
+
+| # | 観点 | 箇所A | 箇所B | 不整合の内容 | ファイル名:行番号 |
+|---|---|---|---|---|---|
+| 1 | 文言の揺れ | TaskInput 親タスクデフォルト選択肢 | TaskEditModal 親タスクデフォルト選択肢 | `'なし（ルートタスク）'` vs `'なし（ルート）'` — 同じ「親なし」の意味だが文言が異なる。`'なし（ルートタスク）'` に統一推奨 | `TaskInput.js:230` / `TaskEditModal.js:200` | ✅ 修正済み |
+| 2 | 文言の揺れ | TaskInput 想定工数プレースホルダ | TaskEditModal 想定工数プレースホルダ | `placeholder="0"` vs `placeholder="未設定"` — 同じ想定工数フィールドで異なるプレースホルダ。`'未設定'` に統一推奨（`0` は「0分」と混同しうる） | `TaskInput.js:253` / `TaskEditModal.js:220` | ✅ 修正済み |
+| 3 | 見た目の不統一（ラベル色） | TaskInput label | TaskEditModal .te-label | ラベルの文字色が `var(--color-text-muted)` (#8791a5) vs `var(--color-text-secondary)` (#4a5068) で異なる。TaskInput はさらに `text-transform: uppercase; letter-spacing: 0.04em` を指定しているが TaskEditModal にはない。BUG-5「レイアウト統一」の趣旨に照らし、同じ色・装飾に統一推奨（`--color-text-muted` + uppercase が他画面と調和しやすい） | `TaskInput.js:363-366` / `TaskEditModal.js:290` | ✅ 修正済み |
+| 4 | 見た目の不統一（入力フィールド背景色） | TaskInput input/select/textarea | TaskEditModal .te-input/.te-select/.te-textarea | 入力フィールドの背景色: `var(--color-surface-hover)` (#f1f3f9) vs `var(--color-surface)` (#ffffff)。同じ種類のフォーム入力なのに背景色が異なる。どちらかに統一推奨 | `TaskInput.js:368` / `TaskEditModal.js:298-299` | ✅ 修正済み |
+| 5 | 見た目の不統一（入力フィールドpadding・font-size） | TaskInput input/select/textarea | TaskEditModal .te-input/.te-select/.te-textarea | padding: `0.55rem 0.65rem` vs `0.5rem`、font-size: `0.875rem` vs `0.9rem` — 微差だがBUG-5の趣旨に照らし統一推奨 | `TaskInput.js:369-370` / `TaskEditModal.js:298` | ✅ 修正済み |
+| 6 | 見た目の不統一（タイトル入力のfont-size） | TaskInput .task-title-input | TaskEditModal .te-input-title | タイトル入力の font-size: `1.05rem` vs `1.5rem` — 大きな差異。モーダルの方が大きい。BUG-5「レイアウト統一」の趣旨上、同程度のサイズに揃えることを推奨 | `TaskInput.js:327` / `TaskEditModal.js:293` | ✅ 修正済み |
+| 7 | 見た目の不統一（textarea rows） | TaskInput 備考 textarea | TaskEditModal 備考 textarea | 同じ「備考」フィールドで `rows="2"` vs `rows="3"` — 初期表示高さが異なる。統一推奨（`rows="3"` が入力しやすい） | `TaskInput.js:206` / `TaskEditModal.js:172` | ✅ 修正済み |
+| 8 | 見た目の不統一（ボタンborder-radius） | TaskInput .btn-submit / .btn-collapse | TaskEditModal .te-btn-save / .te-btn-cancel | TaskInput は CSS変数 `var(--radius-sm)` (=8px) を使用。TaskEditModal はハードコーディング `4px`。デザインシステムの一貫性のため `var(--radius-sm)` に統一推奨 | `TaskInput.js:388` / `TaskEditModal.js:321,313` | ✅ 修正済み |
+| 9 | 同種操作でUI挙動が異なる | TaskInput 想定工数 input | TaskEditModal 想定工数 input | TaskInput は `max="99999"` で上限バリデーションあり、TaskEditModal には `max` 属性なし。編集画面でも同じ制限を適用すべき | `TaskInput.js:249-250` / `TaskEditModal.js:216` | ✅ 修正済み |
+| 10 | 同種操作でUI挙動が異なる（エラートースト） | handleStatusChange（ステータス変更失敗時） | handleDelete（削除失敗時） | ステータス変更の DB 失敗時はトースト通知なし（silent rollback）、削除の DB 失敗時はエラートースト表示。同ファイル内の同種エラーで対応が不統一（観点1 #3 と同一指摘） | `TaskList.js:128` vs `TaskList.js:143` | ✅ 修正済み |
+| 11 | 文言の揺れ（親タスク候補フィルタ） | TaskInput 親候補クエリ | TaskEditModal 親候補クエリ | TaskInput は `status_code != 3 AND status_code != 5`（完了+キャンセル除外）、TaskEditModal は `status_code != 5`（キャンセルのみ除外）。新規作成時は完了タスクを親候補から外すが、編集時は完了タスクも親候補に含まれる不統一。編集時も完了タスクを除外するか、意図的な差異なら ISSUES.md に仕様として明記推奨 | `TaskInput.js:37` / `TaskEditModal.js:43-44` | ✅ 修正済み |
+| 12 | 日付フォーマットの一貫性 | 全画面 | 全画面 | `sv-SE` ロケールによる `YYYY-MM-DD` 形式が全画面で一貫して使用されている。`completed_at.split(' ')[0]` のパターンも `TaskList.js:599`, `today/page.js:486`, `TaskEditModal.js:251` で統一。`formatMin()` 関数も `today/page.js:340-343` と `dashboard/page.js:158-161` で同一ロジック | — | OK |
+| 13 | エラーメッセージのトーン | 全画面 | 全画面 | エラーメッセージは「〜に失敗しました」パターンで統一されている（`TaskInput.js:149` `'タスクの追加に失敗しました'`、`TaskEditModal.js:123` `'保存に失敗しました'`、`TaskList.js:143` `'削除に失敗しました'`）。トーンと粒度に問題なし | — | OK |
+| 14 | 削除確認ダイアログ | 全画面 | 全画面 | 削除操作は全て `confirm()` ダイアログで確認を取っている（`TaskList.js:132`, `settings/page.js:163,214,501-502`）。統一されている | — | OK |
+
+**NG 指摘の詳細:**
+
+**#1 — 親タスクデフォルト選択肢の文言不統一** ✅ 修正済み
+- `TaskEditModal.js:200` の `'なし（ルート）'` を `'なし（ルートタスク）'` に変更
+
+**#2 — 想定工数プレースホルダの不統一** ✅ 修正済み
+- `TaskInput.js:253` の `placeholder` を `"未設定"` に変更
+
+**#3〜8 — TaskInput / TaskEditModal 間の CSS 不統一（BUG-5 関連）** ✅ 修正済み
+- TaskEditModal の styled-jsx を TaskInput のデザインパターンに統一:
+  - ラベル色を `--color-text-muted` + uppercase + letter-spacing に変更 (#3)
+  - 入力フィールド背景色を `--color-surface-hover` に変更 (#4)
+  - padding を `0.55rem 0.65rem`、font-size を `0.875rem` に変更 (#5)
+  - タイトル入力の font-size を `1.05rem` に変更 (#6)
+  - 備考 textarea の rows を `3` に統一 (#7)
+  - ボタン border-radius を `var(--radius-sm)` に変更 (#8)
+  - フォーカス時の box-shadow と背景変化も追加
+
+**#9 — 想定工数 max 属性の欠落** ✅ 修正済み
+- `TaskEditModal.js:216` の `<input type="number">` に `max="99999"` を追加
+
+**#11 — 親タスク候補フィルタの不統一** ✅ 修正済み
+- `TaskEditModal.js:43-44` のクエリに `AND status_code != 3` を追加して TaskInput と統一
+- 既に完了した親を持つタスクの編集時は、現在の親タスクが候補に含まれるよう `OR id = $2` 条件を追加

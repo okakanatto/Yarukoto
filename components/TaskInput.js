@@ -203,7 +203,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                         <div className="form-field">
                             <label>備考</label>
                             <textarea
-                                rows="2"
+                                rows="3"
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 placeholder="メモを入力..."
@@ -250,7 +250,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                                     max="99999"
                                     value={estimatedMinutes}
                                     onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                    placeholder="0"
+                                    placeholder="未設定"
                                 />
                             </div>
                         </div>

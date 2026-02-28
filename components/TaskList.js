@@ -125,7 +125,11 @@ export default function TaskList() {
             } else {
                 await db.execute('UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2', [newStatusCode, taskId]);
             }
-        } catch (e) { console.error(e); fetchTasks(); }
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
+            fetchTasks();
+        }
     };
 
     const handleDelete = async (taskId) => {
