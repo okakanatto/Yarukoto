@@ -130,7 +130,7 @@ export default function Settings() {
                 );
             }
             flash('ok', '保存しました');
-        } catch { flash('err', '保存に失敗しました'); }
+        } catch (e) { console.error(e); flash('err', '保存に失敗しました'); }
         finally { setSaving(false); }
     };
 
@@ -156,7 +156,7 @@ export default function Settings() {
                 );
             }
             flash('ok', '保存しました');
-        } catch { flash('err', '保存に失敗しました'); }
+        } catch (e) { console.error(e); flash('err', '保存に失敗しました'); }
         finally { setSaving(false); }
     };
 
@@ -285,6 +285,18 @@ export default function Settings() {
         }
     };
 
+    const moveTag = (index, direction) => {
+        const activeTags = data.tags.filter(t => !t.archived);
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= activeTags.length) return;
+        setData(p => {
+            const active = p.tags.filter(t => !t.archived);
+            const archived = p.tags.filter(t => t.archived);
+            [active[index], active[newIndex]] = [active[newIndex], active[index]];
+            return { ...p, tags: [...active, ...archived] };
+        });
+    };
+
     const moveStatus = (index, direction) => {
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= data.status.length) return;
@@ -380,6 +392,10 @@ export default function Settings() {
                                         >
                                             <div className="s-row">
                                                 <span className="s-grip" title="ドラッグして並べ替え">⠿</span>
+                                                <div className="s-move-btns">
+                                                    <button className="s-move-btn" onClick={() => moveTag(i, -1)} disabled={i === 0} type="button" title="上に移動">▲</button>
+                                                    <button className="s-move-btn" onClick={() => moveTag(i, 1)} disabled={i === activeTags.length - 1} type="button" title="下に移動">▼</button>
+                                                </div>
                                                 <button className="s-swatch" style={{ backgroundColor: t.color }} onClick={() => tp(`tag-${t.id}`)} type="button" title="色を変更" />
                                                 <div className="s-bar" style={{ backgroundColor: t.color }} />
                                                 <input className="s-input" type="text" value={t.name} onChange={e => updTag(t.id, 'name', e.target.value)} onBlur={() => commitTag(t.id)} />
