@@ -17,9 +17,25 @@
 - **次にやるべきこと**:
   - 枝番3-1の検証STEP完了。次の枝番3-2（IMP-2: アーカイブ機能）の実装へ
 - **注意事項・申し送り**:
-  - **変更した機能**: 設定画面「タグ」タブのタグ並び順変更操作（▲▼ボタン追加）、saveMaster/saveTagsのエラーログ出力
-  - **変更したファイル**: `app/settings/page.js` — moveTag関数追加（activeタグのみ対象にスワップ、archivedは末尾固定）、タグ行のgrip右側に▲▼ボタン追加（先頭▲無効化・末尾▼無効化）、saveMaster/saveTagsのcatchブロックに `(e)` と `console.error(e)` 追加
-  - **影響が想定される箇所**: 設定画面のタグタブのみ。保存は既存の `saveTags` ボタンで行うため他画面への影響なし
+  - **変更した機能**:
+    - 設定画面「タグ」タブのタグ並び順変更操作（▲▼ボタン追加）
+    - 設定画面の保存系関数（saveMaster / saveTags）のエラーログ出力
+  - **変更したファイル**:
+    - `app/settings/page.js` — moveTag関数追加、タグ行に▲▼ボタン追加、saveMaster/saveTagsのcatchブロックにconsole.error(e)追加
+    - `qa-report.md` — STEP B 一貫性レビューの2件に「✅ 修正済み」マーク付与
+  - **変更の概要**:
+    1. タグ一覧に▲▼ボタンを追加（一貫性#1）：`moveTag(index, direction)` 関数を新規追加。activeタグ配列内でスワップし、archivedタグは末尾固定を維持。タグ行のgrip（⠿）右側に `.s-move-btns` > `.s-move-btn`（▲▼）を追加。先頭アイテムは▲disabled、末尾アイテムは▼disabled。CSSはステータスの `.s-move-btns` / `.s-move-btn` を共用。
+    2. saveMaster / saveTags に console.error 追加（一貫性#2）：`catch { ... }` → `catch (e) { console.error(e); ... }` に変更。他の更新系関数と統一。
+  - **影響が想定される箇所**:
+    - `app/settings/page.js` 内のタグタブ描画部分（activeTags.map 内の JSX）
+    - `app/settings/page.js` の `moveTag` 関数（data.tags state を更新）
+    - `app/settings/page.js` の `saveTags` 関数（moveTagで並べ替えた結果をsort_orderとしてDBに保存）
+    - `app/settings/page.js` の `saveMaster` 関数（エラー時のログ出力追加のみ）
+    - `app/today/page.js` — タグのsort_orderを参照する箇所
+    - `hooks/useMasterData.js` — タグ取得時にsort_orderでソート
+    - `components/TagSelect.js` — タグ選択ドロップダウンの表示順
+    - `components/TaskList.js` — タグ表示の並び順
+    - `components/TaskInput.js` — タグ選択の並び順
 
 ---
 
