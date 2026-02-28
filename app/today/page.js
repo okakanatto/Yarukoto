@@ -408,7 +408,7 @@ export default function TodayPage() {
                         <span className="filter-toggle-switch" />
                         <span className="filter-toggle-text">完了・キャンセルを除く</span>
                     </label>
-                    <div className="tl-filter" style={{ marginLeft: 'auto' }}>
+                    <div className="today-filter" style={{ marginLeft: 'auto' }}>
                         <label>並び順</label>
                         <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
                             <option value="priority">優先度順（デフォルト）</option>
@@ -650,8 +650,8 @@ export default function TodayPage() {
           margin-top: 0.6rem; padding-top: 0.6rem;
           border-top: 1px solid var(--border-color);
         }
-        .tl-filter { display: flex; align-items: center; gap: 0.4rem; }
-        .tl-filter label { font-size: 0.78rem; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; }
+        .today-filter { display: flex; align-items: center; gap: 0.4rem; }
+        .today-filter label { font-size: 0.78rem; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; }
 
         /* Stats */
         .today-stats {

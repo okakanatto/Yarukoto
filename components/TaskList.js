@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, useDraggable, useDroppable, closestCorners } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import TaskInput from './TaskInput';
@@ -32,6 +32,7 @@ export default function TaskList() {
     const [editingTask, setEditingTask] = useState(null);
     const [activeId, setActiveId] = useState(null); // For DragOverlay
 
+    const activeRequestId = useRef(0);
     const { masters, tags: allTags } = useMasterData();
     const allStatuses = useMemo(() => masters.status || [], [masters.status]);
     const allImportance = useMemo(() => masters.importance || [], [masters.importance]);
@@ -55,6 +56,7 @@ export default function TaskList() {
     const { setNodeRef: setRootRef } = useDroppable({ id: 'root' });
 
     const fetchTasks = useCallback(async () => {
+        const currentReq = ++activeRequestId.current;
         setLoading(true);
         try {
             const { getDb } = await import('@/lib/db');
@@ -122,9 +124,15 @@ export default function TaskList() {
                 })).filter(t => t.id)
             }));
 
-            setTasks(parsedTasks);
+            if (currentReq === activeRequestId.current) {
+                setTasks(parsedTasks);
+            }
         } catch (e) { console.error("Tauri DB fetch error:", e); }
-        finally { setLoading(false); }
+        finally {
+            if (currentReq === activeRequestId.current) {
+                setLoading(false);
+            }
+        }
     }, [excludeDone, filterTags, filterImportance, filterUrgency]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
@@ -445,13 +453,6 @@ export default function TaskList() {
               border-top:1px solid var(--border-color);
             }
             .tl-filter label { font-size:.78rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
-            .tl-btn-icon {
-              background:var(--color-surface-hover); border:1px solid var(--border-color);
-              color:var(--color-text-secondary); width:32px; height:32px; border-radius:var(--radius-sm);
-              cursor:pointer; display:flex; align-items:center; justify-content:center;
-              font-size:1.05rem; transition:all .15s; margin-left:auto;
-            }
-            .tl-btn-icon:hover { background:var(--color-surface-active); color:var(--color-text); }
             .tl-spin { display:inline-block; animation:spin .8s linear infinite; }
             .tl-items { display:flex; flex-direction:column; gap:.6rem; }
             .tl-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; padding:3rem; color:var(--color-text-muted); }

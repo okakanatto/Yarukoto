@@ -40,7 +40,7 @@
 | 3 | IMP-12: ↩ボタン連打 | ↩ボタンを高速連打 | `e.stopPropagation()` で親要素への伝播なし。onChange(1) は冪等（1→1 は状態変化なし） | 静的分析: `StatusCheckbox.js:27` — `stopPropagation` あり。初回クリックで code=1 → `showRevert=false` でボタン消失。連打による副作用なし ✓ | OK |
 | 4 | ENH-6: completed_at の null ガード | 未完了タスクの completed_at が null の場合 | エラーにならず完了日が非表示 | 静的分析: `TaskList.js:599` — `isDone && task.completed_at &&` の短絡評価で null.split() は発生しない ✓。`today/page.js:486` も同パターン ✓ | OK |
 | 5 | ENH-6: 日付フォーマット互換性 | 楽観的更新の completed_at を split(' ') する | `[0]` で日付部分 `YYYY-MM-DD` が取得できる | 静的分析: `sv-SE` ロケールで `YYYY-MM-DD` + `' '` + `HH:MM:SS`。DB側 `datetime('now', 'localtime')` も `YYYY-MM-DD HH:MM:SS`。split(' ')[0] で互換 ✓ | OK |
-| 6 | BUG-5: 空タスク名での保存 | タスク名を空にして保存クリック | 保存ボタンが disabled | 静的分析: `TaskEditModal.js:258` — `disabled={!title.trim() \|\| saving}`、`TaskEditModal.js:61` — `if (!title.trim() \|\| saving) return;` の二重ガード ✓ | OK |
+| 6 | BUG-5: 空タスク名での保存 | タスク名を空にして保存クリック | 保存ボタンが disabled | 静的分析: `TaskEditModal.js:258` — `disabled={!title.trim() || saving}`、`TaskEditModal.js:61` — `if (!title.trim() || saving) return;` の二重ガード ✓ | OK |
 | 7 | BUG-5: 特殊文字のタスク名 | `' " < > & \ /` を含むタスク名 | パラメタライズドクエリで安全に保存される | 静的分析: `TaskEditModal.js:83-107` — `$1` 〜 `$10` の positional パラメータ使用。SQL injection リスクなし ✓ | OK |
 
 ### 観点3：状態遷移・データ件数テスト
@@ -218,7 +218,7 @@
 | 25 | 影響範囲 | FABモーダルの TaskInput | layout.js の FABボタンから新規タスク追加 | FABモーダル内で TaskInput が正常レンダリング。`.fab-modal .task-input-wrapper` CSS オーバーライド（layout.js:341-354）が引き続き適用 | `layout.js:214-219` — `<TaskInput onTaskAdded={...} />`。TaskInput の外観変更は placeholder と rows のみ。FABモーダルのCSSオーバーライドは border, shadow, padding, background に限定されており、rows・placeholder には干渉しない | OK |
 | 26 | 影響範囲 | トーストリスナー（layout.js） | エラートースト dispatch が正常に受信・表示される | layout.js のグローバルトーストリスナーが `yarukoto:toast` イベントを受信し、3秒後に自動消去 | `layout.js:46-53` — `handleToast` リスナーは `e.detail` から `{message, type}` を取得。`type: 'error'` の場合 `.toast-err` クラス適用（行229）。今回追加されたトーストの payload は既存パターン（`{message: string, type: 'error'}`) と一致 | OK |
 | 27 | 影響範囲 | BUG-4 親タスク削除時の子タスク独立 | 親タスクを削除 | 子タスクの parent_id が NULL 化され独立する（CASCADE は発動しない） | `TaskList.js:140-142` — `UPDATE tasks SET parent_id = NULL WHERE parent_id = $1` + `DELETE FROM tasks WHERE id = $1`。今回の変更は handleStatusChange の catch のみで、handleDelete は未変更 | OK |
-| 28 | 影響範囲 | BUG-6 2階層制限バリデーション | 子タスクを持つタスクに親タスクを設定しようとする | 編集モーダルで select が disabled、handleSave で DB 側バリデーションが拒否 | `TaskEditModal.js:199` — `disabled={hasChildren \|\| parentOptions.length === 0}`。`TaskEditModal.js:70-82` — BUG-6 バリデーション。これらのコード行は今回未変更 | OK |
+| 28 | 影響範囲 | BUG-6 2階層制限バリデーション | 子タスクを持つタスクに親タスクを設定しようとする | 編集モーダルで select が disabled、handleSave で DB 側バリデーションが拒否 | `TaskEditModal.js:199` — `disabled={hasChildren || parentOptions.length === 0}`。`TaskEditModal.js:70-82` — BUG-6 バリデーション。これらのコード行は今回未変更 | OK |
 | 29 | 影響範囲 | IMP-12 着手中→未着手戻し | 着手中タスクにホバー→↩ボタンクリック | ステータスが未着手(1)に遷移 | `StatusCheckbox.js` は今回未変更。handleStatusChange の正常パス（newStatusCode=1）は変更なし。catch のトースト追加は正常パスに影響しない | OK |
 | 30 | 影響範囲 | ENH-6 完了日即時UI反映 | タスクを完了(3)にする | リロードなしで完了日が即座に表示 | `TaskList.js:114-119` / `today/page.js:275-280` の楽観的更新ロジックは未変更。catch のトースト追加は正常パスに影響しない | OK |
 | 31 | 影響範囲 | DnD（タスクのネスト/アンネスト） | タスクをドラッグ&ドロップで子タスク化/独立化 | DnD 操作が正常に動作し、parent_id の更新とタグ継承が機能する | `TaskList.js:166-249` — handleDragEnd は今回未変更。handleStatusChange への変更とは無関係 | OK |
@@ -230,3 +230,86 @@
 - **直接テスト**: 16件 / 全件 OK
 - **影響範囲テスト**: 17件 / 全件 OK
 - **合計**: 33件 / 全件 OK / NG: 0件
+
+---
+
+## STEP A：機能検証（v1.2.0 枝番2-3）
+
+**検証日**: 2026-02-28
+**検証方法**: 静的分析（ソースコードリーディング）
+**検証スコープ**: WORK-LOG.md 枝番2-3 の「やったこと」「変更したファイル」に基づく。
+- IMP-3: フィルタの複数選択（ステータストグル、タグ/重要度/緊急度チップ）
+
+### 観点1：正常系テスト
+
+| # | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|
+| 1 | IMP-3: ステータスフィルタ（タスク一覧） | 「完了・キャンセルを除く」トグルをONにする | DBクエリに `t.status_code NOT IN (3, 5)` が追加され、未完了状態のタスクのみ表示される | 静的分析: `TaskList.js:86-88` — `excludeDone` ON時に条件追加 ✓ | OK |
+| 2 | IMP-3: ステータスフィルタ（今日やる） | 「完了・キャンセルを除く」トグルをONにする | タスクは完了・キャンセル除外、ルーティンは本日未完了(\`rc.completion_date IS NULL\`)のみ表示される | 静的分析: `today/page.js:122-125` — `t.status_code NOT IN (3, 5)` および `rc.completion_date IS NULL` が適切に条件追加される ✓ | OK |
+| 3 | IMP-3: タグフィルタ複数選択 | タグAとタグBのチップを両方選択 | 選択したタグのいずれか（OR条件）を持つタスクが表示される | 静的分析: `TaskList.js:90-94` — `IN ($1, $2)` のプレースホルダを生成し `task_tags` のサブクエリに渡しているため正しくOR検索される ✓ | OK |
+| 4 | IMP-3: 重要度・緊急度フィルタ | 重要度「高」と「中」を選択 | 選択したレベルのいずれかを持つタスクが表示される | 静的分析: `TaskList.js:96-100` — `t.importance_level IN ($1, $2)` として正しくOR検索される。緊急度も同様 ✓ | OK |
+| 5 | IMP-3: 複数条件の組み合わせ | 「完了を除く」ON ＋ 特定タグ選択 ＋ 特定重要度選択 | 各条件が AND で結合され、すべての条件を満たすタスクが表示される | 静的分析: `TaskList.js:108` — `conditions.join(' AND ')` により全てのフィルタグループがAND結合される。today/page.js も同様 ✓ | OK |
+| 6 | IMP-3: ルーティンへのチップフィルタ適用 | 今日やる画面でタグ・重要度・緊急度フィルタを選択 | ルーティンに対しても対応するフィルタが適用される | 静的分析: `today/page.js:134-157` — `rConditions` に対してルーティン用の条件文（\`routine_tags\`サブクエリなど）が並行して構築されている ✓ | OK |
+| 7 | IMP-3: フィルタの解除 | 選択中のチップを再度クリックする | 状態配列から要素が削除され、フィルタが解除される | 静的分析: `toggleFilterTag` 等で \`prev.includes()\` を判定し \`filter()\` で除外する冪等なトグル処理が実装されている ✓ | OK |
+
+### 観点2：異常系・境界値テスト
+
+| # | 対象フィールド/操作 | 入力内容 | 期待される挙動 | 実際の挙動 | OK/NG |
+|---|---|---|---|---|---|
+| 1 | IMP-3: 選択0件（すべて解除） | いずれのチップも選択されていない状態 | 条件配列長が0となり `IN` 句が生成されず、全件（フィルタなし）が表示される | 静的分析: `filterTags.length > 0` のifガードにより、0件時は条件文字列自体がスキップされる ✓ | OK |
+| 2 | IMP-3: CSSのオーバーフロー | 画面幅が狭く、多数のチップが存在する | チップが画面外にはみ出さず、適切に折り返される | 静的分析: `globals.css:600` — `.filter-chip-row` に `flex-wrap: wrap;` が指定されており、安全に折り返される ✓ | OK |
+| 3 | IMP-3: トグルの高速連打 | ステータストグルを高速でON/OFFする | 正しい最新ステートが維持され、予期せぬDOMエラー等が発生しない | 静的分析: Reactのマネージドな controlled checkbox (`checked={excludeDone}`) のため安全 ✓ | OK |
+| 4 | IMP-3: 非同期フェッチの競合（今日やる） | フィルタを高速で連続変更し、複数回の `loadTasks` が並行して走る | 最後にリクエストされたフェッチ結果のみが UI に反映され、過去のリクエストによる上書き（巻き戻り）が起きない | 静的分析: `today/page.js:102, 284` — `activeRequestId.current` を用いたリクエスト追跡により、最新のレスポンス以外は `setTasks` されない（Race Condition対策済） ✓ | OK |
+
+⚠️ 要実機確認:
+- `TaskList.js` 側には fetchTasks の競合を防ぐ `activeRequestId` の実装が見当たらないため、高速でフィルタを切り替えた際に sqlite-plugin のレスポンス順に依存したUIの巻き戻りが起きないか
+
+### 観点3：状態遷移・データ件数テスト
+
+| # | テスト条件 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|
+| 1 | 該当データ0件 | 存在しない組み合わせ（例：特定の極端なタグと重要度）でフィルタ | エラーにならず、0件時のプレースホルダ（空状態）が表示される | 静的分析: TaskList では `parentTasks.length === 0` で空表示、today/page では `tasks.length === 0` で空表示。配列は空になるだけでエラーは発生しない ✓ | OK |
+| 2 | データ大量状態での IN 句 | フィルタ対象のレコードが100件を超える場合 | `sqlite` の `$1, $2` パラメータバインディングが正常に機能する | 静的分析: sqlite の標準的な最大パラメータ数（通常999または32766）には達しない（チップの選択肢数＝マスタ件数に依存し、数十件程度）ため問題ない ✓ | OK |
+
+---
+
+## STEP B：品質レビュー（v1.2.0 枝番2-3）
+
+**検証日**: 2026-02-28
+**検証方法**: 静的分析（ソースコードリーディング）
+**検証スコープ**: WORK-LOG.md 枝番2-3 の「やったこと」「変更したファイル」に基づく。
+- IMP-3: フィルタの複数選択（ステータストグル、タグ/重要度/緊急度チップ）で変更された `app/globals.css`, `components/TaskList.js`, `app/today/page.js`
+
+### 観点1：エラーハンドリング確認
+
+| # | 異常条件 | 挙動 | エラーメッセージの有無と内容 | データへの影響 | OK/NG |
+|---|---|---|---|---|---|
+| 1 | DBファイルが存在しない・破損している場合 | DB接続エラー発生時は前段の try-catch により失敗し、フィルタ用のパラメータバインディングやデータ構築処理には到達しない。React側の状態は更新されず空のまま安全にクラッシュを回避する | `yarukoto:dberror` イベント経由でエラーバウンダリが表示される | データ損失・破損なし | OK |
+| 2 | 設定ファイルが存在しない・不正な場合 | `app_settings` の `show_overdue_in_today` 値の取得に失敗・または存在しない場合も、useStateの初期値(true)が維持されるため、フィルタ機能自体はクラッシュせずに稼働する | エラーメッセージなし（正常パスとしてそのまま続行） | データ影響なし | OK |
+| 3 | ディスク書き込み権限がない場合 | 今回のフィルタ実装は全て `SELECT` 系クエリに対する `WHERE` 条件追加のみであり、書き込みを行わないため権限不足によるエラーは発生しない | エラーメッセージなし | データ影響なし | OK |
+| 4 | DB内のカラム等に想定外のデータ型が入っている場合 | DB内に不正な文字列等が混入していてもSQLiteの緩い型チェックによりクラッシュしない。タグ等のマスタ不在時は `allTags` などの配列が空となり、UI上のチップが非表示になることで安全にフォールバックする。 | エラーメッセージなし | データ影響なし | OK |
+
+### 観点2：一貫性レビュー
+
+| # | 観点 | 箇所A | 箇所B | 不整合の内容 | ファイル名:行番号 |
+|---|---|---|---|---|---|
+| 1 | 見た目の不統一（クラス名） | `components/TaskList.js` の `.tl-filter` | `app/today/page.js` の `.tl-filter` | 共通のスタイリングに対してタスクリスト固有の接頭辞 `tl-` が `today/page.js` 内でもそのまま使用されている。スコープ付き `<style jsx>` 内のため動作上問題ないが、名前空間の統一性（`today-filter` とする等）に欠ける | `app/today/page.js:411, 653` | ✅ 修正済み |
+| 2 | 無効/デッドコードの残存 | 過去のフィルタUIデザイン | `components/TaskList.js` の `.tl-btn-icon` | フィルタUIのUI刷新によってJSXからは完全に削除された `<button className="tl-btn-icon">` のCSS定義が `<style jsx global>` 内に残存したままとなっている。不要なCSSコードのため削除推奨 | `components/TaskList.js:448-454` | ✅ 修正済み |
+| 3 | 同種操作でUI挙動が異なる（非同期フェッチの競合対策） | `app/today/page.js` (`activeRequestId`) | `components/TaskList.js` (`fetchTasks`) | フィルタ用のチップを高速で連続切替した際、`today/page.js` 側は `useRef` を用いて最新リクエスト以外のレスポンス破棄（Race Condition対策）が行われているが、`TaskList.js` 側の `fetchTasks` には同等の競合対策が実装されていない。非同期レスポンス順の追い越しによるUIの巻き戻り（チラつき）が発生しうる不整合 | `components/TaskList.js:125` | ✅ 修正済み |
+
+**NG 指摘の詳細:**
+
+**#1 — tl-filter クラス名の不統一** ✅ 修正済み
+- **問題箇所**: `app/today/page.js:411`, `app/today/page.js:653`
+- **内容**: TaskListコンポーネント用のプレフィックス `tl-` をそのままコピーして使用している。
+- **推奨**: 該当divクラスと `<style jsx>` 内のクラス名を `.today-filter` に変更し一貫性を持たせる。
+
+**#2 — デッドコードの残存 (tl-btn-icon)** ✅ 修正済み
+- **問題箇所**: `components/TaskList.js:448-454`
+- **内容**: 使用されていない `.tl-btn-icon` クラスとそのホバーセレクタが残存している。
+- **推奨**: 該当CSSブロックを削除する。
+
+**#3 — Race Condition (非同期競合) 対策の欠落** ✅ 修正済み
+- **問題箇所**: `components/TaskList.js:125`
+- **内容**: フィルタの複数選択チップ連打により、複数回の SQLite select クエリが非同期に発行される。レスポンス順序が保証されないため、最新のフィルタ状態と異なる古いデータで画面が上書きされる可能性がある。
+- **推奨**: `today/page.js` と同様に `activeRequestId` (useRef) を導入し、現在のリクエストIDと一致する場合のみ `setTasks(parsedTasks)` を実行するように変更する。
