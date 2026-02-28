@@ -158,7 +158,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                     background: var(--color-primary); border-color: var(--color-primary);
                 }
                 .msf-item input:checked + .msf-check::after {
-                    content: '\\2713'; color: #fff; font-size: 0.65rem;
+                    content: '✓'; color: #fff; font-size: 0.65rem;
                     font-weight: 700; line-height: 1;
                 }
                 .msf-dot {
