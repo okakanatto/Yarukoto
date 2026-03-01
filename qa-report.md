@@ -4,38 +4,21 @@
 
 ### 観点1：正常系テスト
 
-| # | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
-|---|---|---|---|---|---|
-| 1 | ステータス一覧の表示 | 設定画面のステータスタブを開く | システム必須項目を含めステータス一覧が表示され、上下移動ボタン（▲▼）も表示されること | 期待通り | OK |
-| 2 | DnDによる並び替え | ステータスをドラッグ＆ドロップする | ドロップ位置に要素が移動し、リストの並び順が更新されること | 期待通り | OK |
-| 3 | 上下ボタンによる並び替え | 各ステータスの▲または▼ボタンをクリックする | 意図した通りに1つ上または1つ下に要素が移動すること | 期待通り | OK |
-| 4 | 並び順の保存 | 並び順変更後に「並び順を保存」ボタンをクリックする | 変更された並び順がDBの `sort_order` に正しく更新されること | 期待通り | OK |
+✅ OK: 4件 全件パス
 
 ### 観点2：異常系・境界値テスト
 
-| # | 対象フィールド/操作 | 入力内容 | 期待される挙動 | 実際の挙動 | OK/NG |
-|---|---|---|---|---|---|
-| 1 | 上下移動の境界値チェック | 先頭項目の▲ボタン、末尾項目の▼ボタンの確認 | 境界外へ移動する操作が防止され、対応する移動ボタンが無効化（disabled）されていること | 期待通り | OK |
-| 2 | 移動ボタンの高速連続実行 | 同じ要素の▲または▼ボタンを連打 | インデックスの境界を越えようとした場合は `moveStatus` 内の判定により無視され、クラッシュしないこと | 期待通り | OK |
-| 3 | 新規ステータスの追加（空文字） | ステータス名に空文字や空白のみを入力 | 「追加」ボタンが非活性となりクリックできないこと | 期待通り | OK |
-| 4 | 新規ステータスの追加（特殊文字等） | `' " < > & \ / ; --` 等の記号、または超長文字列を入力 | DB制約等によるエラーが起きず保存可能なこと。⚠️ 要実機確認：[設定画面]で[超長文字列のステータスを入力]→[リスト表示時にレイアウトが崩れないこと] | 期待通り。プレースホルダ利用でSQL実行は安全。 | OK |
+✅ OK: 4件 全件パス
 
 ### 観点3：状態遷移・データ件数テスト
 
-| # | テスト条件 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
-|---|---|---|---|---|---|
-| 1 | 基本ステータスの制御確認 | 操作対象がシステム必須ステータス（コード1〜5） | 名前の編集・削除操作はできず（readOnly）、並べ替えのみ可能なこと | 期待通り | OK |
-| 2 | 未保存の連続操作 | ステータス追加直後に、そのまま並び替えを行い保存 | 新規追加された項目を含めて正しく状態が管理され、DBに順序を含めて保存されること | 期待通り | OK |
-| 3 | 二重送信の抑止 | 「並び順を保存」をダブルクリックなど連続クリック | 処理中は `saving` フラグによりボタンが非活性になり、重複して保存処理が走らないこと | 期待通り | OK |
+✅ OK: 3件 全件パス
 
 ## STEP B：品質レビュー（v1.3.0 枝番3-1）
 
 ### 観点1：エラーハンドリング確認
 
-| # | 異常条件 | 挙動 | エラーメッセージの有無と内容 | データへの影響 | OK/NG |
-|---|---|---|---|---|---|
-| 1 | DBファイルが存在しない・破損している・ディスク書き込み権限がない場合 | 保存時に `saveMaster` 内の `db.execute` が例外をスローし、`catch` ブロックで処理される。アプリはクラッシュせず稼働を継続する。 | 画面下部に「❌ 保存に失敗しました」とトーストが表示される。 | DBへの変更は反映されず、既存データは保護される。 | OK |
-| 2 | 想定外のデータ・不正な状態 | `moveStatus` 実行時に配列境界外（マイナスや配列長超過）への移動操作が行われても関数冒頭の判定でガードされ無視されるためクラッシュしない。保存時も配列のインデックス番号を `sort_order` として安全に更新するため整合性が保たれる。 | なし | データの損失や破損は発生しない。 | OK |
+✅ OK: 2件 全件パス
 
 ### 観点2：一貫性レビュー
 
@@ -46,57 +29,13 @@
 
 ## STEP R：リグレッションテスト（v1.3.0 枝番3-1 2026-02-28）
 
-### 変更サマリー
-
-- **変更内容**: QA指摘2件修正（タグ一覧に▲▼ボタン追加 + saveMaster/saveTagsにconsole.error追加）
-- **変更ファイル**: `app/settings/page.js`（moveTag関数追加、タグ行に▲▼ボタン追加、saveMaster/saveTagsのcatchブロックにconsole.error(e)追加）
-
-### 影響範囲の洗い出し
-
-以下のファイル・関数を確認対象とした：
-
-| ファイル | 確認した関数/箇所 | 変更との関連 |
-|---|---|---|
-| `app/settings/page.js` L288-298 | `moveTag(index, direction)` — 新規追加 | 直接変更 |
-| `app/settings/page.js` L395-398 | タグ行の▲▼ボタンJSX — 新規追加 | 直接変更 |
-| `app/settings/page.js` L118-135 | `saveMaster()` — catch に console.error(e) 追加 | 直接変更 |
-| `app/settings/page.js` L137-161 | `saveTags()` — catch に console.error(e) 追加 | 直接変更 |
-| `app/settings/page.js` L98-108 | `activeTags`, `setActiveTags`, `dragTags` — DnDとmoveTagの共存 | moveTagと同じ state を操作 |
-| `hooks/useMasterData.js` L21 | `SELECT * FROM tags ORDER BY sort_order, id` | sort_order変更後の取得順に影響 |
-| `app/today/page.js` L74 | `SELECT * FROM tags ORDER BY sort_order, id` | sort_order変更後の取得順に影響 |
-| `components/TagSelect.js` L21-23 | `filtered = allTags.filter(...)` — allTagsの順序を保持 | タグ表示順に影響 |
-| `components/TaskList.js` L43 | `tagOptions = allTags.filter(...).map(...)` — allTags順を保持 | タグフィルタ表示順に影響 |
-| `components/TaskInput.js` L217-220 | `<TagSelect allTags={allTags}>` — useMasterData順を保持 | タグ選択表示順に影響 |
-| `app/today/page.js` L71 | `SELECT * FROM status_master ORDER BY sort_order, code` | saveMasterの変更がstatus sort_orderに影響する可能性 |
-| `components/TaskList.js` L300-302 | ステータス順ソート `allStatuses.find(...)?.sort_order` | saveMasterの変更がstatus sort_orderに影響する可能性 |
-
 ### 第1段階：変更箇所の直接テスト
 
-| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
-|---|---|---|---|---|---|---|
-| 1 | 直接 | moveTag 境界チェック（上限） | 先頭アイテム（index=0）で moveTag(0, -1) が呼ばれた場合 | newIndex=-1 で return され、状態変更なし | L291 `newIndex < 0` で return。正常にガード | OK |
-| 2 | 直接 | moveTag 境界チェック（下限） | 末尾アイテムで moveTag(lastIndex, 1) が呼ばれた場合 | newIndex >= activeTags.length で return | L291 `newIndex >= activeTags.length` で return。正常にガード | OK |
-| 3 | 直接 | moveTag 正常スワップ | 中間アイテムの▲▼操作 | active配列内で隣接要素がスワップされ、archived配列は末尾固定のまま維持 | L293-296 active/archived分離→スワップ→[...active, ...archived]結合。正常動作 | OK |
-| 4 | 直接 | タグ▲ボタン disabled制御 | 先頭アイテム（i=0）の▲ボタン表示 | disabled={true} でクリック不可 | L396 `disabled={i === 0}` — i=0のとき true | OK |
-| 5 | 直接 | タグ▼ボタン disabled制御 | 末尾アイテムの▼ボタン表示 | disabled={true} でクリック不可 | L397 `disabled={i === activeTags.length - 1}` — 末尾で true | OK |
-| 6 | 直接 | タグ▲▼ CSS共用 | .s-move-btns / .s-move-btn のスタイル適用 | ステータスと同じCSSクラスが使われ、同じ見た目になること | L683-699 で共用CSS定義。タグ・ステータス両方が同じクラス名を使用 | OK |
-| 7 | 直接 | saveTags sort_order保存 | moveTagで並べ替え後にsaveTags実行 | active[i]のsort_orderがindex値(0,1,2...)で保存され、archived分はactive.length以降の連番 | L144-157 active→sort_order=i、archived→sort_order=active.length+i でUPDATE | OK |
-| 8 | 直接 | saveMaster console.error | saveMaster実行中にDB例外が発生した場合 | console.error(e)でエラーが出力されること | L133 `catch (e) { console.error(e); flash('err', ...); }` | OK |
-| 9 | 直接 | saveTags console.error | saveTags実行中にDB例外が発生した場合 | console.error(e)でエラーが出力されること | L159 `catch (e) { console.error(e); flash('err', ...); }` | OK |
+✅ OK: 9件 全件パス
 
 ### 第2段階：影響範囲のテスト
 
-| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
-|---|---|---|---|---|---|---|
-| 10 | 影響範囲 | useMasterData タグ取得順 | アプリ各画面でタグをフェッチ | sort_order昇順でタグが取得されること | hooks/useMasterData.js L21 `ORDER BY sort_order, id` — sort_order変更後も正しく反映 | OK |
-| 11 | 影響範囲 | today/page.js タグ取得順 | 今日やるタスク画面を表示 | sort_order昇順でタグが取得されること | app/today/page.js L74 `ORDER BY sort_order, id` — sort_order変更後も正しく反映 | OK |
-| 12 | 影響範囲 | TagSelect タグ表示順 | タスク入力/編集でTagSelectドロップダウンを開く | allTagsの順序（=sort_order順）で表示されること | components/TagSelect.js L21-23 `allTags.filter(!archived)` — 入力順（sort_order順）を保持 | OK |
-| 13 | 影響範囲 | TaskList タグフィルタ | タスク一覧のタグフィルタドロップダウンを開く | sort_order順でタグ選択肢が表示されること | components/TaskList.js L43 `allTags.filter(!archived).map(...)` — useMasterData順を保持 | OK |
-| 14 | 影響範囲 | TaskInput タグ選択 | タスク追加フォームでタグ選択ドロップダウンを開く | sort_order順でタグが表示されること | components/TaskInput.js L217-220 `<TagSelect allTags={allTags}>` — useMasterData順を保持 | OK |
-| 15 | 影響範囲 | ステータスタブ saveMaster | ステータスの並び順を変更して保存 | console.error追加以外に動作変更がないこと（ロジック不変） | app/settings/page.js L118-135 — ループ内のUPDATE SQL・flash呼び出し等すべて変更なし。catchにconsole.error追加のみ | OK |
-| 16 | 影響範囲 | タグDnD moveTagとの共存 | DnDとmoveTag(▲▼)の両方でタグを並べ替え | 両方の操作が競合なく正常動作すること | L100-107 `setActiveTags`（DnD用）と L288-298 `moveTag` は同一パターン（active/archived分離→スワップ→結合）で state を更新。両者のデータ構造は一貫 | OK |
-| 17 | 影響範囲 | ステータスsort_order 今日やるタスク | 今日やるタスク画面でステータス順ソートを選択 | sort_orderに基づき正しくソートされること | app/today/page.js L71 `ORDER BY sort_order, code`、L260-262 `statuses.find(...).sort_order` で参照。saveMasterのロジック変更なしのため影響なし | OK |
-| 18 | 影響範囲 | ステータスsort_order タスク一覧 | タスク一覧でステータス順ソートを選択 | sort_orderに基づき正しくソートされること | components/TaskList.js L300-302 `allStatuses.find(...).sort_order` で参照。saveMasterのロジック変更なしのため影響なし | OK |
+✅ OK: 9件 全件パス
 
 ### 実機確認推奨項目
 
@@ -115,31 +54,10 @@
 
 ### 観点1：正常系テスト
 
+✅ OK: 23件 パス
+
 | # | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
 |---|---|---|---|---|---|
-| 1 | DBマイグレーション: archived_at カラム追加 | アプリ起動時に `initDb()` が実行される | `tasks` テーブルに `archived_at TEXT` カラムが追加され、インデックス `idx_tasks_archived_at` が作成されること | `lib/db.js` L194 で `ALTER TABLE tasks ADD COLUMN archived_at TEXT` を try/catch で実行（既存時は無視）。L198 で `CREATE INDEX IF NOT EXISTS idx_tasks_archived_at` を実行。正常動作。 | OK |
-| 2 | DBマイグレーション: auto_archive_days シード | アプリ起動時に `initDb()` が実行される | `app_settings` に `auto_archive_days = '0'` が INSERT OR IGNORE されること | `lib/db.js` L201 で `INSERT OR IGNORE INTO app_settings (key, value) VALUES ($1, $2)` を `['auto_archive_days', '0']` で実行。既存行があれば無視される。正常動作。 | OK |
-| 3 | 手動アーカイブ: 完了タスクのアーカイブ | タスク一覧で完了(status_code=3)タスクの📦ボタンをクリック | `archived_at` に現在日時がセットされ、タスクが通常ビューから消えること | `TaskList.js` L206 で `status_code !== 3 && !== 5` をバリデーション。L230 で `UPDATE tasks SET archived_at = datetime('now', 'localtime')` を実行。L232 で `setRefreshKey` により再フェッチ。正常動作。 | OK |
-| 4 | 手動アーカイブ: キャンセルタスクのアーカイブ | タスク一覧でキャンセル(status_code=5)タスクの📦ボタンをクリック | 完了タスクと同様にアーカイブされること | L206 の条件で `status_code === 5` もパス。L230 の UPDATE が実行される。正常動作。 | OK |
-| 5 | 手動アーカイブ: 📦ボタンの表示条件 | 未着手・着手中タスクを表示 | 📦ボタンが表示されないこと | `TaskList.js` L765: `{(task.status_code === 3 \|\| task.status_code === 5) && onArchive && (...)}` により、status_code が 3 または 5 以外ではボタンが描画されない。正常動作。 | OK |
-| 6 | 親子連動アーカイブ: 親タスクのアーカイブ | 完了した親タスク（子もすべて完了/キャンセル）の📦ボタンをクリック | 親と子がすべてアーカイブされること | `TaskList.js` L212-227: 親タスク（`!task.parent_id`）の場合、L213 で `SELECT id, status_code FROM tasks WHERE parent_id = $1` で子を取得、L214 で未完了チェック、L220-226 で子を個別にアーカイブ、L230 で親をアーカイブ。正常動作。 | OK |
-| 7 | 親子連動アーカイブ: 未完了の子がある場合の阻止 | 完了した親タスク（子に未完了タスクあり）の📦ボタンをクリック | エラートーストが表示され、アーカイブされないこと | `TaskList.js` L214-218: `children.some(c => c.status_code !== 3 && c.status_code !== 5)` が true の場合、エラートースト「未完了の子タスクがあるためアーカイブできません」を dispatch して return。正常動作。 | OK |
-| 8 | 子タスク単体のアーカイブ | 完了した子タスクの📦ボタンをクリック | 子タスクのみがアーカイブされ、親はアーカイブされないこと | `TaskList.js` L212: `if (!task.parent_id)` の条件に入らず（子タスクは parent_id あり）、L230 で子タスクのみアーカイブ。親タスクには影響なし。正常動作。 | OK |
-| 9 | アーカイブ済みタブの表示 | タスク一覧の「📦 アーカイブ済み」タブをクリック | アーカイブ済みタスクのみが表示されること | `TaskList.js` L85-89: `showArchived` が true の場合 `t.archived_at IS NOT NULL`、false の場合 `t.archived_at IS NULL` の WHERE 条件が追加。L404 のタブクリックで `setShowArchived(true)` が実行。正常動作。 | OK |
-| 10 | アーカイブ済みタスクの復元: 親タスクの復元 | アーカイブ済みビューで親タスクの📤ボタンをクリック | 親と子がすべて復元されること | `TaskList.js` L246-248: 親タスク（`!task.parent_id`）の場合、`UPDATE tasks SET archived_at = NULL WHERE parent_id = $1` で子を一括復元。L255 で自身を復元。正常動作。 | OK |
-| 11 | アーカイブ済みタスクの復元: 子タスクの復元 | アーカイブ済みビューで子タスクの📤ボタンをクリック | 子タスクと親タスクが復元されること | `TaskList.js` L251-253: 子タスク（`task.parent_id` あり）の場合、`UPDATE tasks SET archived_at = NULL WHERE id = $1` で親も復元。L255 で自身を復元。正常動作。 | OK |
-| 12 | 今日やるタスクからのアーカイブ除外 | アーカイブ済みタスクがある状態で今日やるタスク画面を表示 | アーカイブ済みタスクが表示されないこと | `app/today/page.js` L218: `WHERE t.archived_at IS NULL` がクエリに含まれている。正常動作。 | OK |
-| 13 | ダッシュボードからのアーカイブ除外 | アーカイブ済みタスクがある状態でダッシュボードを表示 | 統計にアーカイブ済みタスクが含まれないこと | `app/dashboard/page.js` 全6クエリに `AND archived_at IS NULL` が含まれている：L17（全体完了率）、L21（今日の進捗）、L57（直近3営業日）、L83（7日間完了数）、L109（ステータス分布）、L118（期限切れ）。正常動作。 | OK |
-| 14 | タスク入力: 親タスク候補からのアーカイブ除外 | タスク追加フォームを展開し、親タスクドロップダウンを確認 | アーカイブ済みタスクが候補に含まれないこと | `TaskInput.js` L37: `AND archived_at IS NULL` がクエリに含まれている。正常動作。 | OK |
-| 15 | タスク編集: 親タスク候補からのアーカイブ除外 | タスク編集モーダルの親タスクドロップダウンを確認 | アーカイブ済みタスクが候補に含まれないこと | `TaskEditModal.js` L42-45: 両分岐のクエリに `archived_at IS NULL` が含まれている。正常動作。 | OK |
-| 16 | 自動アーカイブ: 起動時の実行 | アプリ起動時に `initDb()` が完了する | `runAutoArchive(db)` が実行されること | `lib/db.js` L204: `await runAutoArchive(db);` が initDb 内で呼ばれる。正常動作。 | OK |
-| 17 | 自動アーカイブ: 無効時（0日設定）の動作 | auto_archive_days = 0 の状態で runAutoArchive が実行される | 何もアーカイブされずに return すること | `lib/db.js` L220: `if (days <= 0) return;` で早期リターン。正常動作。 | OK |
-| 18 | 自動アーカイブ: 有効時の動作 | auto_archive_days = 14 の状態で、14日以上前に完了したタスクがある | 該当タスクがアーカイブされること | `lib/db.js` L222-229: `WHERE archived_at IS NULL AND status_code = 3 AND completed_at IS NOT NULL AND date(completed_at) <= date('now', 'localtime', '-' \|\| $1 \|\| ' days')` で条件合致タスクを UPDATE。正常動作。 | OK |
-| 19 | 自動アーカイブ: キャンセルタスクの除外 | auto_archive_days > 0 で、キャンセル済みタスクがある | キャンセルタスクは自動アーカイブされないこと | `lib/db.js` L226: `AND status_code = 3` によりキャンセル（status_code=5）は対象外。さらに L227: `AND completed_at IS NOT NULL` によりキャンセルタスクは completed_at が NULL のため除外。正常動作。 | OK |
-| 20 | 設定画面: 自動アーカイブ日数の表示 | 設定画面のオプションタブを開く | 「完了タスクの自動アーカイブ」カードが表示され、数値入力欄と「日後」ラベルがあること | `app/settings/page.js` L511-556: opt-card 内に 📦 アイコン、タイトル「完了タスクの自動アーカイブ」、説明文、数値 input (min=0, max=9999)、「日後」ラベルを描画。正常動作。 | OK ⚠️ 要実機確認：[設定画面]で[オプションタブを開く]→[「完了タスクの自動アーカイブ」カードに数値入力欄と「日後」が表示されていること] |
-| 21 | 設定画面: 自動アーカイブ日数の保存 | 数値を入力してフォーカスを外す（onBlur） | DBに値が保存され、0より大きい場合は runAutoArchive が即時実行されること | `app/settings/page.js` L531-551: onBlur で `parseInt` → DB保存 → `parseInt(val) > 0` なら `runAutoArchive(db)` を実行。正常動作。 | OK |
-| 22 | アーカイブ済みビューのUI制御 | アーカイブ済みタブでタスクカードを確認 | ステータスラベル（読み取り専用）と📤復元ボタンのみ表示。ステータスselect・☀️ボタン・📦ボタン・＋ボタン・🗑ボタンは非表示。DnD無効。 | `TaskList.js` L747-751: `isArchived` 時は `tc-status-label` と `tc-restore-btn` のみ描画。L453: `isDraggable={!showArchived && ...}`。L785: `isDraggable={!isArchived}`。正常動作。 | OK |
-| 23 | アーカイブ日時の表示 | アーカイブ済みタスクのメタ情報を確認 | 📦 アーカイブ日が表示されること | `TaskList.js` L728: `{task.archived_at && <span className="tc-meta-item">📦 アーカイブ: {task.archived_at.split(' ')[0]}</span>}` で archived_at の日付部分を表示。正常動作。 | OK |
 | 24 | 自動アーカイブ: 親子連動なし（バグ） | auto_archive_days = 14、親タスク完了日30日前、子タスク完了日5日前 | 仕様上は親アーカイブ時に子もまとめてアーカイブされるべき | `lib/db.js` L222-229: `runAutoArchive` は個別タスクの `completed_at` のみを評価し、`parent_id` を考慮しない。親が自動アーカイブされても子はアーカイブされない。子の `completed_at` が閾値を超えるまで親子が分離した状態になる。 | ✅ 修正済み |
 
 **NG詳細: #24 自動アーカイブの親子連動欠如**
@@ -153,38 +71,11 @@
 
 ### 観点2：異常系・境界値テスト
 
-| # | 対象フィールド/操作 | 入力内容 | 期待される挙動 | 実際の挙動 | OK/NG |
-|---|---|---|---|---|---|
-| 1 | 自動アーカイブ日数: 空文字 | 数値欄を空にしてフォーカスを外す | 0として扱われ、自動アーカイブ無効になること | `settings/page.js` L532: `parseInt(appSettings.auto_archive_days) \|\| 0` → `parseInt('') = NaN` → `NaN \|\| 0 = 0`。`val = '0'`。`lib/db.js` L220: `days <= 0` で return。正常動作。 | OK |
-| 2 | 自動アーカイブ日数: 文字列入力 | "abc" を入力してフォーカスを外す | 0として扱われ、自動アーカイブ無効になること | `settings/page.js` L532: `parseInt('abc') = NaN` → `NaN \|\| 0 = 0`。正常動作。 | OK |
-| 3 | 自動アーカイブ日数: 負の値 | -5 を入力してフォーカスを外す | 0として扱われ、自動アーカイブ無効になること | `parseInt('-5') = -5` → `String(-5 \|\| 0)` → `-5` は truthy なので `String(-5)` = `'-5'`。DB に `'-5'` が保存される。`lib/db.js` L219: `parseInt('-5') = -5` → L220: `days <= 0` で return。自動アーカイブは実行されないが、DB には不正値 `-5` が残る。UI の input は `min="0"` だがブラウザの制約はキーボード入力では回避可能。**実害なし**だが DB 値が不正。 | OK（実害なし） |
-| 4 | 自動アーカイブ日数: 超大値 | 9999 を入力してフォーカスを外す | 値が保存され、実質無効と同等に動作すること | `parseInt('9999') = 9999`。DB に保存。SQL `date('now', 'localtime', '-9999 days')` は約27年前の日付を算出。該当タスクはほぼ存在しないため実質無効。正常動作。 | OK |
-| 5 | 自動アーカイブ日数: 小数入力 | 3.5 を入力してフォーカスを外す | 整数に丸められて保存されること | `parseInt('3.5') = 3`。`val = '3'`。DB に `'3'` が保存される。正常動作。 | OK |
-| 6 | アーカイブ: 未完了タスクのアーカイブ試行 | status_code が 1（未着手）のタスクで handleArchive を直接呼び出す | エラートーストが表示されアーカイブされないこと | `TaskList.js` L206-209: `task.status_code !== 3 && task.status_code !== 5` の場合、トースト「完了またはキャンセル済みのタスクのみアーカイブできます」を dispatch して return。正常動作。UI 上では📦ボタン自体が非表示なので通常到達しない。 | OK |
-| 7 | アーカイブ: 存在しないタスクIDでアーカイブ | tasks 配列にないIDで handleArchive を呼び出す | 何もせずに return すること | `TaskList.js` L202-203: `tasks.find(t => t.id === taskId)` が undefined → `if (!task) return;`。正常動作。 | OK |
-| 8 | 復元: 存在しないタスクIDで復元 | tasks 配列にないIDで handleRestore を呼び出す | DB UPDATE は実行されるが該当行なし。エラーにならないこと | `TaskList.js` L245: `tasks.find(t => t.id === taskId)` が undefined → task が null → L246 の条件不成立 → L255 の UPDATE は `WHERE id = $1` で該当行なし → `rowsAffected = 0` だがエラーにはならない。正常動作。 | OK |
-| 9 | アーカイブ: DB エラー時の挙動 | DB execute が例外をスローした場合 | エラートーストが表示され、アプリがクラッシュしないこと | `TaskList.js` L233-236: catch ブロックで `console.error(e)` + トースト「アーカイブに失敗しました」。正常動作。 | OK |
-| 10 | 復元: DB エラー時の挙動 | DB execute が例外をスローした場合 | エラートーストが表示され、アプリがクラッシュしないこと | `TaskList.js` L258-261: catch ブロックで `console.error(e)` + トースト「復元に失敗しました」。正常動作。 | OK |
-| 11 | 自動アーカイブ日数保存: DB エラー時の挙動 | DB execute が例外をスローした場合 | エラートーストが表示され、アプリがクラッシュしないこと | `settings/page.js` L548-550: catch ブロックで `console.error(e)` + `flash('err', '設定の保存に失敗しました')`。正常動作。 | OK |
-| 12 | 自動アーカイブ: runAutoArchive の DB エラー時 | DB execute が例外をスローした場合 | コンソールエラーが出力され、アプリがクラッシュしないこと | `lib/db.js` L231-233: catch ブロックで `console.error('Auto-archive error:', e);`。initDb 本体のエラーハンドリング (L206-208) にも catch あり。正常動作。 | OK |
-| 13 | アーカイブ📦ボタン: 高速連続クリック | 完了タスクの📦ボタンを素早く連打 | 2回目以降はタスクが既に tasks 配列から消えているため `task = undefined` で return | `TaskList.js` L202-203: 1回目のクリックで `setRefreshKey` → 再フェッチ → タスクが通常ビューから消える。2回目のクリック時に `tasks.find` が undefined → `if (!task) return;`。ただし、再フェッチ前に2回目が実行された場合は `tasks` state にまだ存在する可能性あり → 同じ UPDATE が2回実行されるが archived_at が上書きされるだけで実害なし。 | OK |
+✅ OK: 13件 全件パス
 
 ### 観点3：状態遷移・データ件数テスト
 
-| # | テスト条件 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
-|---|---|---|---|---|---|
-| 1 | タスク0件でアーカイブタブ表示 | アーカイブ済みタブをクリック | 「📦 アーカイブ済みのタスクはありません」と表示されること | `TaskList.js` L435-440: `!loading && parentTasks.length === 0 && showArchived` の場合に空メッセージ（📦アイコン + 「アーカイブ済みのタスクはありません」+ ヒント文言）を表示。正常動作。 | OK |
-| 2 | タスク0件で通常タブ表示 | 通常タブ（📋 タスク）を表示 | 「最初のタスクを追加して、今日をスタートしましょう！」と表示されること | `TaskList.js` L428-434: `!loading && parentTasks.length === 0 && !showArchived` の場合に空メッセージを表示。正常動作。 | OK |
-| 3 | 1件のみのタスクをアーカイブ | 完了タスク1件のみの状態で📦ボタンをクリック | 通常ビューが空になり、アーカイブビューに1件表示されること | L230 で UPDATE → L232 で refreshKey 更新 → 通常ビュー再フェッチ（0件）→ 空メッセージ表示。アーカイブタブに切替 → `showArchived=true` → 再フェッチ → 1件表示。正常動作。 | OK |
-| 4 | 親子タスク（親+子2件）を一括アーカイブ | 親タスク（完了）と子タスク2件（いずれも完了）がある状態で、親の📦ボタンをクリック | 親と子2件がすべてアーカイブされること | `TaskList.js` L213 で子を取得（2件）、L214 で `hasInProgress` チェック（false）、L223-225 で子2件を個別 UPDATE、L230 で親を UPDATE。計3件がアーカイブ。正常動作。 | OK |
-| 5 | アーカイブ→復元→再アーカイブ | タスクをアーカイブ→復元→再度アーカイブ | 各操作が正常に動作し、`archived_at` が適切に更新/NULL化されること | アーカイブ: `archived_at = datetime('now', 'localtime')`。復元: `archived_at = NULL`。再アーカイブ: 新しい `archived_at` がセットされる。各操作で refreshKey 更新→再フェッチ。正常動作。 | OK |
-| 6 | フィルタ適用中のアーカイブ操作 | タグフィルタを適用した状態でアーカイブ | フィルタとアーカイブ条件が AND で結合され、正しいタスクのみ表示されること | `TaskList.js` L84-89 でアーカイブ条件、L91-113 でフィルタ条件が `conditions` 配列に追加され、L116 で `WHERE` + `AND` 結合。正常動作。 | OK |
-| 7 | 大量タスク（50件以上）のアーカイブビュー | 50件以上のアーカイブ済みタスクを表示 | 全タスクが正常にレンダリングされること | SQL クエリに件数制限なし。`sortedParentTasks.map()` で全件描画。パフォーマンスは実機依存だが、ロジック上は正常動作。 | OK ⚠️ 要実機確認：[タスク一覧画面]で[50件以上のアーカイブ済みタスクを表示]→[スクロールが滑らかで、表示が崩れないこと] |
-| 8 | 自動アーカイブ→手動復元→自動アーカイブ再実行 | 自動アーカイブされたタスクを手動復元した後、再度 runAutoArchive が実行される | 条件を満たすタスクが再びアーカイブされること | 復元で `archived_at = NULL` に戻る → runAutoArchive の WHERE 条件 `archived_at IS NULL AND status_code = 3 AND date(completed_at) <= ...` を再び満たす → 再アーカイブ。正常動作。**注意**: ユーザーが意図的に復元したタスクが次回起動時に再度アーカイブされる。これは仕様通りの動作だが、UX上は注意が必要（ユーザーへの説明等）。 | OK |
-| 9 | 設定変更 0→14→0 の遷移 | 自動アーカイブを 0→14→0 に変更 | 14設定時に runAutoArchive 実行、0設定時は実行されないこと | `settings/page.js` L541: `parseInt(val) > 0` で runAutoArchive を呼ぶ。14のとき実行あり、0のとき L541 不成立で実行なし。0 設定でもトースト「自動アーカイブを無効にしました」は表示。正常動作。 | OK |
-| 10 | タブ切替の競合チェック | 通常タブ→アーカイブタブを素早く連続切替 | レース条件で古いデータが表示されないこと | `TaskList.js` L56: `activeRequestId.current` でリクエスト ID を管理。L133, L138: 最新リクエストのみ state 更新。古いリクエストの結果は破棄される。正常動作。 | OK |
-| 11 | アーカイブ後の今日やるタスク画面整合性 | today_date がセットされたタスクをアーカイブし、今日やるタスク画面を確認 | アーカイブされたタスクが今日やるタスクに表示されないこと | `app/today/page.js` L218: `WHERE t.archived_at IS NULL` でアーカイブ済みを除外。today_date は残るがクエリで除外される。正常動作。 | OK |
-| 12 | アーカイブ後のダッシュボード整合性 | 複数タスクをアーカイブし、ダッシュボードを確認 | 完了率・ステータス分布等からアーカイブ済みが除外されること | `app/dashboard/page.js` の全6クエリに `AND archived_at IS NULL` あり。正常動作。 | OK |
+✅ OK: 12件 全件パス
 
 ### 実機確認推奨項目
 
@@ -195,14 +86,6 @@
 - ⚠️ 要実機確認：[タスク一覧画面]で[📤復元ボタンをクリック]→[タスクがアーカイブビューから消え、通常ビューに戻ること]
 - ⚠️ 要実機確認：[設定画面]で[オプションタブの「完了タスクの自動アーカイブ」カードが表示されていること]→[数値入力欄と「日後」ラベルがあること]
 - ⚠️ 要実機確認：[タスク一覧画面]で[50件以上のアーカイブ済みタスクを表示]→[スクロールが滑らかで表示が崩れないこと]
-
-### 結果サマリー
-
-- **観点1 正常系テスト**: 24件中 OK: 23件 / **NG: 1件**（#24 自動アーカイブの親子連動欠如）
-- **観点2 異常系・境界値テスト**: 13件 全OK
-- **観点3 状態遷移・データ件数テスト**: 12件 全OK
-- **合計**: 49件中 OK: 48件 / **NG: 1件**
-- **NG内容**: `lib/db.js` の `runAutoArchive()` 関数が親子関係を考慮せず、親タスクを自動アーカイブした際に子タスクが連動アーカイブされない。IMP-2 仕様「親アーカイブ時は子もまとめてアーカイブ」に違反。
 
 ### 実機検証で発見された問題
 
@@ -225,20 +108,23 @@ Dashboard Tauri DB Error "error returned from database: (code: 1) no such column
 - **影響範囲**: 開発環境（HMR）のみ。本番ビルドでは毎回アプリ起動時に `initDb()` が実行されるため発生しない。
 - **分類**: 開発環境固有の問題（本番影響なし）。新規マイグレーション追加時はdev再起動が必要という運用ルールで対応可能。
 
+### 結果サマリー
+
+- **観点1 正常系テスト**: 24件中 OK: 23件 / **NG: 1件**（#24 自動アーカイブの親子連動欠如）→ ✅ 修正済み
+- **観点2 異常系・境界値テスト**: 13件 全OK
+- **観点3 状態遷移・データ件数テスト**: 12件 全OK
+- **合計**: 49件中 OK: 48件 / **NG: 1件** → ✅ 修正済み
+
 ## STEP B：品質レビュー（v1.3.0 枝番3-2）
 
 ### 観点1：エラーハンドリング確認
 
+✅ OK: 6件 パス
+
 | # | 異常条件 | 挙動 | エラーメッセージの有無と内容 | データへの影響 | OK/NG |
 |---|---|---|---|---|---|
-| 1 | DBファイルが存在しない・破損している場合（アーカイブ操作時） | `handleArchive`（TaskList.js:198-237）は全体を try/catch で囲んでおり、DB接続失敗や execute 例外時に catch ブロックに入る。アプリはクラッシュせず動作を継続する。`handleRestore`（TaskList.js:239-262）も同様の構造。 | `handleArchive`: 「アーカイブに失敗しました」トースト表示（L235）。`handleRestore`: 「復元に失敗しました」トースト表示（L260）。いずれもグローバルトースト（layout.js の yarukoto:toast リスナー）経由でユーザーに通知される。 | DB書き込みが失敗した場合、`setRefreshKey` が呼ばれないため（catchブロックではrefreshしない）、UIは元の状態を維持する。ただしアーカイブ操作は楽観的更新ではないため、データ不整合は発生しない。 | OK |
-| 2 | DBファイルが存在しない・破損している場合（自動アーカイブ実行時） | `runAutoArchive`（lib/db.js:216-234）は全体を try/catch で囲んでいる。`initDb()` 内で呼ばれるため（L204）、起動時にDB接続自体が失敗している場合はそもそも `runAutoArchive` に到達しない（initDb の外側 catch L206-208 で処理）。runAutoArchive 内の SELECT/UPDATE が個別に失敗した場合は catch（L231-233）で処理される。 | `console.error('Auto-archive error:', e)` がコンソールに出力される（L232）。ユーザー向けのトースト通知はなし。起動時の自動処理であるため、ユーザーへの直接通知は不要と判断。 | 自動アーカイブのSELECTが失敗した場合は何もアーカイブされず、UPDATEが中途で失敗した場合は一部のタスクのみアーカイブされる可能性がある（トランザクションで囲んでいないため）。ただし既存データの破損は発生しない。 | OK |
-| 3 | DBファイルが存在しない・破損している場合（設定画面で自動アーカイブ日数保存時） | settings/page.js L531-551 の onBlur ハンドラ全体が try/catch で囲まれている。DB接続失敗時も catch に入る。 | 「設定の保存に失敗しました」トースト表示（L550、flash('err', ...)経由）。 | DB保存失敗時、UIの `appSettings` state は既に更新済み（L533）だが、ページリロードで元の値に戻る。設定値のUIとDBの一時的な不整合は発生するが、永続データの損失はない。 | OK |
-| 4 | 想定外のデータ型がDBに入っている場合（archived_at に不正な文字列） | `archived_at` は TEXT 型で型制約がないため、任意の文字列がINSERT可能。クエリ側は `IS NULL` / `IS NOT NULL` で判定するため、値の内容に依存しない。TaskList.js L728 の表示は `task.archived_at.split(' ')[0]` で日付部分を切り出すが、不正な形式でも `.split(' ')` は常にstring配列を返すためクラッシュしない。 | なし（エラーにならない）。 | データが不正な形式でもDBの整合性は保たれ、表示が崩れる程度（日付として認識できない文字列が表示される）。 | OK |
-| 5 | 想定外のデータ型がDBに入っている場合（auto_archive_days に非数値文字列） | `runAutoArchive` L218-219: `db.select` で取得した value を `parseInt()` で変換。非数値文字列の場合 `parseInt('abc') = NaN`、`NaN || '0'` → `0`、`days = 0`、L220 で `days <= 0` により早期 return。settings/page.js L532 でも同様に `parseInt(...) || 0` で NaN をガード。 | なし（正常にフォールバック）。 | 自動アーカイブが無効として扱われ、既存データに影響なし。 | OK |
 | 6 | 親子連動アーカイブ時にDBエラーが途中で発生した場合 | `handleArchive`（TaskList.js:198-237）で、子タスクのアーカイブ（L223-225のforループ）の途中で例外が発生した場合、catch（L233-236）に飛ぶ。一部の子タスクはアーカイブ済み、残りと親はアーカイブされない中途半端な状態になる。 | 「アーカイブに失敗しました」トースト表示。 | ✅ 修正済み — `handleArchive` を `BEGIN`/`COMMIT`/`ROLLBACK` トランザクションで囲み、all-or-nothing を保証。子アーカイブも単一 UPDATE 文に統一。 | OK |
 | 7 | 親子連動復元時にDBエラーが途中で発生した場合 | `handleRestore`（TaskList.js:239-262）で、子タスクの一括復元（L247）は単一のUPDATE文（`WHERE parent_id = $1`）のため中途半端にはなりにくい。ただし子を復元（L247）した後に自身の復元（L255）が失敗した場合、子のみ復元されて親がアーカイブのままになる。 | 「復元に失敗しました」トースト表示。 | ✅ 修正済み — `handleRestore` を `BEGIN`/`COMMIT`/`ROLLBACK` トランザクションで囲み、all-or-nothing を保証。 | OK |
-| 8 | ディスク書き込み権限がない場合（アーカイブ関連全般） | Tauri プラグインSQL が内部で SQLite の write をラップしており、権限不足の場合は execute 時に例外をスロー。上記 #1～#3 で確認した各 try/catch が対応。 | 各操作の catch ブロックで適切なエラートーストが表示される。 | 書き込みが失敗するため DB は変更されず、データ損失はない。 | OK |
 
 **NG詳細: #6 親子連動アーカイブの非トランザクション処理**
 
@@ -258,17 +144,11 @@ Dashboard Tauri DB Error "error returned from database: (code: 1) no such column
 
 ### 観点2：一貫性レビュー
 
+✅ OK: 8件 パス
+
 | # | 観点 | 箇所A | 箇所B | 不整合の内容 | ファイル名:行番号 |
 |---|---|---|---|---|---|
-| 1 | 文言の揺れ（ボタン操作の文言） | TaskInput.js の送信ボタン文言: `'✓ 登録'`（L289）、`'登録中...'`（L289） | TaskEditModal.js の保存ボタン文言: `'保存'`（L260）、`'保存中...'`（L260） | タスク追加時は「登録」、タスク編集時は「保存」で使い分けているが、**これは追加と編集で操作が異なるため意図的な使い分けと判断。問題なし。** | — |
-| 2 | 文言の揺れ（トースト通知の動詞） | TaskList.js `handleArchive` 成功トースト: `'アーカイブしました'`（L231） | TaskList.js `handleRestore` 成功トースト: `'復元しました'`（L256） | 統一されている。問題なし。 | — |
-| 3 | 同種操作でのUI挙動の不統一（確認ダイアログ） | タスク削除時: `confirm('このタスクを削除しますか？')` が表示される（TaskList.js:172） | タスクアーカイブ時: `confirm` なし、即座にアーカイブが実行される（TaskList.js:198-237） | **削除は不可逆操作のため confirm あり、アーカイブは復元可能なため confirm なしと判断でき、合理的な差異。問題なし。** | — |
 | 4 | 同種操作でのUI挙動の不統一（アーカイブ済みビューでの子タスク操作） | 通常ビューの子タスク: ステータスselect・☀️ボタン・📦ボタン・＋ボタン・🗑ボタンが表示される | アーカイブ済みビューの子タスク: ステータスラベル（読み取り専用）と📤復元ボタンのみ表示。**ただし、子タスクの📤復元ボタンをクリックすると親も連動復元される（TaskList.js:251-253）が、この挙動はUI上で事前に告知されない。** | ✅ 修正済み — 復元トーストを親子連動時は「親タスクと子タスクをまとめて復元しました」「子タスクと親タスクを復元しました」に変更。連動復元の事実がユーザーに伝わるようにした。 | `components/TaskList.js` |
-| 5 | エラーメッセージのトーン・粒度の不統一 | `handleArchive` 内のバリデーションエラー: `'完了またはキャンセル済みのタスクのみアーカイブできます'`（TaskList.js:207）、`'未完了の子タスクがあるためアーカイブできません'`（TaskList.js:216） | `handleArchive` の DB エラー: `'アーカイブに失敗しました'`（TaskList.js:235）。`handleRestore` の DB エラー: `'復元に失敗しました'`（TaskList.js:260）。 | バリデーションエラーは具体的理由を含み、DBエラーは汎用メッセージ。これはエラーの性質が異なるため合理的。問題なし。 | — |
-| 6 | 日付・時刻の表示フォーマットの不統一 | タスクカードの完了日表示: `task.completed_at.split(' ')[0]`（TaskList.js:727） | タスクカードのアーカイブ日表示: `task.archived_at.split(' ')[0]`（TaskList.js:728） | 両方とも `datetime('now', 'localtime')` の結果（`'YYYY-MM-DD HH:MM:SS'` 形式）から日付部分のみ切り出し。フォーマットは統一されている。問題なし。 | — |
-| 7 | 日付・時刻の表示フォーマットの不統一（今日やるタスク画面） | 今日やるタスク画面の完了日表示: `task.completed_at.split(' ')[0]`（today/page.js:517） | タスク一覧画面のアーカイブ日表示: `task.archived_at.split(' ')[0]`（TaskList.js:728） | 統一されている。問題なし。 | — |
-| 8 | 余白・フォントサイズ・色使いの不統一（アーカイブタブと既存タブ） | タスク一覧の「📋 タスク / 📦 アーカイブ済み」タブ: `.tl-archive-tab`（TaskList.js:617-627）— `padding:.5rem .75rem`, `font-size:.85rem`, `border-radius:8px` | 今日やるタスクの日付タブ: `.date-tab`（today/page.js:571-583）— `padding:0.5rem 0.25rem`, `font-size:（date-tab-label .78rem）`, `border-radius:9px` | **タブの形状は画面の役割が異なるため差異は許容範囲。ただし `border-radius` が 8px vs 9px でわずかに異なる。** 視覚的影響は小さいが、統一するならどちらかに揃えるのが望ましい。 | `components/TaskList.js:620`（8px）vs `app/today/page.js:577`（9px） |
-| 9 | 余白・フォントサイズ・色使いの不統一（設定画面のアーカイブ日数入力） | 設定画面の既存トグルスイッチ（inherit_parent_tags, show_overdue_in_today）: `.opt-toggle` による ON/OFF 切替 | 設定画面の自動アーカイブ日数: `.opt-number-input` による数値入力（settings/page.js:522-554） | **異なるUI要素（トグル vs 数値入力）は入力タイプの違いによるもので適切。** opt-card 内の構造（opt-icon, opt-title, opt-desc）は統一されている。問題なし。 | — |
 | 10 | 文言の揺れ（CSVエクスポートに archived_at が含まれない） | CSVエクスポートのヘッダー: `'id,title,status,importance,urgency,start_date,due_date,estimated_minutes,notes,created_at'`（settings/page.js:588） | DB上のタスクデータ: `archived_at` カラムが存在する | ✅ 修正済み — CSVエクスポートのSQLクエリに `WHERE t.archived_at IS NULL` を追加し、アーカイブ済みタスクを除外。説明文も「アクティブなタスクをCSVファイルとしてダウンロードします（アーカイブ済みは除外）」に更新。 | `app/settings/page.js` |
 
 **NG詳細: #4 子タスク復元時の親連動復元が告知されない**
@@ -298,6 +178,178 @@ Dashboard Tauri DB Error "error returned from database: (code: 1) no such column
 
 ### 結果サマリー
 
-- **観点1 エラーハンドリング**: 8件中 OK: 6件 / **NG: 2件**（#6 親子連動アーカイブの非トランザクション処理、#7 親子連動復元の非トランザクション処理）
-- **観点2 一貫性レビュー**: 10件中 OK: 8件 / **NG: 2件**（#4 子タスク復元時の親連動復元が告知されない、#10 CSVエクスポートがアーカイブ済みタスクを区別しない）
-- **合計**: 18件中 OK: 14件 / **NG: 4件**
+- **観点1 エラーハンドリング**: 8件中 OK: 6件 / **NG: 2件**（#6, #7）→ ✅ 全件修正済み
+- **観点2 一貫性レビュー**: 10件中 OK: 8件 / **NG: 2件**（#4, #10）→ ✅ 全件修正済み
+- **合計**: 18件中 OK: 14件 / **NG: 4件** → ✅ 全件修正済み
+
+## STEP R：リグレッションテスト（v1.3.0 枝番3-2 2026-03-01）
+
+### 第1段階：変更箇所の直接テスト
+
+✅ OK: 15件 全件パス
+
+### 第2段階：影響範囲の特定とテスト
+
+✅ OK: 10件 全件パス
+
+### 結果サマリー
+
+- **第1段階 直接テスト**: 15件 全OK
+- **第2段階 影響範囲テスト**: 10件 全OK
+- **合計**: 25件 全OK / NG: 0件
+
+---
+
+## STEP A：機能検証（v1.3.0 枝番3-3）
+
+> 対象: IMP-4 ソートON/OFF切替 + DnDによる手動並び替え
+> 変更ファイル: `lib/db.js`, `components/TaskList.js`, `app/today/page.js`, `components/TaskInput.js`
+
+### 観点1：正常系テスト
+
+✅ OK: 27件 全件パス
+
+### 観点2：異常系・境界値テスト
+
+✅ OK: 10件 パス
+
+| # | 対象フィールド/操作 | 入力内容 | 期待される挙動 | 実際の挙動 | OK/NG |
+|---|---|---|---|---|---|
+| 11 | 今日やるタスクDnD: リスト変更中のドラッグ（インデックスベースの競合） | 手動モードでドラッグ中に`yarukoto:taskAdded`イベントが発火しタスクリストが更新された場合 | ドラッグ開始時に保存したインデックスが更新後のリストと一致し、正しいタスクが移動されること | ✅ 修正済み。`today/page.js:401` `dragIdx.current = i` でインデックス（タスクIDではなく配列位置）を保存。`today/page.js:421` `const newTasks = [...tasks]` で現在のtasks stateを取得するが、ドラッグ中にtasksが更新された場合（例: FABからタスク追加→yarukoto:taskAddedイベント→loadTasks→setTasks）、保存したインデックスが更新後のリストの異なるタスクを指す。例: 元リスト[A,B,C]でBをドラッグ(idx=1)→新タスクX挿入で[X,A,B,C]→idx=1はAを指す→Bでなく**Aが移動される**。TaskList.jsの@dnd-kitはIDベースで安全 | ✅ 修正済み |
+
+**NG#11 詳細:**
+- **該当ファイル**: `app/today/page.js:400-438`
+- **再現手順**: [今日やるタスク画面]で[手動モードをON]→[カードをドラッグ開始]→[ドラッグ中にFABから新タスク追加]→[ドロップで並び替え完了]→[意図したタスクと異なるタスクが移動される]
+- **期待される挙動**: ドラッグしたタスクが移動されること
+- **実際の挙動**: ドラッグ中にリストが更新されると、保存されたインデックスが別のタスクを指し、誤ったタスクが移動される
+- **原因**: `dragIdx`（`useRef`）にタスクIDではなく配列インデックスを保存しているため。TaskList.jsの`@dnd-kit`ライブラリはIDベースで追跡するため同様の問題は発生しない。`onTodayDragStart`（L401）で`dragIdx.current = i`としているが、`dragIdx.current = tasks[i].id`に変更し、`onTodayDrop`でIDからインデックスを再計算すべき
+- **発生確率**: 低（ドラッグ中に別操作でタスク追加する必要がある）
+
+### 観点3：状態遷移・データ件数テスト
+
+✅ OK: 10件 全件パス
+
+| # | テスト条件 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|
+| 9 | フィルター適用中の手動並び替え | フィルターでタスクを絞り込んだ状態で手動並び替え | 表示中のタスクのみ並び替えが適用され、非表示タスクのsort_orderは変更されないこと | ✅ 修正済み — `TaskList.js:335` `siblings = sortedParentTasks`はフィルター適用後のリスト。`persistSortOrder`は表示中のIDのみ更新。非表示タスクのsort_order値は不変。**ただし**、表示タスクのsort_orderが1,2,3...に再割当されるため、非表示タスクの既存sort_order値（例: 2, 4）と重複する可能性がある。フィルター解除後の表示順が意図しない順序になる場合がある（同値の場合DB側の返却順に依存） | ✅ 修正済み |
+
+**NG#9 詳細:**
+- **該当ファイル**: `components/TaskList.js:326-386`（handleReorder関数）、`components/TaskList.js:315-323`（persistSortOrder関数）
+- **再現手順**: [タスク一覧画面]で[手動モードON]→[ステータスフィルターで「未着手」のみ表示（例: 表示3件、非表示2件）]→[表示中の3件を並び替え]→[フィルターを解除して全件表示]→[並び替え前と異なる意図しない順序になっている]
+- **期待される挙動**: フィルター解除後、並び替えたタスクの相対順序は維持され、非表示だったタスクは元の位置関係を保つこと
+- **実際の挙動**: `persistSortOrder`（L315-323）がフィルター後の表示タスクのみにsort_order = 1, 2, 3を割り当てるため、非表示タスクの既存sort_order値（例: 2, 4）と重複が発生する。SQLiteのORDER BYで同値の場合は不定順序となり、フィルター解除後に非表示だったタスクが予期しない位置に出現する
+- **原因**: `persistSortOrder`が全タスク（非表示含む）のsort_orderを考慮せず、表示タスクのみに連番を振るため。対策として、非表示タスクのsort_order値を避けて値を割り当てるか、全タスクの相対順序を保持する方式への変更が必要
+- **発生確率**: 中（手動モード + フィルター併用時に確実に発生）
+
+### 結果サマリー
+
+- **観点1 正常系**: 27件 全OK
+- **観点2 異常系・境界値**: 11件 / OK: 10件 / NG: 1件
+  - NG#11: 今日やるタスクDnDでインデックスベースの追跡による競合（`today/page.js:400-438`）
+- **観点3 状態遷移・データ件数**: 11件 / OK: 10件 / NG: 1件
+  - NG#9: フィルター適用中の手動並び替えでsort_order重複（`TaskList.js:315-386`）
+- **合計**: 49件 / OK: 47件 / NG: 2件
+
+## STEP B：品質レビュー（v1.3.0 枝番3-3）
+
+### 観点1：エラーハンドリング確認
+
+✅ OK: 3件 パス
+
+| # | 異常条件 | 挙動 | エラーメッセージの有無と内容 | データへの影響 | OK/NG |
+|---|---|---|---|---|---|
+| 3 | ディスク書き込み権限なし等による `toggleSortMode` の保存エラー | 例外がcatchされ無視されるため、UIのソートモードは切り替わるがDBに保存されない | ✅ 修正済み — ⚠️ なし（エラー通知もUIのロールバックも行われない） | DBとUIの不一致 | ✅ 修正済み |
+| 4 | ディスク書き込み権限なし等による DnD 時のDB保存（並び替え）エラー | 例外がcatchされ `fetchTasks` または `loadTasks` によりUIが元の順序にサイレントに巻き戻る | ✅ 修正済み — ⚠️ なし（以前からある `handleStatusChange` にはエラー通知Toastが存在するが、DnDには実装されていない） | 巻き戻るためデータ不整合は防げる | ✅ 修正済み |
+
+**NG詳細: #3 `toggleSortMode` 失敗時のUI不整合とエラー通知漏れ**
+- **該当ファイル名と行番号**: `components/TaskList.js:159-170`, `app/today/page.js:386-397`
+- **問題の具体的な内容**: `toggleSortMode` 内で `setSortMode(newMode)` でUIを先行更新した後、`db.execute('INSERT OR REPLACE INTO app_settings...')` を実行しているが、失敗時の `catch (e) { console.error(e); }` ブロックでUIの変更を戻す処理やエラー通知がない。
+- **期待される挙動と実際の挙動の差分**: 失敗した場合は、「設定の保存に失敗しました」等のToastメッセージを出し、`setSortMode` の状態を元の `sortMode` に戻す（ロールバックする）処理が必要。現状はToastが出ず、画面をリロードするまでUIとDBが食い違った状態になる。
+- **原因の推定**: `toggleSortMode` メソッドへの Optimistic UI のロールバック処理および `dispatchEvent('yarukoto:toast')` の実装漏れ。
+
+**NG詳細: #4 DnD操作のDB更新失敗時におけるエラー通知漏れ**
+- **該当ファイル名と行番号**: `components/TaskList.js:322`, `385`, `409`, `494`, および `app/today/page.js:437`
+- **問題の具体的な内容**: `persistSortOrder` 等の各DnDによる並び替え・アンネスト操作でDB更新が失敗した場合、`catch (e) { console.error(e); fetchTasks(); }` によって単にリストを再取得しUIをサイレントに巻き戻している。
+- **期待される挙動と実際の挙動の差分**: `handleStatusChange` 等の既存メソッドが「ステータスの変更に失敗しました」とToastを出すのと同様に、DnD操作失敗時にも「並び替えの保存に失敗しました」等のToastメッセージを表示するべき。現状は無言でUIが元の位置に戻るため、ユーザーが状況を理解できない。
+- **原因の推定**: 各種 `catch` ブロックへの `dispatchEvent('yarukoto:toast')` の記述漏れ。
+
+### 観点2：一貫性レビュー
+
+| # | 観点 | 箇所A | 箇所B | 不整合の内容 | ファイル名:行番号 |
+|---|---|---|---|---|---|
+| 1 | 色使い・CSS変数の不統一 | `components/TaskList.js:727` | `app/today/page.js:816` | ✅ 修正済み — 手動ソート中にタスクをドラッグして他のタスクに重ねた際（ネストや入れ替えのホバー時）の枠色指定が、TaskListでは `var(--color-primary)`、今日やるタスクでは `var(--color-accent)` とCSS変数が異なっているのを `--color-primary` に統一。 | `components/TaskList.js:727`, `app/today/page.js:816` |
+
+**NG詳細: #1 色使い・CSS変数の不統一**
+- **該当ファイル名と行番号**: `components/TaskList.js:727`, `app/today/page.js:816`
+- **問題の具体的な内容**: `drag-over` クラスの `box-shadow` に対して、TaskList.js 側は `0 0 0 2px var(--color-primary)` を指定しているが、today/page.js 側は `0 0 0 2px var(--color-accent)` を指定している。
+- **どちらに統一すべきかの推奨**: `--color-primary` はアプリ全体で標準利用されているアクセントカラー変数であるため、`app/today/page.js:816` の方も `--color-primary` に統一するべき。
+- **原因の推定**: `today/page.js` 側へドラッグ＆ドロップ用スタイルを追加する際、変数名を誤って指定したまま実装されたものと推測される。
+
+---
+
+## STEP R：リグレッションテスト（v1.3.0 枝番3-3 2026-03-01）
+
+### 第1段階：変更箇所の直接テスト
+
+✅ OK: 5件 全件パス
+
+### 第2段階：影響範囲の特定とテスト
+
+✅ OK: 4件 全件パス
+
+### 結果サマリー
+
+- **第1段階 直接テスト**: 5件 全OK
+- **第2段階 影響範囲テスト**: 4件 全OK
+- **合計**: 9件 全OK / NG: 0件
+
+## STEP R：リグレッションテスト（v1.3.0 枝番3-3 追加修正 2026-03-01）
+
+> 対象変更: 「今日やるタスク」手動並び替え（DnD）が動作しない不具合の修正
+> 変更ファイル: `src-tauri/tauri.conf.json`（dragDropEnabled: false 追加）、`app/today/page.js`（onTodayDragStart に setData 追加）
+
+### 影響範囲の洗い出し
+
+以下のファイル・関数を確認対象とした：
+
+| ファイル | 確認した関数・箇所 | DnD方式 | 影響判定 |
+|---|---|---|---|
+| `app/today/page.js` | `onTodayDragStart` (L405-410), `onTodayDrop` (L422-449), `onTodayDragOver` (L416-420), フィルタ (L118-170), ソート (L251-305), `handleStatusChange` (L326-375), `handleRemove` (L377-384) | HTML5 DnD | 直接変更箇所 |
+| `components/TaskList.js` | `DndContext` (L593), `@dnd-kit/core` import (L4) | @dnd-kit (Pointer Events) | 影響なし |
+| `app/settings/page.js` | `useDragReorder` (L14-53), CSVインポート `<input type="file">` (L617) | HTML5 DnD（改善方向） | 影響なし |
+| `app/tasks/page.js` | ファイル全体 grep 確認 | DnD関連コードなし（TaskList.jsに委譲） | 影響なし |
+| `app/layout.js` | ファイル全体 grep 確認 | DnD関連コードなし | 影響なし |
+| `src-tauri/tauri.conf.json` | `app.windows[0].dragDropEnabled` (L20) | — | 直接変更箇所 |
+
+### 第1段階：変更箇所の直接テスト
+
+| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|---|
+| 1 | 直接 | tauri.conf.json dragDropEnabled設定 | `src-tauri/tauri.conf.json` L20 のウィンドウ設定を確認 | `"dragDropEnabled": false` が正しく追加されている | L20に `"dragDropEnabled": false` が存在。JSON構文も正常、他の設定値に影響なし | OK |
+| 2 | 直接 | onTodayDragStart setData追加 | `app/today/page.js` L408 を確認 | `e.dataTransfer.setData('text/plain', '')` が追加されている | L408に `e.dataTransfer.setData('text/plain', '')` が正しく追加。引数は `'text/plain'` と空文字列 | OK |
+| 3 | 直接 | onTodayDragStart 全体動作 | L405-410 のドラッグ開始ハンドラの処理フローを確認 | ID保存→effectAllowed設定→setData→opacity変更の順で実行 | L406: `dragIdx.current = tasks[i]?.id`（IDベース追跡）→ L407: `effectAllowed = 'move'` → L408: `setData('text/plain', '')` → L409: `opacity: '0.4'`。正常な順序 | OK |
+| 4 | 直接 | onTodayDrop のID→インデックス解決 | L422-449 のdropハンドラがIDベースでインデックスを解決するか確認 | dragIdx.currentに保存されたIDからfindIndexで現在のインデックスを取得 | L425: `const fromId = dragIdx.current` → L426: `const from = tasks.findIndex(t => t.id === fromId)` → L427: `if (from === -1 \|\| from === i) return`。IDベースで正しく解決 | OK |
+| 5 | 直接 | 自動モード時DnD無効 | sortMode='auto' 時にDnD属性・ハンドラが無効化されるか確認 | `draggable={false}`、全DnDイベントハンドラが`undefined` | L593: `draggable={isManual}`（autoなら false）、L594-598: 各ハンドラが `isManual ? handler : undefined`。自動モード時は完全無効 | OK |
+| 6 | 直接 | DnD後のDB永続化 | L432-448 の sort_order 保存処理を確認 | ルーティンは routines.today_sort_order、タスクは tasks.today_sort_order を更新。エラー時はトースト表示+リロード | L436-443: forループで全タスクを走査。L438-439: ルーティン→`UPDATE routines SET today_sort_order`。L440-441: タスク→`UPDATE tasks SET today_sort_order`。L444-448: catch内でトースト+loadTasks。正常 | OK |
+
+### 第2段階：影響範囲の特定とテスト
+
+| # | テスト区分 | 機能名 | 操作内容 | 期待結果 | 実際の結果 | OK/NG |
+|---|---|---|---|---|---|---|
+| 7 | 影響範囲 | TaskList.js @dnd-kit DnD | @dnd-kit の DnD が Tauri `dragDropEnabled` 設定変更の影響を受けないか確認 | @dnd-kit は PointerSensor（Pointer Events）ベースのため、HTML5 DnD 設定に非依存 | L4: `import { DndContext, ... PointerSensor } from '@dnd-kit/core'`。HTML5 DnD イベントを使用しない。影響なし | OK |
+| 8 | 影響範囲 | 設定画面 useDragReorder | `useDragReorder`（L14-53）のHTML5 DnDが影響を受けないか確認 | `dragDropEnabled: false` はTauriネイティブハンドラ無効化のため、HTML5 DnDには改善方向の影響 | L14-53: `useDragReorder` のロジック自体は変更なし。`dragDropEnabled: false` により drop イベント横取りが解消され、正常動作が期待される。既存の `onDragStart` に `setData()` 未呼出の点は今回の変更と無関係の既存状態 | OK |
+| 9 | 影響範囲 | 今日やるタスク フィルタ・ソート | DnD以外のフィルタ（L118-170）・ソート（L251-305）ロジックが影響を受けないか確認 | DnDハンドラ（L405-449）と独立しており影響なし | フィルタ条件構築（L118-170）、ソートロジック（L251-305）はDnDハンドラを参照していない。完全に独立。影響なし | OK |
+| 10 | 影響範囲 | 今日やるタスク ステータス変更・削除 | handleStatusChange（L326-375）、handleRemove（L377-384）が影響を受けないか確認 | DnD変更と独立した関数であり影響なし | 両関数ともDnD関連の変数・関数を参照していない。影響なし | OK |
+| 11 | 影響範囲 | CSV インポート/エクスポート | ファイル操作が `dragDropEnabled` 設定変更の影響を受けないか確認 | CSVインポートは `<input type="file">` ダイアログ方式、エクスポートは Blob ダウンロードのため非依存 | settings/page.js L617: `<input type="file" accept=".csv" hidden>` でファイル選択ダイアログ方式。OSファイルドロップに依存しない。影響なし | OK |
+
+### 実機確認推奨項目
+
+- ⚠️ 要実機確認：[今日やるタスク画面]で[手動モードをONにしてタスクカードをドラッグ&ドロップ]→[タスクの並び順が変更され、画面リロード後も順序が保持されていること]
+- ⚠️ 要実機確認：[設定画面]で[ステータスタブまたはタグタブの項目をドラッグ&ドロップで並び替え]→[並び替えが正常に動作すること]（`dragDropEnabled: false` による改善確認）
+
+### 結果サマリー
+
+- **第1段階 直接テスト**: 6件 全OK
+- **第2段階 影響範囲テスト**: 5件 全OK
+- **合計**: 11件 全OK / NG: 0件
+
