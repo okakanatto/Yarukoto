@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import StatusCheckbox from '@/components/StatusCheckbox';
 import TaskEditModal from '@/components/TaskEditModal';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
+import { ReorderGap } from '@/components/DndGaps';
 import { fetchDb, formatMin } from '@/lib/utils';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
-import { useDragReorder } from '@/hooks/useDragReorder';
 
 function addDays(base, days) {
     const d = new Date(base);
@@ -40,11 +43,88 @@ function buildDateTabs() {
     return tabs;
 }
 
+/**
+ * Individual today-card with @dnd-kit draggable support.
+ */
+function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index }) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: task.id,
+        disabled: !isManual,
+    });
+
+    const style = transform ? {
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.3 : 1,
+        zIndex: isDragging ? 100 : 'auto',
+    } : undefined;
+
+    const st = statusMap[task.status_code] || { label: task.status_label || '不明', color: task.status_color || '#94a3b8' };
+    const isDone = task.status_code === 3;
+    const isRoutine = !!task.is_routine;
+    const isPickedForToday = task.today_date === selectedDate;
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={{ ...style, animationDelay: `${index * 40}ms` }}
+            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''}`}
+        >
+            {isManual && (
+                <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
+            )}
+            <StatusCheckbox
+                statusCode={task.status_code}
+                onChange={(newCode) => onStatusChange(task.id, newCode, isRoutine)}
+                sparkle={justCompletedId === task.id}
+            />
+            <div className="today-card-info">
+                {task.parent_title && (
+                    <span className="today-parent-label">📌 {task.parent_title} ›</span>
+                )}
+                <div className="today-card-title-row">
+                    {isRoutine && <span className="today-routine-badge">🔄</span>}
+                    <span
+                        className={`today-card-title ${isDone ? 'strike' : ''} ${!isRoutine ? 'clickable' : ''}`}
+                        onClick={() => {
+                            if (!isRoutine) onEdit(task);
+                        }}
+                        title={!isRoutine ? "クリックして編集" : ""}
+                    >
+                        {task.title}
+                    </span>
+                </div>
+                <div className="today-card-meta">
+                    {task.tags && task.tags.map(t => (
+                        <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
+                    ))}
+                    {isDone && task.completed_at && <span className="today-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
+                    {task.due_date && !isDone && <span className="today-meta-item">📅 {task.due_date}</span>}
+                    {task.estimated_hours > 0 && (
+                        <span className="today-meta-item">⏱ {formatMin(task.estimated_hours)}</span>
+                    )}
+                </div>
+            </div>
+            <div className="today-card-actions">
+                {!isRoutine && (
+                    <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value, false)}
+                        className="today-status" style={{ borderColor: st.color, color: st.color }}>
+                        {statuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
+                    </select>
+                )}
+                {!isRoutine && isPickedForToday && (
+                    <button className="today-remove" onClick={() => onRemove(task.id)} title="今日やるから外す">✕</button>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function TodayPage() {
     const dateTabs = useMemo(() => buildDateTabs(), []);
     const [selectedDate, setSelectedDate] = useState(() => dateTabs[0].date);
     const [justCompletedId, setJustCompletedId] = useState(null);
     const [editingTask, setEditingTask] = useState(null);
+    const [activeId, setActiveId] = useState(null);
 
     // Filter state (UI-managed)
     const [filterStatuses, setFilterStatuses] = useState([]);
@@ -71,7 +151,12 @@ export default function TodayPage() {
         getTasks: () => tasks,
     });
 
-    // DnD for manual sort (persist today_sort_order to DB)
+    // @dnd-kit sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    );
+
+    // Persist today_sort_order to DB after reorder
     const persistTodaySortOrder = useCallback(async (newTasks) => {
         try {
             const db = await fetchDb();
@@ -90,7 +175,37 @@ export default function TodayPage() {
         }
     }, [reloadTasks]);
 
-    const dnd = useDragReorder(tasks, setTasks, { onReordered: persistTodaySortOrder });
+    // @dnd-kit drag handlers
+    const handleDragStart = useCallback((event) => {
+        setActiveId(event.active.id);
+    }, []);
+
+    const handleDragEnd = useCallback(async (event) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        if (!over) return;
+        const overIdStr = String(over.id);
+        if (!overIdStr.startsWith('reorder-today-')) return;
+
+        let targetIndex = parseInt(overIdStr.replace('reorder-today-', ''));
+        const currentOrder = tasks.map(t => t.id);
+        const oldIndex = currentOrder.indexOf(active.id);
+        if (oldIndex < 0) return;
+
+        // Remove from current position
+        currentOrder.splice(oldIndex, 1);
+        if (oldIndex < targetIndex) targetIndex--;
+
+        // Insert at target position
+        currentOrder.splice(targetIndex, 0, active.id);
+
+        // Optimistic UI update
+        const reordered = currentOrder.map(id => tasks.find(t => t.id === id)).filter(Boolean);
+        setTasks(reordered);
+
+        await persistTodaySortOrder(reordered);
+    }, [tasks, setTasks, persistTodaySortOrder]);
 
     // Status change wrapper: adds justCompleted animation + routes to routine/task handler
     const handleStatusChange = (taskId, newCode, isRoutine = false) => {
@@ -138,198 +253,170 @@ export default function TodayPage() {
     const dateStr = `${selectedD.getFullYear()}年${selectedD.getMonth() + 1}月${selectedD.getDate()}日（${currentTab.weekday}）`;
 
     const isManual = sortMode === 'manual';
+    const activeTaskData = activeId ? tasks.find(t => t.id === activeId) : null;
 
     return (
-        <div className="today-root">
-            <div className="today-header">
-                <div className="today-title-row">
-                    <h2 className="page-title">☀️ {currentTab.isToday ? '今日やるタスク' : 'やるタスク'}</h2>
-                    <span className="today-date">{dateStr}</span>
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <div className="today-root">
+                <div className="today-header">
+                    <div className="today-title-row">
+                        <h2 className="page-title">☀️ {currentTab.isToday ? '今日やるタスク' : 'やるタスク'}</h2>
+                        <span className="today-date">{dateStr}</span>
+                    </div>
+                    <p className="today-subtitle">ルーティン + ☀️ ピック + 📅 期限日のタスク</p>
                 </div>
-                <p className="today-subtitle">ルーティン + ☀️ ピック + 📅 期限日のタスク</p>
-            </div>
 
-            {/* Date Navigation Tabs */}
-            <div className="date-tabs">
-                {dateTabs.map(tab => (
-                    <button key={tab.date}
-                        className={`date-tab ${selectedDate === tab.date ? 'active' : ''} ${tab.isWeekend ? 'weekend' : ''}`}
-                        onClick={() => setSelectedDate(tab.date)}>
-                        <span className="date-tab-label">{tab.label}</span>
-                        <span className="date-tab-wd">{tab.weekday}</span>
-                    </button>
-                ))}
-            </div>
+                {/* Date Navigation Tabs */}
+                <div className="date-tabs">
+                    {dateTabs.map(tab => (
+                        <button key={tab.date}
+                            className={`date-tab ${selectedDate === tab.date ? 'active' : ''} ${tab.isWeekend ? 'weekend' : ''}`}
+                            onClick={() => setSelectedDate(tab.date)}>
+                            <span className="date-tab-label">{tab.label}</span>
+                            <span className="date-tab-wd">{tab.weekday}</span>
+                        </button>
+                    ))}
+                </div>
 
-            {/* Filter Toolbar */}
-            <div className="today-toolbar">
-                <MultiSelectFilter label="ステータス" options={statusOptions} selected={filterStatuses} onChange={setFilterStatuses} />
-                {tagOptions.length > 0 && <MultiSelectFilter label="タグ" options={tagOptions} selected={filterTags} onChange={setFilterTags} />}
-                <MultiSelectFilter label="重要度" options={importanceOptions} selected={filterImportance} onChange={setFilterImportance} />
-                <MultiSelectFilter label="緊急度" options={urgencyOptions} selected={filterUrgency} onChange={setFilterUrgency} />
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                    <button
-                        className={`today-sort-toggle ${sortMode === 'manual' ? 'active' : ''}`}
-                        onClick={toggleSortMode}
-                        title={sortMode === 'manual' ? '自動ソートに切替' : '手動並び替えに切替'}
-                    >
-                        {sortMode === 'manual' ? '✋ 手動' : '🔀 自動'}
-                    </button>
-                    {sortMode === 'auto' && (
-                        <div className="today-filter">
-                            <label>並び順</label>
-                            <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
-                                <option value="priority">優先度順（デフォルト）</option>
-                                <option value="status">ステータス順</option>
-                                <option value="tag">タグ順</option>
-                                <option value="due_asc">期限日（近い順）</option>
-                                <option value="due_desc">期限日（遠い順）</option>
-                                <option value="created_desc">作成日（新しい順）</option>
-                                <option value="created_asc">作成日（古い順）</option>
-                                <option value="importance">重要度（高い順）</option>
-                                <option value="urgency">緊急度（高い順）</option>
-                            </select>
+                {/* Filter Toolbar */}
+                <div className="today-toolbar">
+                    <MultiSelectFilter label="ステータス" options={statusOptions} selected={filterStatuses} onChange={setFilterStatuses} />
+                    {tagOptions.length > 0 && <MultiSelectFilter label="タグ" options={tagOptions} selected={filterTags} onChange={setFilterTags} />}
+                    <MultiSelectFilter label="重要度" options={importanceOptions} selected={filterImportance} onChange={setFilterImportance} />
+                    <MultiSelectFilter label="緊急度" options={urgencyOptions} selected={filterUrgency} onChange={setFilterUrgency} />
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                        <button
+                            className={`today-sort-toggle ${sortMode === 'manual' ? 'active' : ''}`}
+                            onClick={toggleSortMode}
+                            title={sortMode === 'manual' ? '自動ソートに切替' : '手動並び替えに切替'}
+                        >
+                            {sortMode === 'manual' ? '✋ 手動' : '🔀 自動'}
+                        </button>
+                        {sortMode === 'auto' && (
+                            <div className="today-filter">
+                                <label>並び順</label>
+                                <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
+                                    <option value="priority">優先度順（デフォルト）</option>
+                                    <option value="status">ステータス順</option>
+                                    <option value="tag">タグ順</option>
+                                    <option value="due_asc">期限日（近い順）</option>
+                                    <option value="due_desc">期限日（遠い順）</option>
+                                    <option value="created_desc">作成日（新しい順）</option>
+                                    <option value="created_asc">作成日（古い順）</option>
+                                    <option value="importance">重要度（高い順）</option>
+                                    <option value="urgency">緊急度（高い順）</option>
+                                </select>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Mini Dashboard */}
+                <div className="today-stats">
+                    <div className="stat-ring-area">
+                        <svg viewBox="0 0 120 120" className="stat-ring">
+                            <circle cx="60" cy="60" r="50" className="ring-bg" />
+                            <circle cx="60" cy="60" r="50" className="ring-fill"
+                                style={{
+                                    strokeDasharray: `${stats.pct * 3.14} 314`,
+                                    stroke: stats.pct === 100 ? 'var(--color-success)' : 'var(--color-primary)'
+                                }}
+                            />
+                        </svg>
+                        <div className="ring-label">
+                            <span className="ring-pct">{stats.pct}%</span>
+                            <span className="ring-sub">完了</span>
                         </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Mini Dashboard */}
-            <div className="today-stats">
-                <div className="stat-ring-area">
-                    <svg viewBox="0 0 120 120" className="stat-ring">
-                        <circle cx="60" cy="60" r="50" className="ring-bg" />
-                        <circle cx="60" cy="60" r="50" className="ring-fill"
-                            style={{
-                                strokeDasharray: `${stats.pct * 3.14} 314`,
-                                stroke: stats.pct === 100 ? 'var(--color-success)' : 'var(--color-primary)'
-                            }}
-                        />
-                    </svg>
-                    <div className="ring-label">
-                        <span className="ring-pct">{stats.pct}%</span>
-                        <span className="ring-sub">完了</span>
                     </div>
-                </div>
-                <div className="stat-details">
-                    <div className="stat-row">
-                        <span className="stat-icon">📋</span>
-                        <span className="stat-text">全 <strong>{stats.total}</strong> 件</span>
-                    </div>
-                    <div className="stat-row">
-                        <span className="stat-icon">✅</span>
-                        <span className="stat-text">完了 <strong>{stats.completed}</strong> 件</span>
-                    </div>
-                    <div className="stat-row">
-                        <span className="stat-icon">⏳</span>
-                        <span className="stat-text">残り <strong>{stats.remaining}</strong> 件</span>
-                    </div>
-                    {stats.remainingMin > 0 && (
+                    <div className="stat-details">
                         <div className="stat-row">
-                            <span className="stat-icon">⏱</span>
-                            <span className="stat-text">残り想定 <strong>{formatMin(stats.remainingMin)}</strong></span>
+                            <span className="stat-icon">📋</span>
+                            <span className="stat-text">全 <strong>{stats.total}</strong> 件</span>
+                        </div>
+                        <div className="stat-row">
+                            <span className="stat-icon">✅</span>
+                            <span className="stat-text">完了 <strong>{stats.completed}</strong> 件</span>
+                        </div>
+                        <div className="stat-row">
+                            <span className="stat-icon">⏳</span>
+                            <span className="stat-text">残り <strong>{stats.remaining}</strong> 件</span>
+                        </div>
+                        {stats.remainingMin > 0 && (
+                            <div className="stat-row">
+                                <span className="stat-icon">⏱</span>
+                                <span className="stat-text">残り想定 <strong>{formatMin(stats.remainingMin)}</strong></span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Task List */}
+                <div className="today-list">
+                    {loading && tasks.length === 0 && <div className="today-placeholder"><span className="spinner" /> 読み込み中...</div>}
+
+                    {!loading && tasks.length === 0 && (
+                        <div className="today-empty">
+                            <span className="today-empty-icon">{currentTab.isToday ? '☀️' : '📅'}</span>
+                            <span className="today-empty-title">{currentTab.isToday ? '今日やるタスクがありません' : `${currentTab.label}のタスクがありません`}</span>
+                            <span className="today-empty-hint">タスク一覧の ☀️ ボタンでタスクをピックしましょう</span>
                         </div>
                     )}
+
+                    {tasks.map((task, i) => (
+                        <React.Fragment key={task.id}>
+                            {isManual && activeId && i === 0 && (
+                                <ReorderGap id="reorder-today-0" />
+                            )}
+                            <TodayCardItem
+                                task={task}
+                                isManual={isManual}
+                                statuses={statuses}
+                                statusMap={statusMap}
+                                selectedDate={selectedDate}
+                                onStatusChange={handleStatusChange}
+                                onRemove={handleRemove}
+                                onEdit={setEditingTask}
+                                justCompletedId={justCompletedId}
+                                index={i}
+                            />
+                            {isManual && activeId && (
+                                <ReorderGap id={`reorder-today-${i + 1}`} />
+                            )}
+                        </React.Fragment>
+                    ))}
                 </div>
-            </div>
 
-            {/* Task List */}
-            <div className="today-list">
-                {loading && tasks.length === 0 && <div className="today-placeholder"><span className="spinner" /> 読み込み中...</div>}
-
-                {!loading && tasks.length === 0 && (
-                    <div className="today-empty">
-                        <span className="today-empty-icon">{currentTab.isToday ? '☀️' : '📅'}</span>
-                        <span className="today-empty-title">{currentTab.isToday ? '今日やるタスクがありません' : `${currentTab.label}のタスクがありません`}</span>
-                        <span className="today-empty-hint">タスク一覧の ☀️ ボタンでタスクをピックしましょう</span>
+                {currentTab.isToday && stats.total > 0 && stats.completed >= 1 && stats.pct < 50 && (
+                    <div className="today-milestone-banner milestone-start">
+                        いいスタート！ まず1件クリアしました
+                    </div>
+                )}
+                {currentTab.isToday && stats.pct >= 50 && stats.pct < 100 && (
+                    <div className="today-milestone-banner milestone-half">
+                        半分突破！ あと {stats.remaining} 件で完了です
+                    </div>
+                )}
+                {currentTab.isToday && stats.pct === 100 && stats.total > 0 && (
+                    <div className="today-complete-banner">
+                        おめでとうございます！ 今日のタスクをすべて完了しました！
                     </div>
                 )}
 
-                {tasks.map((task, i) => {
-                    const st = statusMap[task.status_code] || { label: task.status_label || '不明', color: task.status_color || '#94a3b8' };
-                    const isDone = task.status_code === 3;
-                    const isRoutine = !!task.is_routine;
-                    const isPickedForToday = task.today_date === selectedDate;
-
-                    return (
-                        <div key={task.id}
-                            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${dnd.dragOverIdx === i ? 'drag-over' : ''}`}
-                            style={{ animationDelay: `${i * 40}ms` }}
-                            draggable={isManual}
-                            onDragStart={isManual ? dnd.onDragStart(i) : undefined}
-                            onDragEnd={isManual ? dnd.onDragEnd : undefined}
-                            onDragOver={isManual ? dnd.onDragOver(i) : undefined}
-                            onDragLeave={isManual ? dnd.onDragLeave : undefined}
-                            onDrop={isManual ? dnd.onDrop(i) : undefined}
-                        >
-                            {isManual && (
-                                <div className="today-drag-handle" title="ドラッグして並び替え">⋮⋮</div>
-                            )}
-                            <StatusCheckbox
-                                statusCode={task.status_code}
-                                onChange={(newCode) => handleStatusChange(task.id, newCode, isRoutine)}
-                                sparkle={justCompletedId === task.id}
-                            />
+                <DragOverlay>
+                    {activeTaskData ? (
+                        <div className="today-card" style={{ opacity: 0.8, transform: 'scale(1.02)', cursor: 'grabbing', animation: 'none' }}>
+                            <div className="today-drag-handle" style={{ opacity: 1 }}>⋮⋮</div>
                             <div className="today-card-info">
-                                {task.parent_title && (
-                                    <span className="today-parent-label">📌 {task.parent_title} ›</span>
-                                )}
                                 <div className="today-card-title-row">
-                                    {isRoutine && <span className="today-routine-badge">🔄</span>}
-                                    <span
-                                        className={`today-card-title ${isDone ? 'strike' : ''} ${!isRoutine ? 'clickable' : ''}`}
-                                        onClick={() => {
-                                            if (!isRoutine) setEditingTask(task);
-                                        }}
-                                        title={!isRoutine ? "クリックして編集" : ""}
-                                    >
-                                        {task.title}
-                                    </span>
+                                    {activeTaskData.is_routine && <span className="today-routine-badge">🔄</span>}
+                                    <span className="today-card-title">{activeTaskData.title}</span>
                                 </div>
-                                <div className="today-card-meta">
-                                    {task.tags && task.tags.map(t => (
-                                        <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
-                                    ))}
-                                    {isDone && task.completed_at && <span className="today-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
-                                    {task.due_date && !isDone && <span className="today-meta-item">📅 {task.due_date}</span>}
-                                    {task.estimated_hours > 0 && (
-                                        <span className="today-meta-item">⏱ {formatMin(task.estimated_hours)}</span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="today-card-actions">
-                                {!isRoutine && (
-                                    <select value={task.status_code} onChange={e => handleStatusChange(task.id, e.target.value, false)}
-                                        className="today-status" style={{ borderColor: st.color, color: st.color }}>
-                                        {statuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
-                                    </select>
-                                )}
-                                {!isRoutine && isPickedForToday && (
-                                    <button className="today-remove" onClick={() => handleRemove(task.id)} title="今日やるから外す">✕</button>
-                                )}
                             </div>
                         </div>
-                    );
-                })}
-            </div>
+                    ) : null}
+                </DragOverlay>
 
-            {currentTab.isToday && stats.total > 0 && stats.completed >= 1 && stats.pct < 50 && (
-                <div className="today-milestone-banner milestone-start">
-                    いいスタート！ まず1件クリアしました
-                </div>
-            )}
-            {currentTab.isToday && stats.pct >= 50 && stats.pct < 100 && (
-                <div className="today-milestone-banner milestone-half">
-                    半分突破！ あと {stats.remaining} 件で完了です
-                </div>
-            )}
-            {currentTab.isToday && stats.pct === 100 && stats.total > 0 && (
-                <div className="today-complete-banner">
-                    おめでとうございます！ 今日のタスクをすべて完了しました！
-                </div>
-            )}
-
-            <style jsx>{`
+                <style jsx>{`
         .today-root { max-width: 800px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .today-header { margin-bottom: 1rem; }
         .today-title-row { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
@@ -420,6 +507,7 @@ export default function TodayPage() {
           border-radius: var(--radius-md); padding: 0.75rem 1rem;
           box-shadow: var(--shadow-sm); transition: all 0.2s;
           animation: tcIn 0.3s cubic-bezier(.16,1,.3,1) both;
+          touch-action: none;
         }
         @keyframes tcIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         .today-card:hover { border-color: var(--border-color-hover); box-shadow: var(--shadow-card-hover); }
@@ -446,7 +534,7 @@ export default function TodayPage() {
         .today-card-title.clickable { cursor: pointer; transition: color 0.15s; }
         .today-card-title.clickable:hover { color: var(--color-primary); text-decoration: underline; }
         .today-card-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
-        .today-tag { font-size: 0.6rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 8px; color: #fff; }
+        .today-tag { font-size: 0.63rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 10px; color: #fff; }
         .today-meta-item { font-size: 0.75rem; color: var(--color-text-muted); }
 
         .today-card-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
@@ -488,10 +576,6 @@ export default function TodayPage() {
         }
         .today-drag-handle:hover { opacity:1; }
         .today-drag-handle:active { cursor:grabbing; }
-        .today-card.drag-over {
-          box-shadow:0 0 0 2px var(--color-primary), 0 4px 12px rgba(0,0,0,.1);
-          transform:scale(1.01);
-        }
 
         .today-milestone-banner {
           margin-top: 1rem; padding: 0.85rem 1.25rem;
@@ -520,16 +604,35 @@ export default function TodayPage() {
         @keyframes celebIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
       `}</style>
 
-            {editingTask && (
-                <TaskEditModal
-                    task={editingTask}
-                    onClose={() => setEditingTask(null)}
-                    onSaved={() => {
-                        setEditingTask(null);
-                        loadTasks(selectedDate);
-                    }}
-                />
-            )}
-        </div>
+                {/* Reorder gap styles (global for ReorderGap child component) */}
+                <style jsx global>{`
+        .tl-reorder-gap {
+          position:relative; padding:3px 0;
+          transition:padding .15s ease; animation:fadeIn .2s ease;
+        }
+        .tl-reorder-gap-line {
+          height:2px; border-radius:1px;
+          background:transparent; transition:all .15s ease;
+        }
+        .tl-reorder-gap.drag-over { padding:8px 0; }
+        .tl-reorder-gap.drag-over .tl-reorder-gap-line {
+          height:3px; background:var(--color-accent);
+          box-shadow:0 0 8px rgba(139,92,246,.35);
+        }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+      `}</style>
+
+                {editingTask && (
+                    <TaskEditModal
+                        task={editingTask}
+                        onClose={() => setEditingTask(null)}
+                        onSaved={() => {
+                            setEditingTask(null);
+                            loadTasks(selectedDate);
+                        }}
+                    />
+                )}
+            </div>
+        </DndContext>
     );
 }
