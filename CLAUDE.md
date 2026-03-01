@@ -5,8 +5,8 @@
 **Yarukoto** は個人用タスク管理Webアプリ。Next.js (App Router) + SQLite のローカル完結型。
 Tauri v2 デスクトップアプリとして動作する。
 
-**現在のバージョン**: v1.3.0 リリース済み（2026-03-01）
-**次期バージョン**: v1.3.1 以降開発予定（詳細は `ROADMAP.md` 参照）
+**現在のバージョン**: v1.3.1 リリース済み（2026-03-01）
+**次期バージョン**: v1.4.0 以降開発予定（詳細は `ROADMAP.md` 参照）
 
 ## 関連ドキュメント
 
@@ -67,14 +67,23 @@ app/
   globals.css        # グローバルCSS (CSS変数定義)
   today/page.js      # 今日やるタスク (進捗リング付き, 日付タブで未来日付も表示)
   tasks/page.js      # タスク一覧 (上部にTaskInput, フィルタ・ソート付き)
-  routines/page.js   # ルーティン管理 (CRUD, 日次/週次/月次)
   dashboard/page.js  # ダッシュボード (完了率リング, 7日間チャート, ステータス分布)
-  settings/page.js   # 設定 (タグ/ステータス/オプション/データ管理)
+  settings/page.js   # 設定 タブシェル (約80行, v1.3.1で分割)
+  settings/_components/
+    TagsPanel.js     # タグ管理タブパネル (v1.3.1)
+    StatusPanel.js   # ステータス管理タブパネル (v1.3.1)
+    OptionsPanel.js  # オプション設定タブパネル (v1.3.1)
+    DataPanel.js     # データ管理タブパネル (v1.3.1)
+  routines/page.js   # ルーティン管理 (CRUD, 日次/週次/月次, v1.3.1で分割)
+  routines/_components/
+    RoutineFormModal.js # ルーティン作成・編集モーダル (routines/page.js から分離, v1.3.1)
   (※ app/api/ フォルダは完全に削除済)
 
 components/
   TaskInput.js       # タスク入力フォーム (展開式, 子タスク対応, 親タスク選択ドロップダウン付き)
-  TaskList.js        # タスク一覧 + TaskItem (親子構造, フィルタ/ソート, DnD, タグ継承)
+  TaskList.js        # タスク一覧 (親子構造, フィルタ/ソート, DnD, タグ継承) ※v1.3.1で分割
+  TaskItem.js        # タスク単体コンポーネント (TaskList.js から抽出, v1.3.1)
+  DndGaps.js         # DnD用ギャップゾーン (TaskList.js から抽出, v1.3.1)
   TaskEditModal.js   # タスク編集モーダル
   StatusCheckbox.js  # 3ステートチェックボックス (未着手/着手中/完了, スパークルアニメ付き)
   CalendarPicker.js  # カスタムカレンダー日付選択
@@ -83,10 +92,17 @@ components/
 
 hooks/
   useMasterData.js   # マスターデータ + タグ取得カスタムフック
+  useFilterOptions.js # フィルタ options 生成カスタムフック (v1.3.1 共通化)
+  useTaskActions.js  # タスクDB操作ハンドラ (TaskList.js から抽出, v1.3.1)
+  useTaskDnD.js      # タスクDnDロジック (TaskList.js から抽出, v1.3.1)
+  useTodayTasks.js   # 今日やるタスクのデータ取得・マージロジック (today/page.js から抽出, v1.3.1)
+  useDragReorder.js  # 手動並び替えDnDハンドラ汎用版 (v1.3.1)
 
 lib/
   db.js              # SQLite接続管理, テーブル初期化, マイグレーション, app_settings シード (globalThis シングルトン)
   holidayService.js  # 祝日キャッシュ管理 (内閣府CSV取得・INSERT), 祝日/週末判定, ルーティン実施日計算 (globalThis シングルトン)
+  utils.js           # 共通ユーティリティ (getDb, formatMin, todayStr, parseTags 等, v1.3.1)
+  taskSorter.js      # タスクソートロジック (v1.3.1 共通化)
 
 src-tauri/
   tauri.conf.json    # Tauri設定 (frontendDist: "../out")

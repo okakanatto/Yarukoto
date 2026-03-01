@@ -14,6 +14,27 @@ This file tracks changes made by AI agents (Antigravity, Claude Code, etc.) to c
 ## Log
 
 ### 2026-03-01
+- **Agent**: Claude Code (claude-sonnet-4-6)
+- **Task**: v1.3.1 Release Build & Documentation
+- **Details**:
+    - **Refactor**: コードリファクタリング完了版のリリースビルドを実施。R-1〜R-4（Phase 0〜Phase 3+4）の全リファクタリング作業を含む。
+    - **Refactor (Phase 0)**: `lib/utils.js`・`lib/taskSorter.js`・`hooks/useFilterOptions.js` を新設し、全ファイル共通の getDb ボイラープレート、formatMin、todayStr、parseTags、フィルタ options 生成、ソートロジックを共通化。
+    - **Refactor (Phase 1)**: `TaskList.js`（1032行）を `components/TaskItem.js`・`hooks/useTaskActions.js`・`hooks/useTaskDnD.js`・`components/DndGaps.js` に分割し約350行に削減。
+    - **Refactor (Phase 2)**: `today/page.js`（859行）を `hooks/useTodayTasks.js`・`hooks/useDragReorder.js` に分割し約350行に削減。
+    - **Refactor (Phase 3+4)**: `settings/page.js`（893行）を `app/settings/_components/` 配下の TagsPanel・StatusPanel・OptionsPanel・DataPanel に分割し約80行に縮小。`routines/page.js`（691行）から `app/routines/_components/RoutineFormModal.js` を分離し約248行に縮小。
+    - **Fix (QA)**: リリース前検証 QA NG3件を修正。`layout.js` サイドバー進捗 SQL（archived_at 除外）、`useTodayTasks.js` キャンセル除外 SQL、`RoutineFormModal.js` Escape リスナー漏れ。
+    - **Release**: バージョン番号を `v1.3.1` に更新し、Tauriビルドを実行。インストーラー版・ポータブル版を `releases/v1.3.1/` に配置。リリースノート・AI_CHANGELOG・CLAUDE.md・WORK-LOG.md を更新。
+- **Files**:
+    - `package.json`, `src-tauri/tauri.conf.json`
+    - `lib/utils.js`, `lib/taskSorter.js`, `hooks/useFilterOptions.js` (Created)
+    - `components/TaskItem.js`, `hooks/useTaskActions.js`, `hooks/useTaskDnD.js`, `components/DndGaps.js` (Created)
+    - `hooks/useTodayTasks.js`, `hooks/useDragReorder.js` (Created)
+    - `app/settings/_components/TagsPanel.js`, `StatusPanel.js`, `OptionsPanel.js`, `DataPanel.js` (Created)
+    - `app/routines/_components/RoutineFormModal.js` (Created)
+    - `app/layout.js`, `hooks/useTodayTasks.js`, `app/routines/_components/RoutineFormModal.js` (Modified: QA修正)
+    - `RELEASE_NOTES.md`, `AI_CHANGELOG.md`, `CLAUDE.md`, `WORK-LOG.md`
+
+### 2026-03-01
 - **Agent**: Claude Code (claude-opus-4-6)
 - **Task**: v1.3.0 Release Build & Documentation
 - **Details**:

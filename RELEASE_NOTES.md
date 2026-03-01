@@ -1,3 +1,14 @@
+## v1.3.1（2026-03-01）
+
+### 内部改善（リファクタリング）
+- コードの可読性・保守性向上のため、肥大化していたファイルを分割・整理しました（ユーザー向けの機能変更はありません）
+  - 共通ユーティリティを `lib/utils.js` / `lib/taskSorter.js` / `hooks/useFilterOptions.js` に抽出（Phase 0）
+  - `TaskList.js`（1032行）を `TaskItem.js`・`hooks/useTaskActions.js`・`hooks/useTaskDnD.js`・`DndGaps.js` に分割（Phase 1）
+  - `today/page.js`（859行）を `hooks/useTodayTasks.js`・`hooks/useDragReorder.js` に分割（Phase 2）
+  - `settings/page.js`（893行）を4つのタブパネルコンポーネントに分割、`routines/page.js` からフォームモーダルを分離（Phase 3+4）
+
+---
+
 ## v1.3.0（2026-03-01）
 
 ### バグ修正

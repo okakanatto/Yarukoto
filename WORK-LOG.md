@@ -1,36 +1,39 @@
 # Work Log
 
-## 最新の作業（2026-03-01 19:30）
+## 最新の作業（2026-03-01 20:00）
 
-- **フェーズ**: v1.3.1 リリース前検証 STEP R（NG修正のリグレッションテスト）+ 完了処理
+- **フェーズ**: v1.3.1 ビルド・リリース
 - **対象バージョン**: v1.3.1
 - **ステータス**: ✅ 完了
 - **やったこと**:
-  - リリース前検証 QA NG修正3件のリグレッションテストを実施（全12項目 OK、NG: 0件）
-  - 直接テスト3件: NG-1（layout.js サイドバー進捗SQL）/ NG-2（useTodayTasks.js キャンセル除外SQL）/ NG-B-1（RoutineFormModal.js Escape リスナー）
-  - 影響範囲テスト9件: サイドバー・ダッシュボード一貫性 / today画面統計・表示・バナー / TaskList キャンセル表示維持 / Escape リスナー干渉・競合なし
-  - 完了処理: ROADMAP.md の R-4 に ✅ 完了マーク / qa-report.md の OK 項目圧縮 / WORK-LOG.md 更新
+  - `package.json` および `src-tauri/tauri.conf.json` のバージョンを `1.3.0` → `1.3.1` に更新
+  - `npm run tauri build` を実行（成功。Next.js ビルド + Rust コンパイル + NSIS/WiX パッケージ生成）
+  - `releases/v1.3.1/` ディレクトリを作成し、インストーラー版・ポータブル版を配置
+  - `RELEASE_NOTES.md` に v1.3.1 リリースノートを追記
+  - `AI_CHANGELOG.md` に v1.3.1 変更ログを追記
+  - `CLAUDE.md` のバージョン・ディレクトリ構造を更新（新規ファイル群を反映）
+  - `WORK-LOG.md` 更新（本エントリ）
 - **変更したファイル**:
-  - `ROADMAP.md` — R-4 に ✅ 完了マーク追加
-  - `qa-report.md` — STEP R 結果追記 + リリース前検証 STEP B の OK テーブル圧縮
-  - `WORK-LOG.md` — 本更新
+  - `package.json`, `src-tauri/tauri.conf.json` — バージョン更新
+  - `releases/v1.3.1/Yarukoto_1.3.1_x64-setup.exe` — インストーラー版
+  - `releases/v1.3.1/Yarukoto_1.3.1-portable.exe` — ポータブル版
+  - `RELEASE_NOTES.md`, `AI_CHANGELOG.md`, `CLAUDE.md`, `WORK-LOG.md` — ドキュメント更新
 - **次にやるべきこと**:
-  - ビルド確認（`npm run tauri build`）の実施 → v1.3.1 リリース
+  - フェーズ8：最終確認とGitHubリリース
 - **注意事項・申し送り**:
-  - v1.3.1 の全枝番（R-1〜R-4）が完了。リリース前検証（STEP A + STEP B + STEP R）も全件パス
-  - 残りはビルド確認のみ。ビルド成功後、`releases/v1.3.1/` にインストーラー・ポータブル版を配置してリリース
   - ⚠️ 要実機確認: CSV エクスポートの Blob API ベースの Tauri 環境での動作（qa-report.md #22）
+  - v1.4.0 に向けて ROADMAP.md の 4-1〜4-4 を参照して実装を開始する
 
 ---
 
 ## 過去の作業（直近2件まで保持。3件目以降は削除すること）
 
+### 2026-03-01 19:30 — v1.3.1 リリース前検証 STEP R（NG修正のリグレッションテスト）+ 完了処理
+- ステータス: ✅ 完了
+- やったこと: リリース前検証 QA NG修正3件のリグレッションテストを実施（全12項目 OK、NG: 0件）。ROADMAP.md の R-4 に ✅ 完了マーク、qa-report.md 圧縮。
+- 変更したファイル: `ROADMAP.md`, `qa-report.md`, `WORK-LOG.md`
+
 ### 2026-03-01 18:30 — v1.3.1 リリース前検証 QA NG項目修正
 - ステータス: ✅ 完了
 - やったこと: NG-1（layout.js サイドバー進捗 archived_at 除外）/ NG-2（useTodayTasks.js キャンセル除外）/ NG-B-1（RoutineFormModal.js Escape リスナー追加）の3件を修正
 - 変更したファイル: `app/layout.js`, `hooks/useTodayTasks.js`, `app/routines/_components/RoutineFormModal.js`, `qa-report.md`
-
-### 2026-03-01 17:30 — v1.3.1 R-4 Phase 3+4 settings タブ分割 + routines モーダル分離
-- ステータス: ✅ 完了
-- やったこと: `app/settings/page.js`（839行）を4つのタブパネルに分割（272行に縮小）。`app/routines/page.js`（691行）からフォームモーダルを分離（248行に縮小）
-- 変更したファイル: `app/settings/page.js`, `app/settings/_components/TagsPanel.js`, `StatusPanel.js`, `OptionsPanel.js`, `DataPanel.js`, `app/routines/page.js`, `app/routines/_components/RoutineFormModal.js`
