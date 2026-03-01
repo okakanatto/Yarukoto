@@ -438,7 +438,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             transition: background 0.3s; flex-shrink: 0;
             padding: 0;
         }
-        .rt-switch-lg.on { background: #34c759; }
+        .rt-switch-lg.on { background: var(--color-primary); }
         .rt-switch-lg.off { background: #e5e5ea; }
         .rt-switch-lg .rt-switch-knob {
             position: absolute; top: 2px; width: 28px; height: 28px;

@@ -46,7 +46,7 @@ function buildDateTabs() {
 /**
  * Individual today-card with @dnd-kit draggable support.
  */
-function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index }) {
+function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index, isProcessing }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
         disabled: !isManual,
@@ -76,6 +76,7 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
                 statusCode={task.status_code}
                 onChange={(newCode) => onStatusChange(task.id, newCode, isRoutine)}
                 sparkle={justCompletedId === task.id}
+                disabled={isProcessing}
             />
             <div className="today-card-info">
                 {task.parent_title && (
@@ -107,12 +108,13 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
             <div className="today-card-actions">
                 {!isRoutine && (
                     <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value, false)}
-                        className="today-status" style={{ borderColor: st.color, color: st.color }}>
+                        className="today-status" style={{ borderColor: st.color, color: st.color }}
+                        disabled={isProcessing}>
                         {statuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
                     </select>
                 )}
                 {!isRoutine && isPickedForToday && (
-                    <button className="today-remove" onClick={() => onRemove(task.id)} title="今日やるから外す">✕</button>
+                    <button className="today-remove" onClick={() => onRemove(task.id)} title="今日やるから外す" disabled={isProcessing}>✕</button>
                 )}
             </div>
         </div>
@@ -382,6 +384,7 @@ export default function TodayPage() {
                                 onEdit={setEditingTask}
                                 justCompletedId={justCompletedId}
                                 index={i}
+                                isProcessing={actions.processingIds.has(task.id)}
                             />
                             {isManual && activeId && (
                                 <ReorderGap id={`reorder-today-${i + 1}`} />

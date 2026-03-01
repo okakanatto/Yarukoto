@@ -57,10 +57,10 @@ export default function OptionsPanel({ appSettings, setAppSettings, flash }) {
                     </div>
                     <button
                         type="button"
-                        className={`opt-toggle ${appSettings.show_overdue_in_today !== '0' ? 'on' : ''}`}
+                        className={`opt-toggle ${appSettings.show_overdue_in_today === '1' ? 'on' : ''}`}
                         onClick={() => toggleSetting('show_overdue_in_today')}
                         role="switch"
-                        aria-checked={appSettings.show_overdue_in_today !== '0'}
+                        aria-checked={appSettings.show_overdue_in_today === '1'}
                     >
                         <span className="opt-toggle-knob" />
                     </button>

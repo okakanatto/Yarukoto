@@ -214,7 +214,7 @@ export default function RoutinesPage() {
             padding: 0.1rem 0.6rem; border-radius: 4px;
         }
         .rt-card-meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-        .rt-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 4px; color: #fff; font-weight: 600; }
+        .rt-tag { font-size: 0.63rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 10px; color: #fff; }
         .rt-meta-item { font-size: 0.75rem; color: var(--color-text-muted); }
         .rt-end-date { color: var(--color-warning); }
 
@@ -228,7 +228,7 @@ export default function RoutinesPage() {
             transition: background 0.3s; flex-shrink: 0;
             padding: 0;
         }
-        .rt-switch.on { background: #34c759; }
+        .rt-switch.on { background: var(--color-primary); }
         .rt-switch.off { background: #e5e5ea; }
         .rt-switch .rt-switch-knob {
             position: absolute; top: 2px; width: 24px; height: 24px;
@@ -240,8 +240,8 @@ export default function RoutinesPage() {
         .rt-switch.off .rt-switch-knob { left: 2px; }
 
         .rt-toast { position: fixed; bottom: 2rem; right: 2rem; padding: 0.8rem 1.5rem; border-radius: 8px; z-index: 3000; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.1); animation: slideUp 0.3s; }
-        .rt-toast-ok { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-        .rt-toast-err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .rt-toast-ok { background: #ecfdf5; color: #15803d; border: 1px solid #bbf7d0; }
+        .rt-toast-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
             `}</style>
         </div>
     );

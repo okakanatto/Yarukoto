@@ -51,7 +51,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
 
                 const settingsRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['show_overdue_in_today']);
                 if (settingsRows.length > 0) {
-                    setShowOverdue(settingsRows[0].value !== '0');
+                    setShowOverdue(settingsRows[0].value === '1');
                 }
 
                 const sortModeRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['sort_mode_today']);

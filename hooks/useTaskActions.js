@@ -54,7 +54,7 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
                         const allComplete = siblings.every(s => s.id === taskId ? true : s.status_code === 3);
                         if (allComplete) {
                             const parentRows = await db.select('SELECT status_code FROM tasks WHERE id = $1', [parentId]);
-                            if (parentRows[0] && parentRows[0].status_code !== 3) {
+                            if (parentRows[0] && parentRows[0].status_code !== 3 && parentRows[0].status_code !== 5) {
                                 await db.execute("UPDATE tasks SET status_code = 3, completed_at = datetime('now', 'localtime') WHERE id = $1", [parentId]);
                                 setTasks(prev => prev.map(t => t.id === parentId ? {
                                     ...t,
