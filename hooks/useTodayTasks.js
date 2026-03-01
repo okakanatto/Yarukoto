@@ -207,8 +207,13 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                 tags: parseTags(t)
             }));
 
+            // Cross-entity dedup: when a routine and task share the same title,
+            // prefer the task (has richer metadata: status, due_date, parent, etc.)
+            const taskTitles = new Set(standardTasks.map(t => t.title));
+            const filteredRoutines = routineTasks.filter(r => !taskTitles.has(r.title));
+
             // Combine, deduplicate by id, and sort
-            const merged = [...routineTasks, ...standardTasks];
+            const merged = [...filteredRoutines, ...standardTasks];
             const seen = new Set();
             const unified = merged.filter(t => {
                 if (seen.has(t.id)) return false;

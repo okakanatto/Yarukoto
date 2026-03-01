@@ -75,9 +75,9 @@ export default function RootLayout({ children }) {
             const date = new Date().toLocaleDateString('sv-SE');
 
             const tasksRes = await db.select(`
-                SELECT status_code FROM tasks 
+                SELECT status_code, title FROM tasks
                 WHERE status_code != 5 AND archived_at IS NULL AND (
-                    today_date = $1 
+                    today_date = $1
                     OR due_date = $2
                     OR (due_date < $3 AND status_code != 3)
                     OR (status_code = 3 AND date(completed_at) = $4)
@@ -90,7 +90,7 @@ export default function RootLayout({ children }) {
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
             const routinesRes = await db.select(`
-              SELECT r.id, r.frequency, r.weekdays_only, rc.completion_date
+              SELECT r.id, r.title, r.frequency, r.weekdays_only, rc.completion_date
               FROM routines r
               LEFT JOIN routine_completions rc ON r.id = rc.routine_id AND rc.completion_date = $1
               WHERE r.enabled = 1
@@ -105,13 +105,17 @@ export default function RootLayout({ children }) {
             let total = 0;
             let completed = 0;
 
+            // Build task title set for cross-entity dedup
+            const taskTitles = new Set();
             tasksRes.forEach(t => {
                 total++;
                 if (t.status_code === 3) completed++;
+                taskTitles.add(t.title);
             });
 
             routinesRes.forEach(r => {
                 if (r.frequency === 'daily' && r.weekdays_only === 1 && isWeekend) return;
+                if (taskTitles.has(r.title)) return; // Skip routine if same-name task exists
                 total++;
                 if (r.completion_date) completed++;
             });
