@@ -423,7 +423,7 @@ export default function TodayPage() {
                     ) : null}
                 </DragOverlay>
 
-                <style jsx>{`
+                <style jsx global>{`
         .today-root { max-width: 800px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .today-header { margin-bottom: 1rem; }
         .today-title-row { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
