@@ -157,7 +157,8 @@ export default function TaskList() {
     }, []);
 
     const toggleSortMode = async () => {
-        const newMode = sortMode === 'auto' ? 'manual' : 'auto';
+        const prevMode = sortMode;
+        const newMode = prevMode === 'auto' ? 'manual' : 'auto';
         setSortMode(newMode);
         try {
             const { getDb } = await import('@/lib/db');
@@ -166,7 +167,11 @@ export default function TaskList() {
                 'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
                 ['sort_mode_tasks', newMode]
             );
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            setSortMode(prevMode);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '設定の保存に失敗しました', type: 'error' } }));
+        }
     };
 
     const handleTaskAdded = () => setRefreshKey(k => k + 1);
@@ -312,14 +317,43 @@ export default function TaskList() {
     };
 
     // Helper to persist sort_order for a list of task IDs
-    const persistSortOrder = async (orderedIds) => {
+    const persistSortOrder = async (orderedIds, parentId = null) => {
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
-            for (let i = 0; i < orderedIds.length; i++) {
-                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [i + 1, orderedIds[i]]);
+
+            const query = parentId != null
+                ? 'SELECT id FROM tasks WHERE parent_id = $1 AND archived_at IS NULL ORDER BY sort_order ASC, id ASC'
+                : 'SELECT id FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL ORDER BY sort_order ASC, id ASC';
+            const params = parentId != null ? [parentId] : [];
+            const rows = await db.select(query, params);
+            let allIds = rows.map(r => r.id);
+
+            for (const id of orderedIds) {
+                if (!allIds.includes(id)) {
+                    allIds.push(id);
+                }
             }
-        } catch (e) { console.error(e); fetchTasks(); }
+
+            const positions = [];
+            for (const id of allIds) {
+                if (orderedIds.includes(id)) {
+                    positions.push(allIds.indexOf(id));
+                }
+            }
+
+            for (let i = 0; i < positions.length; i++) {
+                allIds[positions[i]] = orderedIds[i];
+            }
+
+            for (let i = 0; i < allIds.length; i++) {
+                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [i + 1, allIds[i]]);
+            }
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
+            fetchTasks();
+        }
     };
 
     // Handle DnD reorder (manual sort mode)
@@ -328,7 +362,7 @@ export default function TaskList() {
         const activeTask = tasks.find(t => t.id === activeTaskId);
         if (!activeTask) return;
 
-        let siblings, targetIndex, isRoot;
+        let siblings, targetIndex, isRoot, parentId = null;
 
         if (overIdStr.startsWith('reorder-root-')) {
             targetIndex = parseInt(overIdStr.replace('reorder-root-', ''));
@@ -336,7 +370,7 @@ export default function TaskList() {
             isRoot = true;
         } else if (overIdStr.startsWith('reorder-child-')) {
             const parts = overIdStr.replace('reorder-child-', '').split('-');
-            const parentId = parseInt(parts[0]);
+            parentId = parseInt(parts[0]);
             targetIndex = parseInt(parts[1]);
             siblings = getChildTasks(parentId);
             isRoot = false;
@@ -381,8 +415,12 @@ export default function TaskList() {
             if (isUnnest) {
                 await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
             }
-            await persistSortOrder(currentOrder);
-        } catch (e) { console.error(e); fetchTasks(); }
+            await persistSortOrder(currentOrder, isRoot ? null : parentId);
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
+            fetchTasks();
+        }
     };
 
     const handleDragEnd = async (event) => {
@@ -406,7 +444,11 @@ export default function TaskList() {
                     await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
                     fetchTasks();
                 }
-            } catch (e) { console.error(e); fetchTasks(); }
+            } catch (e) {
+                console.error(e);
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの処理に失敗しました', type: 'error' } }));
+                fetchTasks();
+            }
         };
 
         // REORDER: Dropped on a reorder gap (manual sort mode)
@@ -491,6 +533,7 @@ export default function TaskList() {
             fetchTasks(); // Refresh to get updated sort_order
         } catch (e) {
             console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
             fetchTasks(); // Revert on error
         }
     };

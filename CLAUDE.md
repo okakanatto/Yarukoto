@@ -5,8 +5,8 @@
 **Yarukoto** は個人用タスク管理Webアプリ。Next.js (App Router) + SQLite のローカル完結型。
 Tauri v2 デスクトップアプリとして動作する。
 
-**現在のバージョン**: v1.1.0 リリース済み（2026-02-25）
-**次期バージョン**: v1.2.0 以降開発予定（詳細は `ROADMAP.md` 参照）
+**現在のバージョン**: v1.3.0 リリース済み（2026-03-01）
+**次期バージョン**: v1.3.1 以降開発予定（詳細は `ROADMAP.md` 参照）
 
 ## 関連ドキュメント
 
@@ -15,7 +15,6 @@ Tauri v2 デスクトップアプリとして動作する。
 | `CLAUDE.md` | 本ファイル。技術仕様・アーキテクチャガイド |
 | `ISSUES.md` | バグ・機能改善・機能強化の課題一覧 |
 | `ROADMAP.md` | v1.1〜v2.0の開発ロードマップ（リリース計画・プロンプト単位） |
-| `dev-flow-guide.md` | 開発ワークフローガイド（フェーズ1〜8のプロンプト集） |
 | `WORK-LOG.md` | 作業ログ（枝番単位の実装記録・申し送り） |
 | `qa-report.md` | QAレポート（検証STEP結果の蓄積、バージョンごとにリセット） |
 | `RELEASE_NOTES.md` | リリースノート（バージョンごとに追記） |
@@ -99,11 +98,11 @@ src-tauri/
 
 ### テーブル
 
-- **tasks**: id, title, parent_id (自己参照FK, CASCADE定義あり。ただしアプリ側で削除前に子の parent_id を NULL 化して独立させるため、実質 CASCADE は発動しない), status_code, importance_level, urgency_level, start_date, due_date, estimated_hours (実際は分単位で保存), today_date, notes, created_at, updated_at, completed_at
+- **tasks**: id, title, parent_id (自己参照FK, CASCADE定義あり。ただしアプリ側で削除前に子の parent_id を NULL 化して独立させるため、実質 CASCADE は発動しない), status_code, importance_level, urgency_level, start_date, due_date, estimated_hours (実際は分単位で保存), today_date, notes, created_at, updated_at, completed_at, archived_at, sort_order
 - **importance_master**: level (PK), label, color
 - **urgency_master**: level (PK), label, color
 - **status_master**: code (PK), label, color, sort_order
-- **tags**: id, name (UNIQUE), color, sort_order
+- **tags**: id, name (UNIQUE), color, sort_order, archived
 - **task_tags**: task_id, tag_id (複合PK, 両方CASCADE)
 - **routines**: id, title, frequency (daily/weekly/monthly), days_of_week, day_of_month, monthly_type (date/end_of_month), weekdays_only, holiday_action (none/skip/forward/backward), importance_level, urgency_level, estimated_hours, notes, enabled, end_date, created_at, updated_at
 - **routine_tags**: routine_id, tag_id (複合PK, 両方CASCADE)
@@ -117,6 +116,7 @@ src-tauri/
 |-----|-------|------|
 | `inherit_parent_tags` | `'0'` | DnDで子タスク化した際、親のタグを自動付与するか |
 | `show_overdue_in_today` | `'0'` | 期限切れの未完了タスクを「今日やるタスク」に表示するか |
+| `auto_archive_days` | `'0'` | 完了からN日経過で自動アーカイブ（0=無効） |
 
 ### 注意点
 
@@ -143,7 +143,7 @@ src-tauri/
      - `today_date` で既にピック済みのタスクは重複表示しない
 - **3ステートチェックボックス** (`components/StatusCheckbox.js`):
   - 未着手(1): 空の円。ホバーで右に `▶` ボタン出現 → クリックで着手中(2)。円クリックで完了(3)
-  - 着手中(2): `▶` アイコン（アクセントカラー）→ クリックで完了(3)
+  - 着手中(2): `▶` アイコン（アクセントカラー）ホバーで左に `↺` ボタン出現 → クリックで完了(3)または未着手(1)
   - 完了(3): `✓` チェックマーク → クリックで未着手(1)に戻る
   - ルーティンは着手中をUI表示のみ対応（DB操作なし、`routine_completions` は完了/未完了のみ）
 - **親子タスクのDnD**: ドラッグ中に各タスク間へアンネスト用ギャップゾーン（`UnnestGap`）が出現、`unnest-gap-{id}` IDでアンネスト判定
@@ -151,6 +151,9 @@ src-tauri/
 - **親タスク選択ドロップダウン** (`TaskInput.js`): フォーム展開時、未完了のルートタスク一覧を取得して `<select>` で表示。`predefinedParentId` が渡されている場合（インライン子タスク作成）は非表示。
 - **app_settings**: 設定ページの「オプション」タブで管理。`toggleSetting(key)` で楽観的更新 + DB保存（エラー時ロールバック）。
 - **FABボタン**: layout.js に固定配置（右下）、クリックでTaskInputモーダルが開く。タスク追加後は `yarukoto:taskAdded` カスタムイベントを dispatch してページに通知
+- **アーカイブ機能**: 完了・キャンセル済みタスクを手動アーカイブ可能。自動アーカイブ（`app_settings.auto_archive_days`）にも対応。親アーカイブ時は子もまとめてアーカイブ。タスク一覧に「アーカイブ済み」タブで閲覧・復元可能。`tasks.archived_at` カラムで管理。
+- **ソートON/OFF + 手動並び替え**: タスク一覧・今日やるタスクで自動ソートのON/OFFを切替可能。OFF時はDnDで手動並び替え。`tasks.sort_order` カラムで並び順を永続化。親タスク単位・子タスク単位で独立した並び順を保持。
+- **ステータス並び順変更**: 設定画面でステータスの `sort_order` をDnDまたは上下ボタンで自由に変更可能（デフォルトステータスの間にもユーザー定義ステータスを配置可能）。
 - **レイアウト**: サイドバーナビ固定 (5項目: 今日/ルーティン/タスク一覧/ダッシュボード/設定) + メインコンテンツ領域
 
 ## 開発時の注意
@@ -162,35 +165,3 @@ src-tauri/
 - CSVエクスポート/インポートはBOM付きUTF-8 (Excel互換)
 - `suppressHydrationWarning` が layout.js に多用されている（`'use client'` によるhydrationミスマッチ回避）
 - **Tauri IPC の DB アクセスパターン**: 毎回 `const { getDb } = await import('@/lib/db'); const db = await getDb();` を呼ぶ（シングルトンなので問題なし）
-
-## 実装済み機能一覧
-
-| 機能 | ファイル | 内容 |
-|------|---------|------|
-| devIndicators 無効 | `next.config.mjs` | `devIndicators: false` |
-| 親タスク選択 | `components/TaskInput.js` | フォーム展開時に親候補ドロップダウン表示 |
-| app_settings テーブル | `lib/db.js` | KVストア + `inherit_parent_tags` 初期値 |
-| オプションタブ | `app/settings/page.js` | iOS風トグルスイッチで設定変更 |
-| タグ継承ロジック | `components/TaskList.js` | DnDネスト成功後に親タグを子へ INSERT OR IGNORE |
-| 祝日キャッシュ機能 | `lib/holidayService.js` | 内閣府CSV取得・SQLiteキャッシュ・インメモリSet最適化 |
-| ルーティン祝日除外 | `lib/holidayService.js` | `holiday_action` (none/skip/forward/backward) 対応 |
-| 毎月末ルーティン | `app/routines/page.js`, `lib/holidayService.js` | `monthly_type: end_of_month` + うるう年対応 |
-| 休日設定 全頻度対応 | `app/routines/page.js` | 日次・週次でも `holiday_action` を UI 設定可能に |
-| **【v1.1.0 新機能】** | | |
-| トースト通知 | `app/layout.js` | グローバルな成功/エラー通知を右下(FABの上)に表示 |
-| タスク直接編集 | `app/today/page.js` | 今日やる画面からタスク名クリックで編集モーダル起動 |
-| 完了日の自動記録・表示 | `components/TaskList.js` 他 | 完了(コード3)時に `completed_at` 記録、各画面に表示 |
-| キャンセルステータス | `lib/db.js` 他 | コード5(キャンセル)を追加、グレーアウト+取消線表示 |
-| 期限切れタスク表示設定 | `app/today/page.js` | 過去の未完了タスクを今日タブに表示(設定でトグル可) |
-
-## バグ修正済み
-
-- `app/today/page.js`: `fetch('/api/masters')` → Tauri SQL に修正済み
-- `app/settings/page.js`: 全11箇所の fetch → Tauri SQL に修正済み
-- `components/TaskEditModal.js`: UPDATE 時の `updated_at` セット漏れを修正済み
-- **起動時 `database is locked (code: 5)` エラー（第1弾）**: `lib/db.js` + `lib/holidayService.js` に `globalThis` シングルトン Promise を導入し、HMR や React Strict Mode による `updateHolidayCache` の多重実行を根絶（2026-02-22）
-- **起動時 `database is locked (code: 5)` エラー（第2弾）**: `holidayService.js` の `BEGIN TRANSACTION` がコネクションプール上でロックを長時間保持し、他コンポーネントの書き込みと競合していた。① テーブルにデータが既存なら CSV フェッチ自体をスキップ、② `BEGIN/COMMIT` を廃止し autocommit 個別 INSERT に変更して解消（v1.0前デバッグ）
-- **`components/TaskList.js` `handleStatusChange` の `completed_at` 漏れ**: タスク一覧でステータスを完了(3)に変更しても `completed_at` がセットされず、ダッシュボードの7日間グラフ・「今日やるタスク」の完了フィルタが機能しなかった（v1.0前デバッグ）
-- **`components/TaskEditModal.js` CSS 全壊**: `<style jsx>` 内のクラス名・プロパティ名に誤ったスペースが混入（`.te - backdrop`、`z- index` 等）してモーダルが完全に無スタイルだった（v1.0前デバッグ）
-- **`app/dashboard/page.js` 「全体の完了率」の二重計上**: 今日のルーティン数を全体タスク数に加算していたため日付によって数値が変動していた（v1.0前デバッグ）
-- **`app/routines/page.js` 休日設定 UI の欠落**: 月次ルーティンのみに表示されていた休日対応設定を全頻度で表示するよう修正（v1.0前デバッグ）

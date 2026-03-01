@@ -13,6 +13,26 @@ This file tracks changes made by AI agents (Antigravity, Claude Code, etc.) to c
 
 ## Log
 
+### 2026-03-01
+- **Agent**: Claude Code (claude-opus-4-6)
+- **Task**: v1.3.0 Release Build & Documentation
+- **Details**:
+    - **Feature**: ステータス並び順変更（`BUG-3`）、アーカイブ機能（`IMP-2`）、ソートON/OFF切替+手動並び替え（`IMP-4`）を含むv1.3.0をリリース。
+    - **DB変更**: `tasks` テーブルに `archived_at TEXT` カラムおよび `sort_order INTEGER` カラムを追加。`app_settings` に自動アーカイブ日数設定を追加。`status_master` の `sort_order` をDnDで変更可能に。
+    - **Release**: バージョン番号を `v1.3.0` に更新し、Tauriビルドを実行。インストーラー版・ポータブル版を `releases/v1.3.0/` に配置。リリースノート、AI_CHANGELOG、CLAUDE.md、WORK-LOG.md を更新。
+- **Files**:
+    - `package.json`, `src-tauri/tauri.conf.json`, `RELEASE_NOTES.md`, `AI_CHANGELOG.md`, `CLAUDE.md`, `WORK-LOG.md`
+
+### 2026-02-28
+- **Agent**: Antigravity
+- **Task**: v1.2.0 Release Build & Documentation Setup
+- **Details**:
+    - **Feature**: フィルターの複数選択(`IMP-3`)、タグのアーカイブ(`IMP-7`)、完了日の即時表示(`ENH-6`)を実装。
+    - **Fix**: 親タスク削除時の子タスク保持(`BUG-4`)、追加・編集レイアウト統一(`BUG-5`)、ネスト制限(`BUG-6`)、着手中から未着手への切り替え(`IMP-12`)を修正。
+    - **Release**: バージョン番号を `v1.2.0` に更新し、リリースノートの作成、AI_CHANGELOGおよびCLAUDE.md、WORK-LOG.mdの更新を実施。
+- **Files**:
+    - `package.json`, `src-tauri/tauri.conf.json`, `RELEASE_NOTES.md`, `AI_CHANGELOG.md`, `CLAUDE.md`, `WORK-LOG.md`
+
 ### 2026-02-25
 - **Agent**: Antigravity (Gemini 3.1)
 - **Task**: v1.1.0 Release Implementation, Regression Fixes & Documentation
