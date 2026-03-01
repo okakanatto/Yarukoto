@@ -1,41 +1,36 @@
 # Work Log
 
-## 最新の作業（2026-03-01 18:30）
+## 最新の作業（2026-03-01 19:30）
 
-- **フェーズ**: v1.3.1 リリース前検証 QA NG項目修正
+- **フェーズ**: v1.3.1 リリース前検証 STEP R（NG修正のリグレッションテスト）+ 完了処理
 - **対象バージョン**: v1.3.1
 - **ステータス**: ✅ 完了
 - **やったこと**:
-  - qa-report.md の未修正 NG 項目 3件を修正
-  - **NG-1**: `layout.js` サイドバー進捗SQLに `AND archived_at IS NULL` を追加（アーカイブ済みタスクが進捗カウントに含まれる不整合を修正）
-  - **NG-2**: `hooks/useTodayTasks.js` タスク取得SQLに `AND t.status_code != 5` を追加（キャンセル済みタスクが今日やるタスクに表示される不整合を修正）
-  - **NG-B-1**: `app/routines/_components/RoutineFormModal.js` に Escape キーリスナーを追加（TaskEditModal との一貫性を確保）
-  - `npm run lint` でエラーなしを確認
+  - リリース前検証 QA NG修正3件のリグレッションテストを実施（全12項目 OK、NG: 0件）
+  - 直接テスト3件: NG-1（layout.js サイドバー進捗SQL）/ NG-2（useTodayTasks.js キャンセル除外SQL）/ NG-B-1（RoutineFormModal.js Escape リスナー）
+  - 影響範囲テスト9件: サイドバー・ダッシュボード一貫性 / today画面統計・表示・バナー / TaskList キャンセル表示維持 / Escape リスナー干渉・競合なし
+  - 完了処理: ROADMAP.md の R-4 に ✅ 完了マーク / qa-report.md の OK 項目圧縮 / WORK-LOG.md 更新
 - **変更したファイル**:
-  - `app/layout.js` — `fetchTodayProgress` SQL に `AND archived_at IS NULL` 追加
-  - `hooks/useTodayTasks.js` — `loadTasks` SQL に `AND t.status_code != 5` 追加
-  - `app/routines/_components/RoutineFormModal.js` — `useEffect` import 追加 + Escape キーリスナー追加
-  - `qa-report.md` — NG-1, NG-2, NG-B-1 に「✅ 修正済み」マーク追加
+  - `ROADMAP.md` — R-4 に ✅ 完了マーク追加
+  - `qa-report.md` — STEP R 結果追記 + リリース前検証 STEP B の OK テーブル圧縮
+  - `WORK-LOG.md` — 本更新
 - **次にやるべきこと**:
-  - ROADMAP.md の R-4 を完了マーク（検証＋修正が完了したため）
-  - v1.3.1 リリース前ビルド確認（`npm run tauri build`）
+  - ビルド確認（`npm run tauri build`）の実施 → v1.3.1 リリース
 - **注意事項・申し送り**:
-  - **【変更サマリー】**
-  - **変更した機能**: サイドバーの「今日やるタスク」進捗カウント（アーカイブ済みタスクの除外）/ 「今日やるタスク」画面のタスク一覧表示（キャンセル済みタスクの除外）/ ルーティン編集モーダルの Escape キーによる閉じ操作
-  - **変更したファイル**: `app/layout.js`（fetchTodayProgress SQL に AND archived_at IS NULL 追加）/ `hooks/useTodayTasks.js`（loadTasks SQL に AND t.status_code != 5 追加）/ `app/routines/_components/RoutineFormModal.js`（useEffect import 追加 + Escape キーリスナー追加）/ `qa-report.md`（修正済みマーク追加）/ `WORK-LOG.md`
-  - **変更の概要**: (1) NG-1: layout.js:79 の fetchTodayProgress SQL に AND archived_at IS NULL を追加。today/page.js はアーカイブ除外していたがサイドバーは除外しておらず件数不一致だった。(2) NG-2: useTodayTasks.js:184 の loadTasks SQL に AND t.status_code != 5 を追加。サイドバーやダッシュボードはキャンセル除外していたが今日やるタスク画面は除外していなかった。(3) NG-B-1: RoutineFormModal.js に TaskEditModal.js と同様の useEffect + keydown Escape キーリスナーを追加。
-  - **影響が想定される箇所**: `app/layout.js` の fetchTodayProgress（サイドバー進捗リング表示）/ `hooks/useTodayTasks.js` の loadTasks → `app/today/page.js`（今日やるタスク画面全体のタスク表示・件数・進捗リング）/ `app/routines/_components/RoutineFormModal.js` → `app/routines/page.js`（ルーティン新規作成・編集モーダルの開閉操作）/ `hooks/useTaskActions.js`（useTodayTasks.js から参照されるが SQL 変更のみのため影響なし）/ `components/TaskList.js`（独立した SQL クエリのため影響なし）
+  - v1.3.1 の全枝番（R-1〜R-4）が完了。リリース前検証（STEP A + STEP B + STEP R）も全件パス
+  - 残りはビルド確認のみ。ビルド成功後、`releases/v1.3.1/` にインストーラー・ポータブル版を配置してリリース
+  - ⚠️ 要実機確認: CSV エクスポートの Blob API ベースの Tauri 環境での動作（qa-report.md #22）
 
 ---
 
 ## 過去の作業（直近2件まで保持。3件目以降は削除すること）
 
+### 2026-03-01 18:30 — v1.3.1 リリース前検証 QA NG項目修正
+- ステータス: ✅ 完了
+- やったこと: NG-1（layout.js サイドバー進捗 archived_at 除外）/ NG-2（useTodayTasks.js キャンセル除外）/ NG-B-1（RoutineFormModal.js Escape リスナー追加）の3件を修正
+- 変更したファイル: `app/layout.js`, `hooks/useTodayTasks.js`, `app/routines/_components/RoutineFormModal.js`, `qa-report.md`
+
 ### 2026-03-01 17:30 — v1.3.1 R-4 Phase 3+4 settings タブ分割 + routines モーダル分離
 - ステータス: ✅ 完了
 - やったこと: `app/settings/page.js`（839行）を4つのタブパネルに分割（272行に縮小）。`app/routines/page.js`（691行）からフォームモーダルを分離（248行に縮小）
 - 変更したファイル: `app/settings/page.js`, `app/settings/_components/TagsPanel.js`, `StatusPanel.js`, `OptionsPanel.js`, `DataPanel.js`, `app/routines/page.js`, `app/routines/_components/RoutineFormModal.js`
-
-### 2026-03-01 16:30 — v1.3.1 R-3 Phase 2 today/page.js スリム化（検証）
-- ステータス: ✅ 完了
-- やったこと: STEP R リグレッションテスト（コードロジック抽出による影響範囲の検証）を実施し、全件OK（NG: 0件）を確認
-- 変更したファイル: `ROADMAP.md`, `qa-report.md`, `WORK-LOG.md`
