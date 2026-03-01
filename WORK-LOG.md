@@ -1,45 +1,51 @@
 # Work Log
 
-## 最新の作業（2026-03-01 24:00）
+## 最新の作業（2026-03-01 15:00）
 
-- **フェーズ**: v1.3.1 R-1 Phase 0 共通ユーティリティ抽出
+- **フェーズ**: v1.3.1 R-2 Phase 1 TaskList.js 分割
 - **対象バージョン**: v1.3.1
 - **ステータス**: ✅ 完了
 - **やったこと**:
-  - `lib/utils.js` を新規作成（`fetchDb`, `todayStr`, `formatMin`, `parseTags`）
-  - `hooks/useFilterOptions.js` を新規作成（フィルタオプション生成フック）
-  - `lib/taskSorter.js` を新規作成（`SORT_OPTIONS`, `taskComparator`）
-  - 全ファイル（10ファイル）の getDb ボイラープレート（30箇所以上）を `fetchDb()` に統一
-  - parseTags 重複コード（3ファイル）を `parseTags()` に統一
-  - formatMin 重複定義（3ファイル）を `formatMin()` に統一
-  - フィルタオプション useMemo（2ファイル）を `useFilterOptions()` フックに統一
-  - ソートロジック switch-case（2ファイル）を `taskComparator()` に統一
-  - `npm run lint` — エラーなし
+  - `refactoring-plan.md` の Phase 1 に従い、`TaskList.js`（1030行）を分割
+  - `components/TaskItem.js` 新規作成（TaskItemコンポーネント抽出）
+  - `components/DndGaps.js` 新規作成（UnnestGap / ReorderGap 抽出）
+  - `hooks/useTaskActions.js` 新規作成（DB操作ハンドラ5種を抽出）
+  - `hooks/useTaskDnD.js` 新規作成（DnDロジック一式を抽出）
+  - `TaskList.js` を 1030行 → 516行 に削減（うちCSS約260行、ロジック約256行）
+  - `npm run lint` でエラーなしを確認
 - **変更したファイル**:
-  - `lib/utils.js`（★新規）, `hooks/useFilterOptions.js`（★新規）, `lib/taskSorter.js`（★新規）
-  - `components/TaskList.js`, `app/today/page.js`, `app/dashboard/page.js`
-  - `app/routines/page.js`, `app/settings/page.js`, `app/layout.js`
-  - `components/TaskInput.js`, `components/TaskEditModal.js`, `hooks/useMasterData.js`
+  - `components/TaskList.js` — 分割元。インポート変更 + 抽出済みコードの削除
+  - `components/TaskItem.js` — ★新規。TaskItemコンポーネント（170行）
+  - `components/DndGaps.js` — ★新規。UnnestGap / ReorderGap（36行）
+  - `hooks/useTaskActions.js` — ★新規。タスクCRUD操作フック（150行）
+  - `hooks/useTaskDnD.js` — ★新規。DnDロジックフック（251行）
 - **次にやるべきこと**:
-  - ROADMAP.md で指定された検証 STEP（STEP V: 動作検証）を実施する
-  - `npm run tauri dev` で起動し、全画面・全機能が従来通り動作することを確認する
+  - STEP A + STEP R の検証を実施（ROADMAP.md で指定された検証ステップ）
 - **注意事項・申し送り**:
-  - **機能変更なし**（リファクタリングのみ）。ユーザーから見た動作は一切変わらない
-  - `lib/db.js` の `getDb()` 定義はそのまま。`lib/utils.js` の `fetchDb()` が内部で dynamic import + getDb() を呼ぶラッパー
-  - `settings/page.js` の `runAutoArchive` import は `lib/db.js` から直接 import のまま（utils.js に含めていない）
-  - `today/page.js` の手動ソート（manual mode）の特殊ロジック（today_sort_order による並び替え）はそのまま残存
-  - `todayStr()` は作成済みだが、各ファイルでの `new Date().toLocaleDateString('sv-SE')` 呼び出しは複雑なコンテキスト内が多いため今回は置換せず、将来の Phase で順次適用予定
+  - 【変更サマリー】
+  - ■ 変更した機能：リファクタリングのため機能変更なし。TaskList.js の責務を4ファイルに分離し、メインファイルはレイアウト+ツールバー+リスト描画に集中する構造へ変更。
+  - ■ 変更したファイル：
+    - `components/TaskList.js` — 分割元。useTaskActions / useTaskDnD フックの利用に切替。TaskItem / DndGaps を外部インポートに変更。不要なimport（useDraggable, useDroppable, CSS, StatusCheckbox, formatMin）を削除。
+    - `components/TaskItem.js` ★新規 — TaskList.js L872-1027 のTaskItemコンポーネントを独立ファイルに抽出。DnD refs、dueMeta計算、子タスク展開/インライン入力を含む。
+    - `components/DndGaps.js` ★新規 — TaskList.js L847-870 のUnnestGap / ReorderGapを独立ファイルに抽出。
+    - `hooks/useTaskActions.js` ★新規 — TaskList.js L161-289 のDB操作ハンドラ（handleStatusChange / handleDelete / handleTodayToggle / handleArchive / handleRestore）をカスタムフックに抽出。
+    - `hooks/useTaskDnD.js` ★新規 — TaskList.js L291-511 のDnDロジック（handleDragStart / handleDragEnd / handleReorder / persistSortOrder / activeId state）をカスタムフックに抽出。
+  - ■ 変更の概要：TaskList.js（1030行）が肥大化していたため、refactoring-plan.md Phase 1 に従い責務ごとにファイルを分離した。UIコンポーネント（TaskItem, DndGaps）、DB操作ロジック（useTaskActions）、DnDロジック（useTaskDnD）の3軸で分割。styled-jsx CSSはプロジェクト方針に従いTaskList.js側に残置。
+  - ■ 影響が想定される箇所：
+    - `app/tasks/page.js` — TaskList をデフォルトインポートしているが、インターフェース変更なし（影響なし）
+    - `app/today/page.js` — Phase 2（R-3）で useTaskActions フックの利用を検討予定。現時点では変更なし
+    - styled-jsx global CSS — TaskList.js に残しているため、TaskItem.js 等の子コンポーネントから参照されるCSSクラス（tc-card, tc-body等）は引き続き正常に適用される
 
 ---
 
 ## 過去の作業（直近2件まで保持。3件目以降は削除すること）
 
-### 2026-03-01 23:00 — v1.3.0 リリース後片付け作業
+### 2026-03-01 14:32 — v1.3.1 R-1 Phase 0 共通ユーティリティ抽出（検証）
 - ステータス: ✅ 完了
-- やったこと: archives にアーカイブ作成、qa-report.md リセット、ROADMAP.md / ISSUES.md 整理、WORK-LOG.md 更新
-- 変更したファイル: `archives/qa-report-v1.3.0.md`（新規）, `archives/roadmap-v1.3.0.md`（新規）, `qa-report.md`, `ROADMAP.md`, `ISSUES.md`, `WORK-LOG.md`
+- やったこと: STEP R リグレッションテスト（直接テスト9項目・影響範囲の検証）を実施し、全件OKを確認
+- 変更したファイル: `ROADMAP.md`, `qa-report.md`, `WORK-LOG.md`
 
-### 2026-03-01 22:00 — v1.3.0 ビルド・リリースノート作成・ドキュメント更新
+### 2026-03-01 24:00 — v1.3.1 R-1 Phase 0 共通ユーティリティ抽出（実装）
 - ステータス: ✅ 完了
-- やったこと: `package.json` / `tauri.conf.json` バージョン更新、`npm run tauri build` 実行、`releases/v1.3.0/` にインストーラー・ポータブル版配置、`RELEASE_NOTES.md` / `AI_CHANGELOG.md` / `CLAUDE.md` 更新
-- 変更したファイル: `package.json`, `src-tauri/tauri.conf.json`, `RELEASE_NOTES.md`, `AI_CHANGELOG.md`, `CLAUDE.md`, `WORK-LOG.md`
+- やったこと: `lib/utils.js` 等新規作成、全ファイルの getDb ボイラープレート等共通化
+- 変更したファイル: `lib/utils.js`, `hooks/useFilterOptions.js`, `lib/taskSorter.js`, `components/TaskList.js` など
