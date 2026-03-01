@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMasterData } from '@/hooks/useMasterData';
 import TagSelect from '@/components/TagSelect';
 import { fetchDb } from '@/lib/utils';
@@ -47,6 +47,13 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
     });
 
     const { masters, tags } = useMasterData();
+
+    // Close on Escape
+    useEffect(() => {
+        const handler = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [onClose]);
 
     const toggleDow = (day) => {
         const current = form.days_of_week ? form.days_of_week.split(',').map(Number) : [];

@@ -76,7 +76,7 @@ export default function RootLayout({ children }) {
 
             const tasksRes = await db.select(`
                 SELECT status_code FROM tasks 
-                WHERE status_code != 5 AND (
+                WHERE status_code != 5 AND archived_at IS NULL AND (
                     today_date = $1 
                     OR due_date = $2
                     OR (due_date < $3 AND status_code != 3)

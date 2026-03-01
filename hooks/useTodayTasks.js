@@ -181,7 +181,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
               LEFT JOIN tasks p ON t.parent_id = p.id
               LEFT JOIN task_tags tt ON t.id = tt.task_id
               LEFT JOIN tags tg ON tt.tag_id = tg.id
-              WHERE t.archived_at IS NULL
+              WHERE t.archived_at IS NULL AND t.status_code != 5
                 AND (
                   t.today_date = $1
                   OR t.due_date = $2
