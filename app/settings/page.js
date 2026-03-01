@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import ColorPalette from '@/components/ColorPalette';
 import { fetchDb } from '@/lib/utils';
+import { useDragReorder } from '@/hooks/useDragReorder';
 
 const TABS = [
     { key: 'tags', label: 'タグ', icon: '🏷️' },
@@ -10,49 +11,6 @@ const TABS = [
     { key: 'options', label: 'オプション', icon: '🔧' },
     { key: 'data', label: 'データ管理', icon: '💾' },
 ];
-
-/* ---- tiny drag-and-drop hook ---- */
-function useDragReorder(items, setItems) {
-    const dragIdx = useRef(null);
-    const overIdx = useRef(null);
-
-    const onDragStart = (i) => (e) => {
-        dragIdx.current = i;
-        e.dataTransfer.effectAllowed = 'move';
-        // Make the dragged element semi-transparent
-        requestAnimationFrame(() => {
-            e.target.style.opacity = '0.4';
-        });
-    };
-
-    const onDragEnd = (e) => {
-        e.target.style.opacity = '1';
-        dragIdx.current = null;
-        overIdx.current = null;
-    };
-
-    const onDragOver = (i) => (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        overIdx.current = i;
-    };
-
-    const onDrop = (i) => (e) => {
-        e.preventDefault();
-        const from = dragIdx.current;
-        if (from === null || from === i) return;
-        setItems(prev => {
-            const arr = [...prev];
-            const [moved] = arr.splice(from, 1);
-            arr.splice(i, 0, moved);
-            return arr;
-        });
-        dragIdx.current = null;
-        overIdx.current = null;
-    };
-
-    return { onDragStart, onDragEnd, onDragOver, onDrop };
-}
 
 export default function Settings() {
     const [tab, setTab] = useState('tags');

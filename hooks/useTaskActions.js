@@ -140,8 +140,44 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         }
     }, [getTasks, refresh]);
 
+    /**
+     * Handles routine completion toggling (for today page).
+     * Code 2 (着手中) is UI-only, no DB operation.
+     * Code 3 inserts into routine_completions, others delete.
+     *
+     * @param {string|number} taskId - The unified task id (e.g. "routine_5_2026-03-01")
+     * @param {number|string} newStatusCode - The new status code
+     * @param {object} params
+     * @param {number} params.routineId - The routine's actual DB id
+     * @param {string} params.completionDate - The date string (YYYY-MM-DD)
+     */
+    const handleRoutineStatusChange = useCallback(async (taskId, newStatusCode, { routineId, completionDate }) => {
+        const code = parseInt(newStatusCode);
+        const completedNow = new Date().toLocaleDateString('sv-SE') + ' ' + new Date().toLocaleTimeString('sv-SE');
+        setTasks(prev => prev.map(t => t.id === taskId ? {
+            ...t,
+            status_code: code,
+            completed_at: code === 3 ? completedNow : null
+        } : t));
+        // 着手中(2)はUI表示のみ、DB操作不要
+        if (code === 2) return;
+        try {
+            const db = await fetchDb();
+            if (code === 3) {
+                await db.execute('INSERT OR IGNORE INTO routine_completions (routine_id, completion_date) VALUES ($1, $2)', [routineId, completionDate]);
+            } else {
+                await db.execute('DELETE FROM routine_completions WHERE routine_id = $1 AND completion_date = $2', [routineId, completionDate]);
+            }
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
+            fetchTasks();
+        }
+    }, [setTasks, fetchTasks]);
+
     return {
         handleStatusChange,
+        handleRoutineStatusChange,
         handleDelete,
         handleTodayToggle,
         handleArchive,

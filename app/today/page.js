@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import StatusCheckbox from '@/components/StatusCheckbox';
 import TaskEditModal from '@/components/TaskEditModal';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
-import { fetchDb, parseTags, formatMin } from '@/lib/utils';
+import { fetchDb, formatMin } from '@/lib/utils';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
-import { taskComparator } from '@/lib/taskSorter';
+import { useTodayTasks } from '@/hooks/useTodayTasks';
+import { useTaskActions } from '@/hooks/useTaskActions';
+import { useDragReorder } from '@/hooks/useDragReorder';
 
 function addDays(base, days) {
     const d = new Date(base);
@@ -41,340 +43,36 @@ function buildDateTabs() {
 export default function TodayPage() {
     const dateTabs = useMemo(() => buildDateTabs(), []);
     const [selectedDate, setSelectedDate] = useState(() => dateTabs[0].date);
-    const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [statuses, setStatuses] = useState([]);
     const [justCompletedId, setJustCompletedId] = useState(null);
-    const [editingTask, setEditingTask] = useState(null); // For IMP-1
+    const [editingTask, setEditingTask] = useState(null);
 
+    // Filter state (UI-managed)
     const [filterStatuses, setFilterStatuses] = useState([]);
     const [filterTags, setFilterTags] = useState([]);
     const [filterImportance, setFilterImportance] = useState([]);
     const [filterUrgency, setFilterUrgency] = useState([]);
-    const [sortKey, setSortKey] = useState('priority'); // default sort
-    const [sortMode, setSortMode] = useState('auto'); // 'auto' or 'manual'
 
-    const [allTags, setAllTags] = useState([]);
-    const [allImportance, setAllImportance] = useState([]);
-    const [allUrgency, setAllUrgency] = useState([]);
-    const [showOverdue, setShowOverdue] = useState(true);
-
-    // DnD state for manual sort (native HTML5 drag)
-    const dragIdx = useRef(null);
-    const [dragOverIdx, setDragOverIdx] = useState(null);
-
-    // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
-    const activeRequestId = useRef(0);
+    // Data hook: master data, tasks, sort, loading
+    const {
+        tasks, setTasks, loading, loadTasks,
+        statuses, allTags, allImportance, allUrgency,
+        sortMode, sortKey, setSortKey,
+        toggleSortMode,
+    } = useTodayTasks(selectedDate, { filterStatuses, filterTags, filterImportance, filterUrgency });
 
     const { statusOptions, tagOptions, importanceOptions, urgencyOptions } = useFilterOptions(statuses, allTags, allImportance, allUrgency);
 
-    useEffect(() => {
-        (async () => {
-            try {
-                const db = await fetchDb();
-                const rows = await db.select('SELECT * FROM status_master ORDER BY sort_order, code');
-                setStatuses(rows);
+    // Task actions (shared handler for regular tasks + routines)
+    const reloadTasks = useCallback(() => loadTasks(selectedDate), [loadTasks, selectedDate]);
+    const actions = useTaskActions({
+        setTasks,
+        fetchTasks: reloadTasks,
+        refresh: reloadTasks,
+        getTasks: () => tasks,
+    });
 
-                const tagsRows = await db.select('SELECT * FROM tags ORDER BY sort_order, id');
-                setAllTags(tagsRows);
-
-                const importanceRows = await db.select('SELECT * FROM importance_master ORDER BY level');
-                setAllImportance(importanceRows);
-                const urgencyRows = await db.select('SELECT * FROM urgency_master ORDER BY level');
-                setAllUrgency(urgencyRows);
-
-                const settingsRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['show_overdue_in_today']);
-                if (settingsRows.length > 0) {
-                    setShowOverdue(settingsRows[0].value !== '0');
-                }
-
-                const sortModeRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['sort_mode_today']);
-                if (sortModeRows.length > 0) setSortMode(sortModeRows[0].value);
-            } catch (e) { console.error('Failed to load statuses/tags:', e); }
-        })();
-    }, []);
-
-    const loadTasks = useCallback(async (date) => {
-        const currentReq = ++activeRequestId.current;
-        setLoading(true);
-        try {
-            const db = await fetchDb();
-
-            const dObj = new Date(date + 'T00:00:00');
-            const dayOfWeek = dObj.getDay();
-            const dayOfMonth = dObj.getDate();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            const todayStr = new Date().toLocaleDateString('sv-SE');
-            const isViewingToday = (date === todayStr);
-
-            // Build condition strings
-            const tConditions = [];
-            const rConditions = [];
-            const sqlParams = [date, date, date, date];
-            let paramIndex = 5;
-
-            if (filterStatuses.length > 0) {
-                const tPlaceholders = filterStatuses.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.status_code IN (${tPlaceholders})`);
-                sqlParams.push(...filterStatuses);
-
-                // Routine status mapping: routines only have done(3) or not-done(1)
-                const showComplete = filterStatuses.includes(3);
-                const showIncomplete = filterStatuses.includes(1) || filterStatuses.includes(2);
-                if (showComplete && !showIncomplete) {
-                    rConditions.push('rc.completion_date IS NOT NULL');
-                } else if (!showComplete && showIncomplete) {
-                    rConditions.push('rc.completion_date IS NULL');
-                } else if (!showComplete && !showIncomplete) {
-                    rConditions.push('1 = 0');
-                }
-            }
-
-            // Routine SQL uses standard args first
-            const rSqlParams = [date, date];
-            let rParamIndex = 3;
-
-            if (filterTags.length > 0) {
-                const tPlaceholders = filterTags.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.id IN (SELECT task_id FROM task_tags WHERE tag_id IN (${tPlaceholders}))`);
-                sqlParams.push(...filterTags);
-
-                const rPlaceholders = filterTags.map(() => `$${rParamIndex++}`).join(',');
-                rConditions.push(`r.id IN (SELECT routine_id FROM routine_tags WHERE tag_id IN (${rPlaceholders}))`);
-                rSqlParams.push(...filterTags);
-            }
-
-            if (filterImportance.length > 0) {
-                const tPlaceholders = filterImportance.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.importance_level IN (${tPlaceholders})`);
-                sqlParams.push(...filterImportance);
-
-                const rPlaceholders = filterImportance.map(() => `$${rParamIndex++}`).join(',');
-                rConditions.push(`r.importance_level IN (${rPlaceholders})`);
-                rSqlParams.push(...filterImportance);
-            }
-
-            if (filterUrgency.length > 0) {
-                const tPlaceholders = filterUrgency.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.urgency_level IN (${tPlaceholders})`);
-                sqlParams.push(...filterUrgency);
-
-                const rPlaceholders = filterUrgency.map(() => `$${rParamIndex++}`).join(',');
-                rConditions.push(`r.urgency_level IN (${rPlaceholders})`);
-                rSqlParams.push(...filterUrgency);
-            }
-
-            const tConditionStr = tConditions.length > 0 ? ' AND ' + tConditions.join(' AND ') : '';
-            const rConditionStr = rConditions.length > 0 ? ' AND ' + rConditions.join(' AND ') : '';
-
-            // Get valid routines for this date
-            const routinesSql = `
-              SELECT r.*,
-                     rc.completion_date,
-                     json_group_array(tg.name) as tag_names,
-                     json_group_array(tg.color) as tag_colors,
-                     json_group_array(tg.id) as tag_ids
-              FROM routines r
-              LEFT JOIN routine_tags rt ON r.id = rt.routine_id
-              LEFT JOIN tags tg ON rt.tag_id = tg.id
-              LEFT JOIN routine_completions rc ON r.id = rc.routine_id AND rc.completion_date = $1
-              WHERE r.enabled = 1
-                AND (r.end_date IS NULL OR r.end_date >= $2)
-                ${rConditionStr}
-              GROUP BY r.id
-            `;
-            const rawRoutines = await db.select(routinesSql, rSqlParams);
-
-            const { isRoutineActiveOnDate } = await import('@/lib/holidayService');
-            const activeRawRoutines = [];
-            for (const r of rawRoutines) {
-                const isActive = await isRoutineActiveOnDate(db, r, date);
-                if (isActive) activeRawRoutines.push(r);
-            }
-
-            const routineTasks = activeRawRoutines
-                .map(r => ({
-                    id: `routine_${r.id}_${date}`,
-                    routine_id: r.id,
-                    is_routine: true,
-                    title: r.title,
-                    status_code: r.completion_date ? 3 : 1, // 3: Done, 1: Todo
-                    importance_level: r.importance_level,
-                    urgency_level: r.urgency_level,
-                    estimated_hours: r.estimated_hours,
-                    due_date: null,
-                    today_sort_order: r.today_sort_order || 0,
-                    tags: parseTags(r)
-                }));
-
-            // Get tasks assigned to this date OR overdue standard tasks
-            const tasksSql = `
-              SELECT t.*,
-                     p.title as parent_title,
-                     json_group_array(tg.name) as tag_names,
-                     json_group_array(tg.color) as tag_colors,
-                     json_group_array(tg.id) as tag_ids
-              FROM tasks t
-              LEFT JOIN tasks p ON t.parent_id = p.id
-              LEFT JOIN task_tags tt ON t.id = tt.task_id
-              LEFT JOIN tags tg ON tt.tag_id = tg.id
-              WHERE t.archived_at IS NULL
-                AND (
-                  t.today_date = $1
-                  OR t.due_date = $2
-                  ${showOverdue && isViewingToday ? 'OR (t.due_date < $3 AND t.status_code NOT IN (3, 5))' : ''}
-                  OR (t.status_code = 3 AND date(t.completed_at) = $4)
-                )
-                ${tConditionStr}
-              GROUP BY t.id
-            `;
-            const rawTasks = await db.select(tasksSql, sqlParams);
-
-            const standardTasks = rawTasks.map(t => ({
-                ...t,
-                tags: parseTags(t)
-            }));
-
-            // Combine and sort
-            const unified = [...routineTasks, ...standardTasks];
-
-            if (sortMode === 'manual') {
-                // Manual sort: by today_sort_order with priority fallback for ties
-                unified.sort((a, b) => {
-                    const orderDiff = (a.today_sort_order || 0) - (b.today_sort_order || 0);
-                    if (orderDiff !== 0) return orderDiff;
-                    const aDone = a.status_code === 3;
-                    const bDone = b.status_code === 3;
-                    if (aDone && !bDone) return 1;
-                    if (!aDone && bDone) return -1;
-                    return (b.importance_level || 0) - (a.importance_level || 0);
-                });
-            } else {
-                unified.sort(taskComparator(sortKey, statuses));
-            }
-
-            if (currentReq === activeRequestId.current) {
-                setTasks(unified);
-            }
-        } catch (e) {
-            console.error("Tauri DB fetch today error:", e);
-        } finally {
-            if (currentReq === activeRequestId.current) {
-                setLoading(false);
-            }
-        }
-    }, [filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, sortMode, showOverdue, statuses]);
-
-    useEffect(() => {
-        loadTasks(selectedDate);
-        const handleTaskAdded = () => loadTasks(selectedDate);
-        window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
-        return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
-    }, [selectedDate, loadTasks]);
-
-    const handleStatusChange = async (taskId, newCode, isRoutine = false) => {
-        const code = parseInt(newCode);
-        if (code === 3) {
-            setJustCompletedId(taskId);
-            setTimeout(() => setJustCompletedId(null), 700);
-        }
-        const completedNow = new Date().toLocaleDateString('sv-SE') + ' ' + new Date().toLocaleTimeString('sv-SE');
-        setTasks(prev => prev.map(t => t.id === taskId ? {
-            ...t,
-            status_code: code,
-            completed_at: code === 3 ? completedNow : null
-        } : t));
-
-        if (isRoutine) {
-            // Toggle routine completion
-            const item = tasks.find(t => t.id === taskId);
-            if (!item) return;
-            // 着手中(2)はUI表示のみ、DB操作不要
-            if (code === 2) return;
-            try {
-                const db = await fetchDb();
-
-                if (code === 3) {
-                    await db.execute('INSERT OR IGNORE INTO routine_completions (routine_id, completion_date) VALUES ($1, $2)', [item.routine_id, selectedDate]);
-                } else {
-                    await db.execute('DELETE FROM routine_completions WHERE routine_id = $1 AND completion_date = $2', [item.routine_id, selectedDate]);
-                }
-            } catch (e) {
-                console.error(e);
-                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
-                loadTasks(selectedDate);
-            }
-        } else {
-            try {
-                const db = await fetchDb();
-
-                if (code === 3) {
-                    await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [code, taskId]);
-                } else {
-                    await db.execute("UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2", [code, taskId]);
-                }
-            } catch (e) {
-                console.error(e);
-                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
-                loadTasks(selectedDate);
-            }
-        }
-    };
-
-    const handleRemove = async (taskId) => {
-        setTasks(prev => prev.filter(t => t.id !== taskId));
-        try {
-            const db = await fetchDb();
-            await db.execute('UPDATE tasks SET today_date = NULL WHERE id = $1', [taskId]);
-        } catch (e) { console.error(e); loadTasks(selectedDate); }
-    };
-
-    const toggleSortMode = async () => {
-        const prevMode = sortMode;
-        const newMode = prevMode === 'auto' ? 'manual' : 'auto';
-        setSortMode(newMode);
-        try {
-            const db = await fetchDb();
-            await db.execute(
-                'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
-                ['sort_mode_today', newMode]
-            );
-        } catch (e) {
-            console.error(e);
-            setSortMode(prevMode);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '設定の保存に失敗しました', type: 'error' } }));
-        }
-    };
-
-    // Native DnD handlers for manual sort
-    const onTodayDragStart = (i) => (e) => {
-        dragIdx.current = tasks[i]?.id;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', '');
-        requestAnimationFrame(() => { e.target.style.opacity = '0.4'; });
-    };
-    const onTodayDragEnd = (e) => {
-        e.target.style.opacity = '1';
-        dragIdx.current = null;
-        setDragOverIdx(null);
-    };
-    const onTodayDragOver = (i) => (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        setDragOverIdx(i);
-    };
-    const onTodayDragLeave = () => { setDragOverIdx(null); };
-    const onTodayDrop = (i) => async (e) => {
-        e.preventDefault();
-        setDragOverIdx(null);
-        const fromId = dragIdx.current;
-        const from = tasks.findIndex(t => t.id === fromId);
-        if (from === -1 || from === i) return;
-        const newTasks = [...tasks];
-        const [moved] = newTasks.splice(from, 1);
-        newTasks.splice(i, 0, moved);
-        setTasks(newTasks);
-        // Persist today_sort_order
+    // DnD for manual sort (persist today_sort_order to DB)
+    const persistTodaySortOrder = useCallback(async (newTasks) => {
         try {
             const db = await fetchDb();
             for (let idx = 0; idx < newTasks.length; idx++) {
@@ -388,10 +86,38 @@ export default function TodayPage() {
         } catch (err) {
             console.error(err);
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
-            loadTasks(selectedDate);
+            reloadTasks();
+        }
+    }, [reloadTasks]);
+
+    const dnd = useDragReorder(tasks, setTasks, { onReordered: persistTodaySortOrder });
+
+    // Status change wrapper: adds justCompleted animation + routes to routine/task handler
+    const handleStatusChange = (taskId, newCode, isRoutine = false) => {
+        const code = parseInt(newCode);
+        if (code === 3) {
+            setJustCompletedId(taskId);
+            setTimeout(() => setJustCompletedId(null), 700);
+        }
+        if (isRoutine) {
+            const item = tasks.find(t => t.id === taskId);
+            if (!item) return;
+            actions.handleRoutineStatusChange(taskId, newCode, { routineId: item.routine_id, completionDate: selectedDate });
+        } else {
+            actions.handleStatusChange(taskId, newCode);
         }
     };
 
+    // Remove task from today
+    const handleRemove = async (taskId) => {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        try {
+            const db = await fetchDb();
+            await db.execute('UPDATE tasks SET today_date = NULL WHERE id = $1', [taskId]);
+        } catch (e) { console.error(e); reloadTasks(); }
+    };
+
+    // Computed values for rendering
     const stats = useMemo(() => {
         const total = tasks.length;
         const completed = tasks.filter(t => t.status_code === 3).length;
@@ -410,6 +136,8 @@ export default function TodayPage() {
     const currentTab = dateTabs.find(t => t.date === selectedDate) || dateTabs[0];
     const selectedD = new Date(selectedDate + 'T00:00:00');
     const dateStr = `${selectedD.getFullYear()}年${selectedD.getMonth() + 1}月${selectedD.getDate()}日（${currentTab.weekday}）`;
+
+    const isManual = sortMode === 'manual';
 
     return (
         <div className="today-root">
@@ -522,18 +250,17 @@ export default function TodayPage() {
                     const isDone = task.status_code === 3;
                     const isRoutine = !!task.is_routine;
                     const isPickedForToday = task.today_date === selectedDate;
-                    const isManual = sortMode === 'manual';
 
                     return (
                         <div key={task.id}
-                            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${dragOverIdx === i ? 'drag-over' : ''}`}
+                            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${dnd.dragOverIdx === i ? 'drag-over' : ''}`}
                             style={{ animationDelay: `${i * 40}ms` }}
                             draggable={isManual}
-                            onDragStart={isManual ? onTodayDragStart(i) : undefined}
-                            onDragEnd={isManual ? onTodayDragEnd : undefined}
-                            onDragOver={isManual ? onTodayDragOver(i) : undefined}
-                            onDragLeave={isManual ? onTodayDragLeave : undefined}
-                            onDrop={isManual ? onTodayDrop(i) : undefined}
+                            onDragStart={isManual ? dnd.onDragStart(i) : undefined}
+                            onDragEnd={isManual ? dnd.onDragEnd : undefined}
+                            onDragOver={isManual ? dnd.onDragOver(i) : undefined}
+                            onDragLeave={isManual ? dnd.onDragLeave : undefined}
+                            onDrop={isManual ? dnd.onDrop(i) : undefined}
                         >
                             {isManual && (
                                 <div className="today-drag-handle" title="ドラッグして並び替え">⋮⋮</div>
