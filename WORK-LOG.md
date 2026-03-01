@@ -1,51 +1,39 @@
 # Work Log
 
-## 最新の作業（2026-03-01 15:00）
+## 最新の作業（2026-03-01 16:00）
 
-- **フェーズ**: v1.3.1 R-2 Phase 1 TaskList.js 分割
+- **フェーズ**: v1.3.1 R-3 Phase 2 today/page.js スリム化（実装）
 - **対象バージョン**: v1.3.1
 - **ステータス**: ✅ 完了
 - **やったこと**:
-  - `refactoring-plan.md` の Phase 1 に従い、`TaskList.js`（1030行）を分割
-  - `components/TaskItem.js` 新規作成（TaskItemコンポーネント抽出）
-  - `components/DndGaps.js` 新規作成（UnnestGap / ReorderGap 抽出）
-  - `hooks/useTaskActions.js` 新規作成（DB操作ハンドラ5種を抽出）
-  - `hooks/useTaskDnD.js` 新規作成（DnDロジック一式を抽出）
-  - `TaskList.js` を 1030行 → 516行 に削減（うちCSS約260行、ロジック約256行）
+  - `refactoring-plan.md` の Phase 2 に従い、`app/today/page.js`（809行）からデータ取得・DnD・ステータス変更ロジックを分離
+  - `hooks/useTodayTasks.js` を新設（マスターデータ読み込み、タスク+ルーティン取得・マージ・ソート、ソートモード管理）
+  - `hooks/useDragReorder.js` を新設（`settings/page.js` からDnDフック抽出、`dragOverIdx`/`onDragLeave`/`onReordered` コールバック追加で汎用化）
+  - `hooks/useTaskActions.js` に `handleRoutineStatusChange` を追加（ルーティン完了トグル対応）
+  - `app/settings/page.js` からローカル `useDragReorder` 関数を削除し、`hooks/useDragReorder` をインポートするよう変更
+  - `app/today/page.js` を新しいフック群を使ってリライト（809行 → 535行、CSS除くロジック部分は約345行）
   - `npm run lint` でエラーなしを確認
 - **変更したファイル**:
-  - `components/TaskList.js` — 分割元。インポート変更 + 抽出済みコードの削除
-  - `components/TaskItem.js` — ★新規。TaskItemコンポーネント（170行）
-  - `components/DndGaps.js` — ★新規。UnnestGap / ReorderGap（36行）
-  - `hooks/useTaskActions.js` — ★新規。タスクCRUD操作フック（150行）
-  - `hooks/useTaskDnD.js` — ★新規。DnDロジックフック（251行）
+  - `hooks/useTodayTasks.js` ★新規（261行）
+  - `hooks/useDragReorder.js` ★新規（55行）
+  - `hooks/useTaskActions.js`（`handleRoutineStatusChange` 追加、151行 → 186行）
+  - `app/today/page.js`（フック利用に書き換え、809行 → 535行）
+  - `app/settings/page.js`（ローカル `useDragReorder` 削除・import変更、893行 → 838行）
 - **次にやるべきこと**:
-  - STEP A + STEP R の検証を実施（ROADMAP.md で指定された検証ステップ）
+  - STEP A + STEP R の検証を実施する
 - **注意事項・申し送り**:
-  - 【変更サマリー】
-  - ■ 変更した機能：リファクタリングのため機能変更なし。TaskList.js の責務を4ファイルに分離し、メインファイルはレイアウト+ツールバー+リスト描画に集中する構造へ変更。
-  - ■ 変更したファイル：
-    - `components/TaskList.js` — 分割元。useTaskActions / useTaskDnD フックの利用に切替。TaskItem / DndGaps を外部インポートに変更。不要なimport（useDraggable, useDroppable, CSS, StatusCheckbox, formatMin）を削除。
-    - `components/TaskItem.js` ★新規 — TaskList.js L872-1027 のTaskItemコンポーネントを独立ファイルに抽出。DnD refs、dueMeta計算、子タスク展開/インライン入力を含む。
-    - `components/DndGaps.js` ★新規 — TaskList.js L847-870 のUnnestGap / ReorderGapを独立ファイルに抽出。
-    - `hooks/useTaskActions.js` ★新規 — TaskList.js L161-289 のDB操作ハンドラ（handleStatusChange / handleDelete / handleTodayToggle / handleArchive / handleRestore）をカスタムフックに抽出。
-    - `hooks/useTaskDnD.js` ★新規 — TaskList.js L291-511 のDnDロジック（handleDragStart / handleDragEnd / handleReorder / persistSortOrder / activeId state）をカスタムフックに抽出。
-  - ■ 変更の概要：TaskList.js（1030行）が肥大化していたため、refactoring-plan.md Phase 1 に従い責務ごとにファイルを分離した。UIコンポーネント（TaskItem, DndGaps）、DB操作ロジック（useTaskActions）、DnDロジック（useTaskDnD）の3軸で分割。styled-jsx CSSはプロジェクト方針に従いTaskList.js側に残置。
-  - ■ 影響が想定される箇所：
-    - `app/tasks/page.js` — TaskList をデフォルトインポートしているが、インターフェース変更なし（影響なし）
-    - `app/today/page.js` — Phase 2（R-3）で useTaskActions フックの利用を検討予定。現時点では変更なし
-    - styled-jsx global CSS — TaskList.js に残しているため、TaskItem.js 等の子コンポーネントから参照されるCSSクラス（tc-card, tc-body等）は引き続き正常に適用される
+  - 【変更サマリー】は下記参照
 
 ---
 
 ## 過去の作業（直近2件まで保持。3件目以降は削除すること）
 
-### 2026-03-01 14:32 — v1.3.1 R-1 Phase 0 共通ユーティリティ抽出（検証）
+### 2026-03-01 15:05 — v1.3.1 R-2 Phase 1 TaskList.js 分割（検証）
 - ステータス: ✅ 完了
-- やったこと: STEP R リグレッションテスト（直接テスト9項目・影響範囲の検証）を実施し、全件OKを確認
+- やったこと: STEP R リグレッションテスト（UI・ロジック分離による影響範囲の検証など）を実施し、全件OK（NG: 0件）を確認
 - 変更したファイル: `ROADMAP.md`, `qa-report.md`, `WORK-LOG.md`
 
-### 2026-03-01 24:00 — v1.3.1 R-1 Phase 0 共通ユーティリティ抽出（実装）
+### 2026-03-01 15:00 — v1.3.1 R-2 Phase 1 TaskList.js 分割（実装）
 - ステータス: ✅ 完了
-- やったこと: `lib/utils.js` 等新規作成、全ファイルの getDb ボイラープレート等共通化
-- 変更したファイル: `lib/utils.js`, `hooks/useFilterOptions.js`, `lib/taskSorter.js`, `components/TaskList.js` など
+- やったこと: `refactoring-plan.md` の Phase 1 に従い、`TaskList.js`（1030行）を分割し4ファイルを新規作成
+- 変更したファイル: `components/TaskList.js`, `components/TaskItem.js`, `components/DndGaps.js`, `hooks/useTaskActions.js`, `hooks/useTaskDnD.js`
