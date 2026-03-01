@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, useDraggable, useDroppable, closestCorners } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
-import TaskInput from './TaskInput';
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable, closestCorners } from '@dnd-kit/core';
 import TaskEditModal from './TaskEditModal';
-import StatusCheckbox from './StatusCheckbox';
+import TaskItem from './TaskItem';
+import { UnnestGap, ReorderGap } from './DndGaps';
+import MultiSelectFilter from './MultiSelectFilter';
 import { useMasterData } from '../hooks/useMasterData';
 import { useFilterOptions } from '../hooks/useFilterOptions';
-import MultiSelectFilter from './MultiSelectFilter';
-import { fetchDb, parseTags, formatMin } from '@/lib/utils';
+import { useTaskActions } from '../hooks/useTaskActions';
+import { useTaskDnD } from '../hooks/useTaskDnD';
+import { fetchDb, parseTags } from '@/lib/utils';
 import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 
 export default function TaskList() {
@@ -23,10 +24,13 @@ export default function TaskList() {
     const [sortMode, setSortMode] = useState('auto'); // 'auto' or 'manual'
     const [refreshKey, setRefreshKey] = useState(0);
     const [editingTask, setEditingTask] = useState(null);
-    const [activeId, setActiveId] = useState(null); // For DragOverlay
     const [showArchived, setShowArchived] = useState(false);
 
     const activeRequestId = useRef(0);
+    const tasksRef = useRef(tasks);
+    tasksRef.current = tasks;
+    const sortedParentTasksRef = useRef([]);
+
     const { masters, tags: allTags } = useMasterData();
     const allStatuses = useMemo(() => masters.status || [], [masters.status]);
     const allImportance = useMemo(() => masters.importance || [], [masters.importance]);
@@ -157,359 +161,9 @@ export default function TaskList() {
 
     const handleTaskAdded = () => setRefreshKey(k => k + 1);
     const handleTaskEdited = () => setRefreshKey(k => k + 1);
+    const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
-    const handleStatusChange = async (taskId, newStatusCode) => {
-        const completedNow = new Date().toLocaleDateString('sv-SE') + ' ' + new Date().toLocaleTimeString('sv-SE');
-        setTasks(prev => prev.map(t => t.id === taskId ? {
-            ...t,
-            status_code: parseInt(newStatusCode),
-            completed_at: parseInt(newStatusCode) === 3 ? completedNow : null
-        } : t));
-        try {
-            const db = await fetchDb();
-            if (parseInt(newStatusCode) === 3) {
-                await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [newStatusCode, taskId]);
-            } else {
-                await db.execute('UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2', [newStatusCode, taskId]);
-            }
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
-            fetchTasks();
-        }
-    };
-
-    const handleDelete = async (taskId) => {
-        if (!confirm('このタスクを削除しますか？')) return;
-        try {
-            const db = await fetchDb();
-            // BUG-4: 削除前に子タスクの parent_id を NULL 化して独立させる
-            await db.execute('UPDATE tasks SET parent_id = NULL WHERE parent_id = $1', [taskId]);
-            await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'タスクを削除しました', type: 'success' } }));
-            setRefreshKey(k => k + 1);
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '削除に失敗しました', type: 'error' } }));
-        }
-    };
-
-    const handleTodayToggle = async (taskId, currentTodayDate) => {
-        const today = new Date().toLocaleDateString('sv-SE');
-        const newVal = currentTodayDate === today ? null : today;
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, today_date: newVal } : t));
-        try {
-            const db = await fetchDb();
-            await db.execute('UPDATE tasks SET today_date = $1 WHERE id = $2', [newVal, taskId]);
-        } catch (e) { console.error(e); fetchTasks(); }
-    };
-
-    const handleArchive = async (taskId) => {
-        try {
-            const db = await fetchDb();
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return;
-
-            // Validate: only completed (3) or cancelled (5)
-            if (task.status_code !== 3 && task.status_code !== 5) {
-                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '完了またはキャンセル済みのタスクのみアーカイブできます', type: 'error' } }));
-                return;
-            }
-
-            // Parent check: all children must be completed or cancelled
-            if (!task.parent_id) {
-                const children = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [taskId]);
-                const hasInProgress = children.some(c => c.status_code !== 3 && c.status_code !== 5);
-                if (hasInProgress) {
-                    window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '未完了の子タスクがあるためアーカイブできません', type: 'error' } }));
-                    return;
-                }
-            }
-
-            // Use transaction for all-or-nothing parent+children archive
-            await db.execute('BEGIN');
-            try {
-                if (!task.parent_id) {
-                    // Archive children together with parent
-                    await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1 AND archived_at IS NULL", [taskId]);
-                }
-                await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
-                await db.execute('COMMIT');
-            } catch (txErr) {
-                await db.execute('ROLLBACK');
-                throw txErr;
-            }
-
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
-            setRefreshKey(k => k + 1);
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブに失敗しました', type: 'error' } }));
-        }
-    };
-
-    const handleRestore = async (taskId) => {
-        try {
-            const db = await fetchDb();
-            const task = tasks.find(t => t.id === taskId);
-
-            // Use transaction for all-or-nothing parent+children restore
-            await db.execute('BEGIN');
-            try {
-                // If this is a parent task, restore children too
-                if (task && !task.parent_id) {
-                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE parent_id = $1', [taskId]);
-                }
-
-                // If this is a child, also restore the parent
-                if (task && task.parent_id) {
-                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [task.parent_id]);
-                }
-
-                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
-                await db.execute('COMMIT');
-            } catch (txErr) {
-                await db.execute('ROLLBACK');
-                throw txErr;
-            }
-
-            // Descriptive toast for parent-child restore
-            let toastMsg = '復元しました';
-            if (task && !task.parent_id && tasks.some(t => t.parent_id === taskId)) {
-                toastMsg = '親タスクと子タスクをまとめて復元しました';
-            } else if (task && task.parent_id) {
-                toastMsg = '子タスクと親タスクを復元しました';
-            }
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: toastMsg, type: 'success' } }));
-            setRefreshKey(k => k + 1);
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '復元に失敗しました', type: 'error' } }));
-        }
-    };
-
-    const handleDragStart = (event) => {
-        setActiveId(event.active.id);
-    };
-
-    // Helper to persist sort_order for a list of task IDs
-    const persistSortOrder = async (orderedIds, parentId = null) => {
-        try {
-            const db = await fetchDb();
-
-            const query = parentId != null
-                ? 'SELECT id FROM tasks WHERE parent_id = $1 AND archived_at IS NULL ORDER BY sort_order ASC, id ASC'
-                : 'SELECT id FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL ORDER BY sort_order ASC, id ASC';
-            const params = parentId != null ? [parentId] : [];
-            const rows = await db.select(query, params);
-            let allIds = rows.map(r => r.id);
-
-            for (const id of orderedIds) {
-                if (!allIds.includes(id)) {
-                    allIds.push(id);
-                }
-            }
-
-            const positions = [];
-            for (const id of allIds) {
-                if (orderedIds.includes(id)) {
-                    positions.push(allIds.indexOf(id));
-                }
-            }
-
-            for (let i = 0; i < positions.length; i++) {
-                allIds[positions[i]] = orderedIds[i];
-            }
-
-            for (let i = 0; i < allIds.length; i++) {
-                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [i + 1, allIds[i]]);
-            }
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
-            fetchTasks();
-        }
-    };
-
-    // Handle DnD reorder (manual sort mode)
-    const handleReorder = async (activeTaskId, overId) => {
-        const overIdStr = String(overId);
-        const activeTask = tasks.find(t => t.id === activeTaskId);
-        if (!activeTask) return;
-
-        let siblings, targetIndex, isRoot, parentId = null;
-
-        if (overIdStr.startsWith('reorder-root-')) {
-            targetIndex = parseInt(overIdStr.replace('reorder-root-', ''));
-            siblings = sortedParentTasks;
-            isRoot = true;
-        } else if (overIdStr.startsWith('reorder-child-')) {
-            const parts = overIdStr.replace('reorder-child-', '').split('-');
-            parentId = parseInt(parts[0]);
-            targetIndex = parseInt(parts[1]);
-            siblings = getChildTasks(parentId);
-            isRoot = false;
-        } else {
-            return;
-        }
-
-        // Check if this is an unnest (child task dropped at root level)
-        const isUnnest = activeTask.parent_id && isRoot;
-
-        const currentOrder = siblings.map(t => t.id);
-        const oldIndex = currentOrder.indexOf(activeTaskId);
-
-        // Remove from current position if present
-        if (oldIndex >= 0) {
-            currentOrder.splice(oldIndex, 1);
-            // Adjust target index if we removed an item before it
-            if (oldIndex < targetIndex) targetIndex--;
-        }
-
-        // Insert at target position
-        currentOrder.splice(targetIndex, 0, activeTaskId);
-
-        // Optimistic UI update
-        setTasks(prev => {
-            let updated = [...prev];
-            if (isUnnest) {
-                updated = updated.map(t => t.id === activeTaskId ? { ...t, parent_id: null } : t);
-            }
-            // Update sort_order for all items in this group
-            currentOrder.forEach((id, i) => {
-                const idx = updated.findIndex(t => t.id === id);
-                if (idx >= 0) updated[idx] = { ...updated[idx], sort_order: i + 1 };
-            });
-            return updated;
-        });
-
-        // Persist to DB
-        try {
-            const db = await fetchDb();
-            if (isUnnest) {
-                await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
-            }
-            await persistSortOrder(currentOrder, isRoot ? null : parentId);
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
-            fetchTasks();
-        }
-    };
-
-    const handleDragEnd = async (event) => {
-        const { active, over } = event;
-        setActiveId(null);
-
-        const activeTask = tasks.find(t => t.id === active.id);
-        if (!activeTask) return;
-
-        // Helper: un-nest a child task back to root
-        const unnest = async () => {
-            setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: null } : t));
-            try {
-                const db = await fetchDb();
-                await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
-                // In manual mode, assign sort_order at the end of root tasks
-                if (sortMode === 'manual') {
-                    const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL');
-                    const newOrder = (maxSort[0]?.ms || 0) + 1;
-                    await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
-                    fetchTasks();
-                }
-            } catch (e) {
-                console.error(e);
-                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの処理に失敗しました', type: 'error' } }));
-                fetchTasks();
-            }
-        };
-
-        // REORDER: Dropped on a reorder gap (manual sort mode)
-        if (over && String(over.id).startsWith('reorder-')) {
-            await handleReorder(active.id, over.id);
-            return;
-        }
-
-        // If a child task is dropped with no target (outside any droppable), un-nest
-        if (!over) {
-            if (activeTask.parent_id) await unnest();
-            return;
-        }
-
-        // UN-NEST: Dropped on root container, unnest gap zones
-        const isUnnestZone = over.id === 'root' || String(over.id).startsWith('unnest-gap-');
-        if (isUnnestZone) {
-            if (!activeTask.parent_id) return; // Already root
-            await unnest();
-            return;
-        }
-
-        // NEST: Dropped on another task
-        if (active.id === over.id) return;
-
-        const parentTask = tasks.find(t => t.id === over.id);
-        if (!parentTask) return;
-
-        // If child is dropped on another child, ignore
-        if (parentTask.parent_id) return;
-        // Validation: Task with children cannot become child
-        const activeChildren = tasks.filter(t => t.parent_id === active.id);
-        if (activeChildren.length > 0) {
-            alert('子タスクを持つタスクは、他のタスクの子タスクにできません。');
-            return;
-        }
-
-        // Optimistic update
-        setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: parentTask.id } : t));
-
-        try {
-            const db = await fetchDb();
-            await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
-
-            // In manual mode, assign sort_order at end of new parent's children
-            if (sortMode === 'manual') {
-                const maxSort = await db.select(
-                    'SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id = $1 AND archived_at IS NULL',
-                    [parentTask.id]
-                );
-                const newOrder = (maxSort[0]?.ms || 0) + 1;
-                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
-            }
-
-            // Tag inheritance: copy parent tags to child if setting enabled
-            try {
-                const settingRows = await db.select(
-                    "SELECT value FROM app_settings WHERE key = 'inherit_parent_tags'"
-                );
-                if (settingRows.length > 0 && settingRows[0].value === '1') {
-                    const parentTags = await db.select(
-                        'SELECT tag_id FROM task_tags WHERE task_id = $1',
-                        [parentTask.id]
-                    );
-                    let tagsAdded = false;
-                    for (const row of parentTags) {
-                        await db.execute(
-                            'INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES ($1, $2)',
-                            [active.id, row.tag_id]
-                        );
-                        tagsAdded = true;
-                    }
-                    if (tagsAdded) {
-                        fetchTasks(); // Refresh to show inherited tags
-                        return;
-                    }
-                }
-            } catch (tagErr) {
-                console.error('Tag inheritance error:', tagErr);
-            }
-            fetchTasks(); // Refresh to get updated sort_order
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
-            fetchTasks(); // Revert on error
-        }
-    };
-
+    // Derived data
     const parentTasks = useMemo(() => tasks.filter(t => !t.parent_id || !tasks.some(p => p.id === t.parent_id)), [tasks]);
     const getChildTasks = useCallback((parentId) => {
         const children = tasks.filter(t => t.parent_id === parentId);
@@ -534,14 +188,31 @@ export default function TaskList() {
         return sorted;
     }, [parentTasks, sortKey, sortMode, allStatuses]);
 
+    sortedParentTasksRef.current = sortedParentTasks;
+    const getSortedParentTasks = useCallback(() => sortedParentTasksRef.current, []);
+
     const statusMap = useMemo(() => {
         const m = {};
         allStatuses.forEach(s => { m[s.code] = { label: s.label, color: s.color }; });
         return m;
     }, [allStatuses]);
 
-    const activeTaskData = activeId ? tasks.find(t => t.id === activeId) : null;
-    const isDraggingChild = activeTaskData?.parent_id != null;
+    // Custom hooks
+    const { handleStatusChange, handleDelete, handleTodayToggle, handleArchive, handleRestore } = useTaskActions({
+        setTasks,
+        fetchTasks,
+        refresh,
+        getTasks: useCallback(() => tasksRef.current, []),
+    });
+
+    const { activeId, activeTaskData, isDraggingChild, handleDragStart, handleDragEnd } = useTaskDnD({
+        tasks,
+        setTasks,
+        fetchTasks,
+        sortMode,
+        getSortedParentTasks,
+        getChildTasks,
+    });
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -674,7 +345,7 @@ export default function TaskList() {
             .tl-empty-icon { font-size:2.5rem; opacity:.5; }
             .tl-empty-title { font-size:1rem; font-weight:500; color:var(--color-text-secondary); }
             .tl-empty-hint { font-size:.82rem; color:var(--color-text-disabled); }
-    
+
             .tl-unnest-gap {
                 position: relative;
                 padding: 6px 0;
@@ -732,7 +403,7 @@ export default function TaskList() {
             .tc-card.done:hover { opacity:.75; }
             .tc-card.cancelled { opacity:.4; filter: grayscale(1); }
             .tc-card.cancelled:hover { opacity:.6; filter: grayscale(0.8); }
-    
+
             .tc-body { display:flex; align-items:flex-start; gap:.65rem; padding:.85rem 1rem; }
             .tc-handle {
                 cursor: grab; color: var(--color-text-disabled);
@@ -751,14 +422,14 @@ export default function TaskList() {
             .tc-toggle:hover { background:var(--color-surface-hover); }
             .tc-chev { display:inline-block; transition:transform .2s; }
             .tc-chev.open { transform:rotate(90deg); }
-    
+
             .tc-info { flex:1; min-width:0; cursor:pointer; padding:.1rem .3rem; border-radius:var(--radius-sm); transition:background .15s; }
             .tc-info:hover { background:var(--color-surface-hover); }
             .tc-title-row { display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; margin-bottom:.3rem; }
             .tc-title { font-weight:600; font-size:.92rem; color:var(--color-text); line-height:1.4; }
             .tc-title.strike { text-decoration:line-through; color:var(--color-text-disabled); }
             .tc-tag { font-size:.63rem; font-weight:600; padding:.1rem .5rem; border-radius:10px; color:#fff; }
-    
+
             .tc-meta { display:flex; gap:.7rem; flex-wrap:wrap; }
             .tc-meta-item { font-size:.76rem; color:var(--color-text-muted); display:flex; align-items:center; gap:.2rem; white-space:nowrap; }
             .tc-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
@@ -766,7 +437,7 @@ export default function TaskList() {
             .tc-badge-danger  { background:var(--color-danger-bg); color:var(--color-danger); }
             .tc-badge-warning { background:var(--color-warning-bg); color:var(--color-warning); }
             .tc-badge-info    { background:rgba(79,110,247,.08); color:var(--color-primary); }
-    
+
             .tc-actions { display:flex; gap:.3rem; flex-shrink:0; align-items:center; margin-top:2px; }
             .tc-status-select {
               font-weight:600; font-size:.78rem;
@@ -805,7 +476,7 @@ export default function TaskList() {
               background:var(--color-primary); color:#fff; font-weight:600;
               box-shadow:0 2px 10px rgba(79,110,247,.18);
             }
-    
+
             /* Sort mode toggle */
             .tl-sort-toggle {
               padding:.35rem .7rem; border:1px solid var(--border-color);
@@ -843,187 +514,3 @@ export default function TaskList() {
         </DndContext>
     );
 }
-
-function UnnestGap({ id }) {
-    const { setNodeRef, isOver } = useDroppable({ id });
-    return (
-        <div
-            ref={setNodeRef}
-            className={`tl-unnest-gap ${isOver ? 'drag-over' : ''}`}
-        >
-            <div className="tl-unnest-gap-line" />
-            {isOver && <span className="tl-unnest-gap-label">ここにドロップして親タスクに戻す</span>}
-        </div>
-    );
-}
-
-function ReorderGap({ id }) {
-    const { setNodeRef, isOver } = useDroppable({ id });
-    return (
-        <div
-            ref={setNodeRef}
-            className={`tl-reorder-gap ${isOver ? 'drag-over' : ''}`}
-        >
-            <div className="tl-reorder-gap-line" />
-        </div>
-    );
-}
-
-function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined }) {
-    const [expanded, setExpanded] = useState(true);
-    const [showSub, setShowSub] = useState(false);
-
-    // Draggable Hook
-    const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
-        id: task.id,
-        disabled: !isDraggable // Only disabled if parent has children (isDraggable=false for parents with children)
-    });
-
-    // Droppable Hook (Target for nesting)
-    const { setNodeRef: setDropRef, isOver } = useDroppable({
-        id: task.id,
-        disabled: isChild // Cannot nest under a child (max depth 1)
-    });
-
-    // Merge refs
-    const setNodeRef = (node) => {
-        setDragRef(node);
-        setDropRef(node);
-    };
-
-    const style = transform ? {
-        transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.3 : 1,
-        zIndex: isDragging ? 100 : 'auto',
-    } : undefined;
-
-    const dueMeta = (() => {
-        if (!task.due_date) return {};
-        const due = new Date(task.due_date + 'T00:00:00');
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-        if (due < today) return { color: 'var(--color-danger)', badge: '期限切れ', cls: 'tc-badge-danger' };
-        if (due.getTime() === today.getTime()) return { color: 'var(--color-warning)', badge: '本日', cls: 'tc-badge-warning' };
-        if (due.getTime() === tomorrow.getTime()) return { color: 'var(--color-primary)', badge: '明日', cls: 'tc-badge-info' };
-        return {};
-    })();
-
-    const st = statusMap[task.status_code] || { label: task.status_label || '不明', color: '#94a3b8' };
-    const isDone = task.status_code === 3;
-    const isCancelled = task.status_code === 5;
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={`tc-card ${isDone ? 'done' : ''} ${isCancelled ? 'cancelled' : ''} ${isOver && !isDragging ? 'drag-over' : ''}`}
-        >
-            <div className="tc-body">
-                {/* Drag Handle */}
-                {isDraggable && (
-                    <div className="tc-handle" {...attributes} {...listeners} title={sortMode === 'manual' ? 'ドラッグして並び替え' : isChild ? 'ドラッグして親から外す' : 'ドラッグして他のタスクの子にする'}>
-                        ⋮⋮
-                    </div>
-                )}
-
-                <StatusCheckbox
-                    statusCode={task.status_code}
-                    onChange={(newCode) => onStatusChange(task.id, newCode)}
-                />
-
-                {childTasks.length > 0 && (
-                    <button className="tc-toggle" onClick={() => setExpanded(!expanded)}>
-                        <span className={`tc-chev ${expanded ? 'open' : ''}`}>›</span>
-                    </button>
-                )}
-
-                <div className="tc-info" onClick={() => onEdit(task)} title="クリックして編集">
-                    {!isChild && task.parent_id && task.parent_title && (
-                        <span className="tc-parent-label" style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, color: 'var(--color-text-muted)', marginBottom: '0.15rem', letterSpacing: '0.01em' }}>📌 {task.parent_title} ›</span>
-                    )}
-                    <div className="tc-title-row">
-                        <span className={`tc-title ${isDone || isCancelled ? 'strike' : ''}`}>{task.title}</span>
-                        {task.tags && task.tags.map(t => <span key={t.id} className="tc-tag" style={{ backgroundColor: t.color }}>{t.name}</span>)}
-                    </div>
-                    <div className="tc-meta">
-                        {isDone && task.completed_at && <span className="tc-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
-                        {task.archived_at && <span className="tc-meta-item">📦 アーカイブ: {task.archived_at.split(' ')[0]}</span>}
-                        {task.start_date && !isDone && <span className="tc-meta-item">🟢 開始: {task.start_date}</span>}
-                        {task.due_date && !isDone && (
-                            <span className="tc-meta-item" style={{ color: dueMeta.color || 'inherit' }}>
-                                📅 期限: {task.due_date}{dueMeta.badge && <span className={`tc-badge ${dueMeta.cls}`}>{dueMeta.badge}</span>}
-                            </span>
-                        )}
-                        {task.importance_label && (
-                            <span className="tc-meta-item"><span className="tc-dot" style={{ backgroundColor: task.importance_color }} /> 重要度: {task.importance_label}</span>
-                        )}
-                        {task.urgency_label && (
-                            <span className="tc-meta-item"><span className="tc-dot" style={{ backgroundColor: task.urgency_color }} /> 緊急度: {task.urgency_label}</span>
-                        )}
-                        {task.estimated_hours > 0 && <span className="tc-meta-item">⏱ {formatMin(task.estimated_hours)}</span>}
-                        {task.notes?.trim() && <span className="tc-meta-item" title={task.notes}>📝 メモ</span>}
-                    </div>
-                </div>
-
-                <div className="tc-actions">
-                    {isArchived ? (
-                        <>
-                            <span className="tc-status-label" style={{ color: st.color }}>{st.label}</span>
-                            <button className="tc-act-btn tc-restore-btn" onClick={() => onRestore(task.id)} title="復元">📤</button>
-                        </>
-                    ) : (
-                        <>
-                            <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value)} className="tc-status-select"
-                                style={{ borderColor: st.color, color: st.color, background: `${st.color}10` }}>
-                                {allStatuses.length > 0 ? allStatuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>) : <option value={task.status_code}>{st.label}</option>}
-                            </select>
-                            {onTodayToggle && (
-                                <button
-                                    className={`tc-act-btn tc-today-btn ${task.today_date === new Date().toLocaleDateString('sv-SE') ? 'active' : ''}`}
-                                    onClick={() => onTodayToggle(task.id, task.today_date)}
-                                    title={task.today_date === new Date().toLocaleDateString('sv-SE') ? '今日やるから外す' : '今日やるタスクに追加'}
-                                >☀️</button>
-                            )}
-                            {(task.status_code === 3 || task.status_code === 5) && onArchive && (
-                                <button className="tc-act-btn tc-archive-btn" onClick={() => onArchive(task.id)} title="アーカイブ">📦</button>
-                            )}
-                            {!isChild && <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加">＋</button>}
-                            <button className="tc-act-btn danger" onClick={() => onDelete(task.id)} title="削除">🗑</button>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {showSub && <div className="tc-sub-input"><TaskInput onTaskAdded={() => { onTaskAdded(); setShowSub(false); }} predefinedParentId={task.id} /></div>}
-
-            {expanded && childTasks.length > 0 && (
-                <div className="tc-children">
-                    {childTasks.map((c, i) => (
-                        <React.Fragment key={c.id}>
-                            {/* ReorderGap between children in manual mode */}
-                            {sortMode === 'manual' && activeId && activeDragParentId === task.id && i === 0 && (
-                                <ReorderGap id={`reorder-child-${task.id}-0`} />
-                            )}
-                            <TaskItem task={c} childTasks={[]} onStatusChange={onStatusChange}
-                                onDelete={onDelete} onTaskAdded={() => { }} onEdit={onEdit}
-                                onTodayToggle={onTodayToggle}
-                                onArchive={onArchive} onRestore={onRestore}
-                                index={i} isChild statusMap={statusMap} allStatuses={allStatuses}
-                                isDraggable={!isArchived}
-                                isArchived={isArchived}
-                                sortMode={sortMode}
-                                activeId={activeId}
-                            />
-                            {/* ReorderGap after each child in manual mode */}
-                            {sortMode === 'manual' && activeId && activeDragParentId === task.id && (
-                                <ReorderGap id={`reorder-child-${task.id}-${i + 1}`} />
-                            )}
-                        </React.Fragment>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-
