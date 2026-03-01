@@ -12,7 +12,7 @@ import { formatMin } from '@/lib/utils';
  * Individual task card component with DnD support, status controls, and child task rendering.
  * Extracted from TaskList.js (Phase 1-1).
  */
-export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined }) {
+export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false }) {
     const [expanded, setExpanded] = useState(true);
     const [showSub, setShowSub] = useState(false);
 
@@ -72,6 +72,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                 <StatusCheckbox
                     statusCode={task.status_code}
                     onChange={(newCode) => onStatusChange(task.id, newCode)}
+                    disabled={isProcessing}
                 />
 
                 {childTasks.length > 0 && (
@@ -112,11 +113,12 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                     {isArchived ? (
                         <>
                             <span className="tc-status-label" style={{ color: st.color }}>{st.label}</span>
-                            <button className="tc-act-btn tc-restore-btn" onClick={() => onRestore(task.id)} title="復元">📤</button>
+                            <button className="tc-act-btn tc-restore-btn" onClick={() => onRestore(task.id)} title="復元" disabled={isProcessing}>📤</button>
                         </>
                     ) : (
                         <>
                             <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value)} className="tc-status-select"
+                                disabled={isProcessing}
                                 style={{ borderColor: st.color, color: st.color, background: `${st.color}10` }}>
                                 {allStatuses.length > 0 ? allStatuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>) : <option value={task.status_code}>{st.label}</option>}
                             </select>
@@ -125,10 +127,11 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                                     className={`tc-act-btn tc-today-btn ${task.today_date === new Date().toLocaleDateString('sv-SE') ? 'active' : ''}`}
                                     onClick={() => onTodayToggle(task.id, task.today_date)}
                                     title={task.today_date === new Date().toLocaleDateString('sv-SE') ? '今日やるから外す' : '今日やるタスクに追加'}
+                                    disabled={isProcessing}
                                 >☀️</button>
                             )}
                             {(task.status_code === 3 || task.status_code === 5) && onArchive && (
-                                <button className="tc-act-btn tc-archive-btn" onClick={() => onArchive(task.id)} title="アーカイブ">📦</button>
+                                <button className="tc-act-btn tc-archive-btn" onClick={() => onArchive(task.id)} title="アーカイブ" disabled={isProcessing}>📦</button>
                             )}
                             {!isChild && <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加">＋</button>}
                             <button className="tc-act-btn danger" onClick={() => onDelete(task.id)} title="削除">🗑</button>
@@ -156,6 +159,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                                 isArchived={isArchived}
                                 sortMode={sortMode}
                                 activeId={activeId}
+                                isProcessing={isProcessing}
                             />
                             {/* ReorderGap after each child in manual mode */}
                             {sortMode === 'manual' && activeId && activeDragParentId === task.id && (

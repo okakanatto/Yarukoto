@@ -198,7 +198,7 @@ export default function TaskList() {
     }, [allStatuses]);
 
     // Custom hooks
-    const { handleStatusChange, handleDelete, handleTodayToggle, handleArchive, handleRestore } = useTaskActions({
+    const { handleStatusChange, handleDelete, handleTodayToggle, handleArchive, handleRestore, processingIds } = useTaskActions({
         setTasks,
         fetchTasks,
         refresh,
@@ -294,6 +294,7 @@ export default function TaskList() {
                                 sortMode={sortMode}
                                 activeId={activeId}
                                 activeDragParentId={activeTaskData?.parent_id}
+                                isProcessing={processingIds.has(task.id)}
                             />
                             {/* Manual mode: ReorderGap after each root task */}
                             {!showArchived && sortMode === 'manual' && activeId && (

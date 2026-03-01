@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 
-export default function StatusCheckbox({ statusCode, onChange, sparkle = false, twoStateOnly = false }) {
+export default function StatusCheckbox({ statusCode, onChange, sparkle = false, twoStateOnly = false, disabled = false }) {
     const [hovered, setHovered] = useState(false);
     const code = parseInt(statusCode);
 
     const handleMainClick = () => {
-        if (code === 5) return; // キャンセル時は操作不可
+        if (disabled || code === 5) return; // disabled or キャンセル時は操作不可
         if (code === 3) {
             onChange(1); // 完了 → 未着手
         } else if (code === 2) {
@@ -19,18 +19,18 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
 
     const handlePlayClick = (e) => {
         e.stopPropagation();
-        if (code === 5) return; // キャンセル時は操作不可
+        if (disabled || code === 5) return;
         if (code === 1) onChange(2); // 未着手 → 着手中
     };
 
     const handleRevertClick = (e) => {
         e.stopPropagation();
-        if (code === 5) return; // キャンセル時は操作不可
+        if (disabled || code === 5) return;
         if (code === 2) onChange(1); // 着手中 → 未着手
     };
 
-    const showPlay = code === 1 && hovered && !twoStateOnly;
-    const showRevert = code === 2 && hovered && !twoStateOnly;
+    const showPlay = code === 1 && hovered && !twoStateOnly && !disabled;
+    const showRevert = code === 2 && hovered && !twoStateOnly && !disabled;
 
     return (
         <div
@@ -39,7 +39,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
             onMouseLeave={() => setHovered(false)}
         >
             <button
-                className={`status-cb-main${code === 3 ? ' checked' : ''}${code === 2 ? ' in-progress' : ''}${code === 5 ? ' cancelled' : ''}${sparkle ? ' sparkle' : ''}`}
+                className={`status-cb-main${code === 3 ? ' checked' : ''}${code === 2 ? ' in-progress' : ''}${code === 5 ? ' cancelled' : ''}${disabled ? ' disabled' : ''}${sparkle ? ' sparkle' : ''}`}
                 onClick={handleMainClick}
                 title={code === 3 ? '未着手に戻す' : code === 2 ? '完了にする' : '完了にする'}
             >
@@ -87,6 +87,11 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     transition: all 0.2s;
                     position: relative;
                     overflow: visible;
+                }
+                .status-cb-main.disabled {
+                    cursor: not-allowed;
+                    opacity: 0.5;
+                    pointer-events: none;
                 }
                 .status-cb-main.cancelled {
                     cursor: not-allowed;

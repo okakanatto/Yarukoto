@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { fetchDb } from '@/lib/utils';
 
 /**
@@ -14,7 +14,19 @@ import { fetchDb } from '@/lib/utils';
  */
 export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
 
+    // Track task IDs currently being processed to prevent concurrent DB operations
+    const [processingIds, setProcessingIds] = useState(new Set());
+
+    const addProcessing = useCallback((id) => {
+        setProcessingIds(prev => new Set([...prev, id]));
+    }, []);
+
+    const removeProcessing = useCallback((id) => {
+        setProcessingIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+    }, []);
+
     const handleStatusChange = useCallback(async (taskId, newStatusCode) => {
+        addProcessing(taskId);
         const completedNow = new Date().toLocaleDateString('sv-SE') + ' ' + new Date().toLocaleTimeString('sv-SE');
         setTasks(prev => prev.map(t => t.id === taskId ? {
             ...t,
@@ -32,8 +44,10 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
             console.error(e);
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
             fetchTasks();
+        } finally {
+            removeProcessing(taskId);
         }
-    }, [setTasks, fetchTasks]);
+    }, [setTasks, fetchTasks, addProcessing, removeProcessing]);
 
     const handleDelete = useCallback(async (taskId) => {
         if (!confirm('このタスクを削除しますか？')) return;
@@ -60,17 +74,27 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
     }, [setTasks, fetchTasks]);
 
     const handleArchive = useCallback(async (taskId) => {
+        const tasks = getTasks();
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        // Validate: only completed (3) or cancelled (5)
+        if (task.status_code !== 3 && task.status_code !== 5) {
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '完了またはキャンセル済みのタスクのみアーカイブできます', type: 'error' } }));
+            return;
+        }
+
+        addProcessing(taskId);
+
+        // Optimistic update: remove task (and children if parent) from current view
+        setTasks(prev => prev.filter(t => {
+            if (t.id === taskId) return false;
+            if (!task.parent_id && t.parent_id === taskId) return false;
+            return true;
+        }));
+
         try {
             const db = await fetchDb();
-            const tasks = getTasks();
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return;
-
-            // Validate: only completed (3) or cancelled (5)
-            if (task.status_code !== 3 && task.status_code !== 5) {
-                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '完了またはキャンセル済みのタスクのみアーカイブできます', type: 'error' } }));
-                return;
-            }
 
             // Parent check: all children must be completed or cancelled
             if (!task.parent_id) {
@@ -78,6 +102,7 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
                 const hasInProgress = children.some(c => c.status_code !== 3 && c.status_code !== 5);
                 if (hasInProgress) {
                     window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '未完了の子タスクがあるためアーカイブできません', type: 'error' } }));
+                    fetchTasks();
                     return;
                 }
             }
@@ -96,18 +121,33 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
             }
 
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
-            refresh();
         } catch (e) {
             console.error(e);
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブに失敗しました', type: 'error' } }));
+            fetchTasks();
+        } finally {
+            removeProcessing(taskId);
         }
-    }, [getTasks, refresh]);
+    }, [getTasks, setTasks, fetchTasks, addProcessing, removeProcessing]);
 
     const handleRestore = useCallback(async (taskId) => {
+        const tasks = getTasks();
+        const task = tasks.find(t => t.id === taskId);
+
+        addProcessing(taskId);
+
+        // Optimistic update: remove affected tasks from archived view
+        setTasks(prev => prev.filter(t => {
+            if (t.id === taskId) return false;
+            // Parent: also remove children
+            if (task && !task.parent_id && t.parent_id === taskId) return false;
+            // Child: also remove parent
+            if (task && task.parent_id && t.id === task.parent_id) return false;
+            return true;
+        }));
+
         try {
             const db = await fetchDb();
-            const tasks = getTasks();
-            const task = tasks.find(t => t.id === taskId);
 
             // Use transaction for all-or-nothing parent+children restore
             await db.execute('BEGIN');
@@ -133,12 +173,14 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
                 toastMsg = '子タスクと親タスクを復元しました';
             }
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: toastMsg, type: 'success' } }));
-            refresh();
         } catch (e) {
             console.error(e);
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '復元に失敗しました', type: 'error' } }));
+            fetchTasks();
+        } finally {
+            removeProcessing(taskId);
         }
-    }, [getTasks, refresh]);
+    }, [getTasks, setTasks, fetchTasks, addProcessing, removeProcessing]);
 
     /**
      * Handles routine completion toggling (for today page).
@@ -182,5 +224,6 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         handleTodayToggle,
         handleArchive,
         handleRestore,
+        processingIds,
     };
 }
