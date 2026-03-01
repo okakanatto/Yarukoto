@@ -1,66 +1,65 @@
 # Work Log
 
-## 最新の作業（2026-03-01 02:00）
+## 最新の作業（2026-03-01 14:00）
 
-- **フェーズ**: v1.3.0 枝番3-2 QA指摘5件修正
+- **フェーズ**: v1.3.0 枝番3-3 IMP-4 実装
 - **対象バージョン**: v1.3.0
-- **対象枝番**: 3-2（IMP-2: アーカイブ機能のQA指摘修正）
+- **対象枝番**: 3-3（IMP-4: ソートON/OFF切替 + DnDによる手動並び替え）
 - **ステータス**: ✅ 完了
 - **やったこと**:
-  - STEP B #6: handleArchive をトランザクション（BEGIN/COMMIT/ROLLBACK）で囲み、親子連動アーカイブの all-or-nothing を保証。子アーカイブも for ループから単一 UPDATE 文に統一
-  - STEP B #7: handleRestore をトランザクションで囲み、親子連動復元の all-or-nothing を保証
-  - STEP A #24: runAutoArchive に親子連動ロジックを追加（自動アーカイブ後、アーカイブ済み親タスクの子も連動アーカイブ）
-  - STEP B 一貫性 #10: CSVエクスポートのクエリに WHERE t.archived_at IS NULL を追加、説明文を更新
-  - STEP B 一貫性 #4: 復元トーストを親子連動時に具体的なメッセージに変更
-  - npm run lint 実行 → エラー0件
+  - IMP-4の全仕様を実装
+    - 自動ソート/手動並び替えの切替トグルボタン（タスク一覧・やるタスク両画面）
+    - 手動モード時のDnDによるタスク並び替え（タスク一覧: @dnd-kit ReorderGap方式、やるタスク: ネイティブHTML5 DnD方式）
+    - タスク一覧: 親タスク単位・子タスク単位の独立した並び替え
+    - やるタスク: ルーティン・ピック済みタスク・期限日タスクの統合並び替え
+    - 新規タスク追加時のリスト先頭挿入（sort_order = MIN - 1）
+    - DB: tasks.sort_order, tasks.today_sort_order, routines.today_sort_order カラム追加
+    - app_settings: sort_mode_tasks, sort_mode_today 設定追加
+  - DnD操作体系: ギャップドロップ→並び替え、タスク上ドロップ→ネスト、UnnestGapドロップ→アンネスト（共存）
+  - 手動モード時は親タスク（子タスク持ち）もドラッグ可能に変更
+  - `npm run lint` エラーなし
 - **変更したファイル**:
-  - `components/TaskList.js` — handleArchive: トランザクション化 + 子アーカイブを単一UPDATE文に変更。handleRestore: トランザクション化 + 親子連動時のトーストメッセージを改善
-  - `lib/db.js` — runAutoArchive: 親子連動アーカイブの追加UPDATE文を追加
-  - `app/settings/page.js` — CSVエクスポートクエリに WHERE t.archived_at IS NULL 追加、説明文更新
-  - `qa-report.md` — 5件のNG項目に「✅ 修正済み」マーク追記
+  - `lib/db.js` — sort_order/today_sort_order カラム追加マイグレーション、インデックス作成、sort_mode設定シード
+  - `components/TaskList.js` — sortMode状態管理、トグルUI、ReorderGapコンポーネント、handleReorder関数、manual時のsort_order依存ソート、isDraggable条件変更、子タスク間ReorderGap、CSS追加
+  - `app/today/page.js` — sortMode状態管理、トグルUI、ネイティブHTML5 DnDハンドラ、today_sort_order保存・ソート、ルーティンのtoday_sort_orderマッピング追加、CSS追加
+  - `components/TaskInput.js` — 新規タスクのsort_order計算（MIN(siblings) - 1で先頭挿入）
 - **次にやるべきこと**:
-  - 枝番3-2 の検証を継続（STEP R リグレッションテスト）
+  - ROADMAPの検証STEP（4-E リグレッションテスト）を実施する
 - **注意事項・申し送り**:
-  - handleArchive の子アーカイブを for ループ→単一 UPDATE 文に変更したため、挙動が若干異なる（filter で archived_at 未設定の子を選ぶ代わりに、SQL の WHERE archived_at IS NULL で同等の条件を処理）
-  - runAutoArchive の親子連動は、status_code に関係なくアーカイブ済み親の子を全てアーカイブする。これは手動アーカイブと同じ挙動（手動も親アーカイブ時に子全部をアーカイブ）
   - 【変更サマリー】
   - ■ 変更した機能：
-    - タスクのアーカイブ操作（手動アーカイブ）：トランザクション処理に変更し、親子連動アーカイブの all-or-nothing を保証
-    - タスクの復元操作：トランザクション処理に変更し、親子連動復元の all-or-nothing を保証
-    - タスクの復元トースト通知：親子連動復元時に「親タスクと子タスクをまとめて復元しました」等の具体的メッセージに変更
-    - 自動アーカイブの親子連動：親タスクが自動アーカイブされた際、子タスクも連動してアーカイブされるように修正
-    - CSVエクスポート：アーカイブ済みタスクをエクスポート対象から除外、説明文を更新
+    - 自動ソート/手動並び替え切替（タスク一覧画面）
+    - 自動ソート/手動並び替え切替（今日やるタスク画面）
+    - タスク一覧でのDnD手動並び替え（親タスク間・子タスク間の独立した並び替え）
+    - 今日やるタスクでのドラッグ手動並び替え（ルーティン含む）
+    - 新規タスクのリスト先頭挿入
+    - 手動モード時の親タスク（子あり）のドラッグ対応
   - ■ 変更したファイル：
-    - `components/TaskList.js` — handleArchive: BEGIN/COMMIT/ROLLBACK トランザクション化、子アーカイブを for ループから単一 UPDATE WHERE parent_id 文に変更。handleRestore: トランザクション化、復元トーストを親子連動時に具体的メッセージに分岐（親→子: 「親タスクと子タスクをまとめて復元しました」、子→親: 「子タスクと親タスクを復元しました」、単体: 「復元しました」）
-    - `lib/db.js` — runAutoArchive(): 自動アーカイブ UPDATE 後に親子連動 UPDATE を追加（`UPDATE tasks SET archived_at = ... WHERE archived_at IS NULL AND parent_id IN (SELECT id FROM tasks WHERE archived_at IS NOT NULL AND parent_id IS NULL)`）
-    - `app/settings/page.js` — CSVエクスポートの SELECT クエリに `WHERE t.archived_at IS NULL` を追加。説明文を「アクティブなタスクをCSVファイルとしてダウンロードします（アーカイブ済みは除外）」に変更
+    - `lib/db.js` — tasks.sort_order, tasks.today_sort_order, routines.today_sort_orderカラム追加。既存タスクの初期sort_order設定。sort_mode_tasks/sort_mode_today設定シード。idx_tasks_sort_orderインデックス追加
+    - `components/TaskList.js` — sortMode状態+DB永続化、トグルUI、ReorderGapコンポーネント、handleReorder関数（ルート・子の並び替え+アンネスト対応）、manual時ソートロジック、isDraggable条件分岐、子タスク間gap描画、CSS
+    - `app/today/page.js` — sortMode状態+DB永続化、トグルUI、ネイティブDnD（dragStart/dragEnd/dragOver/dragLeave/drop）、today_sort_order永続化（tasks+routines）、manual時ソートロジック、CSS
+    - `components/TaskInput.js` — INSERT前にsort_order算出（MIN(同グループsort_order) - 1）、INSERTカラムにsort_order追加
   - ■ 変更の概要：
-    - QA レポート（STEP A + STEP B）で検出された NG 5件を修正。handleArchive/handleRestore が複数の db.execute を逐次呼び出していたためDBエラー時に不整合状態が発生し得た問題を、BEGIN/COMMIT/ROLLBACK トランザクションで囲むことで解決。handleArchive の子アーカイブは for ループで個別 UPDATE していたものを単一 UPDATE WHERE parent_id 文に統一し、効率と安全性を向上。runAutoArchive は完了日ベースの自動アーカイブのみで親子関係を考慮していなかったため、自動アーカイブ後にアーカイブ済み親の子を連動アーカイブする追加 UPDATE を実装。CSVエクスポートはアーカイブ済みタスクも含めて出力していたため WHERE archived_at IS NULL で除外。復元トーストは親子連動の事実をユーザーに伝えるためメッセージを分岐。
+    - 自動ソートのON/OFF切替を実装。自動時は従来のドロップダウンでソートキーを選択、手動時はDnDで自由に並び替え可能。タスク一覧と今日やるタスクでそれぞれ独立したソートモードと並び順（sort_order/today_sort_order）を保持。DnD操作体系はギャップ→並び替え、タスク上→ネスト、UnnestGap→アンネストの3操作が共存する設計。手動モード時は子タスクを持つ親タスクもドラッグ可能にし、並び替えできるよう変更。新規タスクはMIN(sort_order)-1で常にリスト先頭に挿入される。
   - ■ 影響が想定される箇所：
-    - `app/tasks/page.js` — TaskList を使用。handleArchive/handleRestore のトランザクション化による再レンダリングタイミングは変更なし（setRefreshKey は COMMIT 後に呼ばれる）
-    - `components/TaskList.js` L467-475 — TaskItem への onArchive/onRestore props 受け渡し。handleArchive/handleRestore の引数・戻り値は変更なし
-    - `components/TaskList.js` L800-806 — 子タスク TaskItem への onArchive/onRestore props 受け渡し。変更なし
-    - `components/TaskList.js` L770 — 📤復元ボタンの onClick。handleRestore の呼び出しインターフェースは変更なし
-    - `components/TaskList.js` L785-787 — 📦アーカイブボタンの onClick。handleArchive の呼び出しインターフェースは変更なし
-    - `lib/db.js` L204 — initDb() 内の `await runAutoArchive(db)` 呼び出し。runAutoArchive の引数・戻り値は変更なし
-    - `app/settings/page.js` L546-547 — 設定画面 onBlur からの `runAutoArchive(db)` 呼び出し。インターフェース変更なし
-    - `app/settings/page.js` L579-592 — CSVエクスポートのクエリ変更。CSVインポート（L621-652）には影響なし
-    - `app/today/page.js` — タスク取得クエリ（archived_at IS NULL）は変更なし。runAutoArchive の親子連動により、自動アーカイブ後の表示結果が変わる可能性あり（親がアーカイブされると子も消える）
-    - `app/dashboard/page.js` — 統計クエリ（archived_at IS NULL）は変更なし。同上の表示結果変動あり
-    - `hooks/useMasterData.js` — 変更なし（影響なし）
-    - `components/TaskInput.js` — 親タスク候補クエリ（archived_at IS NULL）は変更なし。同上の候補変動あり
-    - `components/TaskEditModal.js` — 親タスク候補クエリ（archived_at IS NULL）は変更なし。同上の候補変動あり
+    - `app/tasks/page.js` — TaskListコンポーネントを使用（新props不要、内部で自己完結）
+    - `app/layout.js` — FABからTaskInputを呼び出し（sort_order計算は内部で完結）
+    - `app/dashboard/page.js` — タスク統計表示（sort_orderは影響しない）
+    - `app/routines/page.js` — ルーティン管理（today_sort_orderカラム追加だが参照箇所なし）
+    - `components/TaskEditModal.js` — タスク編集（sort_orderは編集対象外）
+    - `hooks/useMasterData.js` — マスターデータ取得（影響なし）
+    - `lib/holidayService.js` — 祝日判定（影響なし）
 
 ---
 
 ## 過去の作業（直近2件まで保持。3件目以降は削除すること）
 
-### 2026-03-01 01:00 — v1.3.0 枝番3-2 アーカイブ機能実装
+### 2026-03-01 11:00 — v1.3.0 枝番3-2 リグレッションテスト + 完了処理
 - ステータス: ✅ 完了
-- やったこと: IMP-2 アーカイブ機能の全仕様を実装（手動/自動アーカイブ、親子連動、アーカイブ済みタブ、除外処理、設定UI）
-- 変更したファイル: `lib/db.js`, `components/TaskList.js`, `components/TaskInput.js`, `components/TaskEditModal.js`, `app/today/page.js`, `app/dashboard/page.js`, `app/settings/page.js`
-
-### 2026-02-28 24:30 — v1.3.0 枝番3-1 リグレッションテスト + 完了処理
-- ステータス: ✅ 完了
-- やったこと: STEP R リグレッションテスト実施（18件全OK、NG=0件）、完了処理（ISSUES.md BUG-3 → 🟢 完了、ROADMAP.md 枝番3-1 → ✅ 完了）
+- やったこと: STEP R リグレッションテスト実施（25件全OK）、ISSUES.md IMP-2 → 完了、ROADMAP.md 枝番3-2 → 完了
 - 変更したファイル: `qa-report.md`, `ISSUES.md`, `ROADMAP.md`, `WORK-LOG.md`
+
+### 2026-03-01 02:00 — v1.3.0 枝番3-2 QA指摘5件修正
+- ステータス: ✅ 完了
+- やったこと: handleArchive/handleRestoreのトランザクション化、runAutoArchiveの親子連動、CSVエクスポートのアーカイブ除外、復元トーストメッセージ改善
+- 変更したファイル: `components/TaskList.js`, `lib/db.js`, `app/settings/page.js`, `qa-report.md`
