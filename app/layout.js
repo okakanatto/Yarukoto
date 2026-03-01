@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import TaskInput from '@/components/TaskInput';
+import { fetchDb } from '@/lib/utils';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
@@ -70,8 +71,7 @@ export default function RootLayout({ children }) {
     const fetchTodayProgress = useCallback(async () => {
         if (!mounted) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const date = new Date().toLocaleDateString('sv-SE');
 
             const tasksRes = await db.select(`

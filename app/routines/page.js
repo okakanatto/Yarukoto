@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMasterData } from '@/hooks/useMasterData';
 import TagSelect from '@/components/TagSelect';
+import { fetchDb, parseTags } from '@/lib/utils';
 
 const FREQ_OPTIONS = [
     { value: 'daily', label: '毎日' },
@@ -43,8 +44,7 @@ export default function RoutinesPage() {
     const loadRoutines = useCallback(async () => {
         setLoading(true);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const sql = `
               SELECT r.*,
                      json_group_array(tg.name) as tag_names,
@@ -59,11 +59,7 @@ export default function RoutinesPage() {
             const rawRoutines = await db.select(sql);
             const parsedRoutines = rawRoutines.map(r => ({
                 ...r,
-                tags: JSON.parse(r.tag_ids || '[]').map((id, index) => ({
-                    id,
-                    name: JSON.parse(r.tag_names || '[]')[index],
-                    color: JSON.parse(r.tag_colors || '[]')[index]
-                })).filter(t => t.id)
+                tags: parseTags(r)
             }));
             setRoutines(parsedRoutines);
         } catch (e) { console.error("Tauri DB fetch routines error:", e); }
@@ -123,8 +119,7 @@ export default function RoutinesPage() {
         };
 
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
 
             if (editingId) {
                 // Update existing routine
@@ -178,8 +173,7 @@ export default function RoutinesPage() {
     const handleDelete = async (id) => {
         if (!confirm('このルーティンを削除しますか？')) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('DELETE FROM routines WHERE id = $1', [id]);
             flash('ok', 'ルーティンを削除しました');
             handleCloseModal();
@@ -193,8 +187,7 @@ export default function RoutinesPage() {
         // Optimistic update
         setRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, enabled: newEnabled ? 1 : 0 } : r));
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('UPDATE routines SET enabled = $1 WHERE id = $2', [newEnabled ? 1 : 0, routine.id]);
             flash('ok', newEnabled ? 'ルーティンを有効にしました' : 'ルーティンを停止しました');
         } catch (e) {

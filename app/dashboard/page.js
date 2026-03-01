@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchDb, formatMin } from '@/lib/utils';
 
 export default function DashboardPage() {
     const [data, setData] = useState(null);
@@ -9,8 +10,7 @@ export default function DashboardPage() {
     useEffect(() => {
         const loadDashboard = async () => {
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
                 const dateStr = new Date().toLocaleDateString('sv-SE');
 
                 // 1. Overall
@@ -154,12 +154,6 @@ export default function DashboardPage() {
     const biz3Pct = biz3.total > 0 ? Math.round((biz3.completed / biz3.total) * 100) : 0;
     const maxDailyCount = Math.max(...dailyCompletions.map(d => d.count), 1);
     const maxStatusCount = Math.max(...statusDistribution.map(s => s.count), 1);
-
-    const formatMin = (m) => {
-        if (!m || m <= 0) return '0分';
-        if (m >= 60) return `${Math.floor(m / 60)}h ${m % 60 ? m % 60 + '分' : ''}`.trim();
-        return `${m}分`;
-    };
 
     return (
         <div className="db-root">

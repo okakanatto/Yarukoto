@@ -7,19 +7,10 @@ import TaskInput from './TaskInput';
 import TaskEditModal from './TaskEditModal';
 import StatusCheckbox from './StatusCheckbox';
 import { useMasterData } from '../hooks/useMasterData';
+import { useFilterOptions } from '../hooks/useFilterOptions';
 import MultiSelectFilter from './MultiSelectFilter';
-
-const SORT_OPTIONS = [
-    { key: 'created_desc', label: '作成日（新しい順）' },
-    { key: 'created_asc', label: '作成日（古い順）' },
-    { key: 'due_asc', label: '期限日（近い順）' },
-    { key: 'due_desc', label: '期限日（遠い順）' },
-    { key: 'importance', label: '重要度（高い順）' },
-    { key: 'urgency', label: '緊急度（高い順）' },
-    { key: 'title', label: 'タイトル（あいう順）' },
-    { key: 'status', label: 'ステータス順' },
-    { key: 'tag', label: 'タグ順' },
-];
+import { fetchDb, parseTags, formatMin } from '@/lib/utils';
+import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 
 export default function TaskList() {
     const [tasks, setTasks] = useState([]);
@@ -41,10 +32,7 @@ export default function TaskList() {
     const allImportance = useMemo(() => masters.importance || [], [masters.importance]);
     const allUrgency = useMemo(() => masters.urgency || [], [masters.urgency]);
 
-    const statusOptions = useMemo(() => allStatuses.map(s => ({ value: s.code, label: s.label, color: s.color })), [allStatuses]);
-    const tagOptions = useMemo(() => allTags.filter(t => !t.archived).map(t => ({ value: t.id, label: t.name, color: t.color })), [allTags]);
-    const importanceOptions = useMemo(() => allImportance.map(i => ({ value: i.level, label: i.label, color: i.color })), [allImportance]);
-    const urgencyOptions = useMemo(() => allUrgency.map(u => ({ value: u.level, label: u.label, color: u.color })), [allUrgency]);
+    const { statusOptions, tagOptions, importanceOptions, urgencyOptions } = useFilterOptions(allStatuses, allTags, allImportance, allUrgency);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -57,8 +45,7 @@ export default function TaskList() {
         const currentReq = ++activeRequestId.current;
         setLoading(true);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
 
             let sql = `
               SELECT t.*,
@@ -124,11 +111,7 @@ export default function TaskList() {
             // Parse SQLite json_group_array results back into JS arrays
             const parsedTasks = rawTasks.map(task => ({
                 ...task,
-                tags: JSON.parse(task.tag_ids || '[]').map((id, index) => ({
-                    id,
-                    name: JSON.parse(task.tag_names || '[]')[index],
-                    color: JSON.parse(task.tag_colors || '[]')[index]
-                })).filter(t => t.id)
+                tags: parseTags(task)
             }));
 
             if (currentReq === activeRequestId.current) {
@@ -148,8 +131,7 @@ export default function TaskList() {
     useEffect(() => {
         (async () => {
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
                 const rows = await db.select("SELECT value FROM app_settings WHERE key = 'sort_mode_tasks'");
                 if (rows.length > 0) setSortMode(rows[0].value);
             } catch (e) { console.error(e); }
@@ -161,8 +143,7 @@ export default function TaskList() {
         const newMode = prevMode === 'auto' ? 'manual' : 'auto';
         setSortMode(newMode);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute(
                 'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
                 ['sort_mode_tasks', newMode]
@@ -185,8 +166,7 @@ export default function TaskList() {
             completed_at: parseInt(newStatusCode) === 3 ? completedNow : null
         } : t));
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             if (parseInt(newStatusCode) === 3) {
                 await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [newStatusCode, taskId]);
             } else {
@@ -202,8 +182,7 @@ export default function TaskList() {
     const handleDelete = async (taskId) => {
         if (!confirm('このタスクを削除しますか？')) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             // BUG-4: 削除前に子タスクの parent_id を NULL 化して独立させる
             await db.execute('UPDATE tasks SET parent_id = NULL WHERE parent_id = $1', [taskId]);
             await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
@@ -220,16 +199,14 @@ export default function TaskList() {
         const newVal = currentTodayDate === today ? null : today;
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, today_date: newVal } : t));
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('UPDATE tasks SET today_date = $1 WHERE id = $2', [newVal, taskId]);
         } catch (e) { console.error(e); fetchTasks(); }
     };
 
     const handleArchive = async (taskId) => {
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const task = tasks.find(t => t.id === taskId);
             if (!task) return;
 
@@ -273,8 +250,7 @@ export default function TaskList() {
 
     const handleRestore = async (taskId) => {
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const task = tasks.find(t => t.id === taskId);
 
             // Use transaction for all-or-nothing parent+children restore
@@ -319,8 +295,7 @@ export default function TaskList() {
     // Helper to persist sort_order for a list of task IDs
     const persistSortOrder = async (orderedIds, parentId = null) => {
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
 
             const query = parentId != null
                 ? 'SELECT id FROM tasks WHERE parent_id = $1 AND archived_at IS NULL ORDER BY sort_order ASC, id ASC'
@@ -410,8 +385,7 @@ export default function TaskList() {
 
         // Persist to DB
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             if (isUnnest) {
                 await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
             }
@@ -434,8 +408,7 @@ export default function TaskList() {
         const unnest = async () => {
             setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: null } : t));
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
                 await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
                 // In manual mode, assign sort_order at the end of root tasks
                 if (sortMode === 'manual') {
@@ -490,8 +463,7 @@ export default function TaskList() {
         setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: parentTask.id } : t));
 
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
 
             // In manual mode, assign sort_order at end of new parent's children
@@ -558,25 +530,7 @@ export default function TaskList() {
             sorted.sort((a, b) => a.sort_order - b.sort_order);
             return sorted;
         }
-        switch (sortKey) {
-            case 'created_desc': sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
-            case 'created_asc': sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); break;
-            case 'due_asc': sorted.sort((a, b) => { if (!a.due_date) return 1; if (!b.due_date) return -1; return new Date(a.due_date) - new Date(b.due_date); }); break;
-            case 'due_desc': sorted.sort((a, b) => { if (!a.due_date) return 1; if (!b.due_date) return -1; return new Date(b.due_date) - new Date(a.due_date); }); break;
-            case 'importance': sorted.sort((a, b) => (b.importance_level || 0) - (a.importance_level || 0)); break;
-            case 'urgency': sorted.sort((a, b) => (b.urgency_level || 0) - (a.urgency_level || 0)); break;
-            case 'title': sorted.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ja')); break;
-            case 'status': sorted.sort((a, b) => {
-                const aOrder = allStatuses.find(s => s.code === a.status_code)?.sort_order || 0;
-                const bOrder = allStatuses.find(s => s.code === b.status_code)?.sort_order || 0;
-                return aOrder - bOrder;
-            }); break;
-            case 'tag': sorted.sort((a, b) => {
-                const aTag = a.tags && a.tags.length > 0 ? a.tags[0].name : '\uFFFF';
-                const bTag = b.tags && b.tags.length > 0 ? b.tags[0].name : '\uFFFF';
-                return aTag.localeCompare(bTag, 'ja');
-            }); break;
-        }
+        sorted.sort(taskComparator(sortKey, allStatuses));
         return sorted;
     }, [parentTasks, sortKey, sortMode, allStatuses]);
 
@@ -1006,7 +960,7 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
                         {task.urgency_label && (
                             <span className="tc-meta-item"><span className="tc-dot" style={{ backgroundColor: task.urgency_color }} /> 緊急度: {task.urgency_label}</span>
                         )}
-                        {task.estimated_hours > 0 && <span className="tc-meta-item">⏱ {task.estimated_hours >= 60 ? `${Math.floor(task.estimated_hours / 60)}h${task.estimated_hours % 60 ? ` ${task.estimated_hours % 60}分` : ''}` : `${task.estimated_hours}分`}</span>}
+                        {task.estimated_hours > 0 && <span className="tc-meta-item">⏱ {formatMin(task.estimated_hours)}</span>}
                         {task.notes?.trim() && <span className="tc-meta-item" title={task.notes}>📝 メモ</span>}
                     </div>
                 </div>

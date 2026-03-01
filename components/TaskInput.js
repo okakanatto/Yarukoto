@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import CalendarPicker from './CalendarPicker';
 import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
+import { fetchDb } from '@/lib/utils';
 
 export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
     const [title, setTitle] = useState('');
@@ -31,8 +32,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
         let cancelled = false;
         (async () => {
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
                 const rows = await db.select(
                     'SELECT id, title FROM tasks WHERE parent_id IS NULL AND status_code != 3 AND status_code != 5 AND archived_at IS NULL ORDER BY title'
                 );
@@ -53,8 +53,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
         const actualParentId = (parentId ? parseInt(parentId) : null) || predefinedParentId || null;
 
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
 
             // Calculate sort_order to insert at top of list (IMP-4)
             let newSortOrder = 0;

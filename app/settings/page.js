@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ColorPalette from '@/components/ColorPalette';
+import { fetchDb } from '@/lib/utils';
 
 const TABS = [
     { key: 'tags', label: 'タグ', icon: '🏷️' },
@@ -70,8 +71,7 @@ export default function Settings() {
     const load = async () => {
         setLoading(true);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const [importance, urgency, status, tagsData] = await Promise.all([
                 db.select('SELECT * FROM importance_master ORDER BY level'),
                 db.select('SELECT * FROM urgency_master ORDER BY level'),
@@ -120,8 +120,7 @@ export default function Settings() {
         const idF = type === 'status' ? 'code' : 'level';
         const table = type === 'status' ? 'status_master' : `${type}_master`;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             for (let i = 0; i < data[type].length; i++) {
                 const x = data[type][i];
                 await db.execute(
@@ -137,8 +136,7 @@ export default function Settings() {
     const saveTags = async () => {
         setSaving(true);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const active = data.tags.filter(t => !t.archived);
             const archived = data.tags.filter(t => t.archived);
             for (let i = 0; i < active.length; i++) {
@@ -163,8 +161,7 @@ export default function Settings() {
     const addStatus = async () => {
         if (!newStatus.label.trim()) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM status_master');
             const nextSort = (maxSort[0]?.ms || 0) + 1;
             const result = await db.execute(
@@ -181,8 +178,7 @@ export default function Settings() {
     const delStatus = async (code) => {
         if (!confirm('このステータスを削除しますか？')) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             // Check if any tasks use this status
             const usage = await db.select('SELECT COUNT(*) as cnt FROM tasks WHERE status_code = $1', [code]);
             if (usage[0]?.cnt > 0) {
@@ -199,8 +195,7 @@ export default function Settings() {
         e.preventDefault();
         if (!newTag.name.trim()) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tags');
             const nextSort = (maxSort[0]?.ms || 0) + 1;
             const result = await db.execute(
@@ -227,8 +222,7 @@ export default function Settings() {
         const tag = data.tags.find(t => t.id === id);
         if (!tag) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('UPDATE tags SET name = $1, color = $2 WHERE id = $3', [tag.name, tag.color, id]);
         } catch (e) { console.error(e); }
     };
@@ -236,8 +230,7 @@ export default function Settings() {
     const delTag = async (id) => {
         if (!confirm('このタグを削除しますか？')) return;
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('DELETE FROM tags WHERE id = $1', [id]);
             setData(p => ({ ...p, tags: p.tags.filter(t => t.id !== id) }));
             flash('ok', 'タグを削除しました');
@@ -251,8 +244,7 @@ export default function Settings() {
         // Optimistic update
         setData(p => ({ ...p, tags: p.tags.map(t => t.id === id ? { ...t, archived: newArchived } : t) }));
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('UPDATE tags SET archived = $1 WHERE id = $2', [newArchived, id]);
             flash('ok', newArchived ? 'タグをアーカイブしました' : 'タグのアーカイブを解除しました');
         } catch (e) {
@@ -271,8 +263,7 @@ export default function Settings() {
         // Optimistic update
         setAppSettings(prev => ({ ...prev, [key]: next }));
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute(
                 'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
                 [key, next]
@@ -532,8 +523,7 @@ export default function Settings() {
                                                     const val = String(parseInt(appSettings.auto_archive_days) || 0);
                                                     setAppSettings(prev => ({ ...prev, auto_archive_days: val }));
                                                     try {
-                                                        const { getDb } = await import('@/lib/db');
-                                                        const db = await getDb();
+                                                        const db = await fetchDb();
                                                         await db.execute(
                                                             'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
                                                             ['auto_archive_days', val]
@@ -574,8 +564,7 @@ export default function Settings() {
                                         </div>
                                         <button className="s-btn-primary" onClick={async () => {
                                             try {
-                                                const { getDb } = await import('@/lib/db');
-                                                const db = await getDb();
+                                                const db = await fetchDb();
                                                 const rows = await db.select(`
                                                     SELECT t.*,
                                                            im.label as importance_label, um.label as urgency_label, sm.label as status_label
@@ -624,8 +613,7 @@ export default function Settings() {
                                                     const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"(.*)"$/, '$1'));
                                                     const titleIdx = headers.indexOf('title');
                                                     if (titleIdx === -1) { flash('err', 'title列が見つかりません'); ev.target.value = ''; return; }
-                                                    const { getDb } = await import('@/lib/db');
-                                                    const db = await getDb();
+                                                    const db = await fetchDb();
                                                     let count = 0;
                                                     for (let i = 1; i < lines.length; i++) {
                                                         // Simple CSV parse (handles quoted fields)
@@ -663,8 +651,7 @@ export default function Settings() {
                                             if (!confirm('本当にすべてのタスクとルーティンを削除しますか？\n\nこの操作は元に戻せません。')) return;
                                             if (!confirm('最終確認：すべてのユーザーデータ（タスク・ルーティン）が完全に削除されます。よろしいですか？')) return;
                                             try {
-                                                const { getDb } = await import('@/lib/db');
-                                                const db = await getDb();
+                                                const db = await fetchDb();
 
                                                 // BUG-2: ルーティンデータも削除対象に含める（子テーブルから先に削除）
                                                 await db.execute('DELETE FROM routine_completions');

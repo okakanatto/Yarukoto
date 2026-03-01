@@ -4,6 +4,9 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import StatusCheckbox from '@/components/StatusCheckbox';
 import TaskEditModal from '@/components/TaskEditModal';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
+import { fetchDb, parseTags, formatMin } from '@/lib/utils';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
+import { taskComparator } from '@/lib/taskSorter';
 
 function addDays(base, days) {
     const d = new Date(base);
@@ -63,16 +66,12 @@ export default function TodayPage() {
     // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
     const activeRequestId = useRef(0);
 
-    const statusOptions = useMemo(() => statuses.map(s => ({ value: s.code, label: s.label, color: s.color })), [statuses]);
-    const tagOptions = useMemo(() => allTags.filter(t => !t.archived).map(t => ({ value: t.id, label: t.name, color: t.color })), [allTags]);
-    const importanceOptions = useMemo(() => allImportance.map(i => ({ value: i.level, label: i.label, color: i.color })), [allImportance]);
-    const urgencyOptions = useMemo(() => allUrgency.map(u => ({ value: u.level, label: u.label, color: u.color })), [allUrgency]);
+    const { statusOptions, tagOptions, importanceOptions, urgencyOptions } = useFilterOptions(statuses, allTags, allImportance, allUrgency);
 
     useEffect(() => {
         (async () => {
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
                 const rows = await db.select('SELECT * FROM status_master ORDER BY sort_order, code');
                 setStatuses(rows);
 
@@ -99,8 +98,7 @@ export default function TodayPage() {
         const currentReq = ++activeRequestId.current;
         setLoading(true);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
 
             const dObj = new Date(date + 'T00:00:00');
             const dayOfWeek = dObj.getDay();
@@ -206,11 +204,7 @@ export default function TodayPage() {
                     estimated_hours: r.estimated_hours,
                     due_date: null,
                     today_sort_order: r.today_sort_order || 0,
-                    tags: JSON.parse(r.tag_ids || '[]').map((id, index) => ({
-                        id,
-                        name: JSON.parse(r.tag_names || '[]')[index],
-                        color: JSON.parse(r.tag_colors || '[]')[index]
-                    })).filter(t => t.id)
+                    tags: parseTags(r)
                 }));
 
             // Get tasks assigned to this date OR overdue standard tasks
@@ -238,11 +232,7 @@ export default function TodayPage() {
 
             const standardTasks = rawTasks.map(t => ({
                 ...t,
-                tags: JSON.parse(t.tag_ids || '[]').map((id, index) => ({
-                    id,
-                    name: JSON.parse(t.tag_names || '[]')[index],
-                    color: JSON.parse(t.tag_colors || '[]')[index]
-                })).filter(tg => tg.id)
+                tags: parseTags(t)
             }));
 
             // Combine and sort
@@ -260,48 +250,7 @@ export default function TodayPage() {
                     return (b.importance_level || 0) - (a.importance_level || 0);
                 });
             } else {
-                unified.sort((a, b) => {
-                    const aDone = a.status_code === 3;
-                    const bDone = b.status_code === 3;
-
-                    switch (sortKey) {
-                        case 'created_desc': return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-                        case 'created_asc': return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-                        case 'due_asc': {
-                            if (!a.due_date) return 1; if (!b.due_date) return -1;
-                            return new Date(a.due_date) - new Date(b.due_date);
-                        }
-                        case 'due_desc': {
-                            if (!a.due_date) return 1; if (!b.due_date) return -1;
-                            return new Date(b.due_date) - new Date(a.due_date);
-                        }
-                        case 'importance': return (b.importance_level || 0) - (a.importance_level || 0);
-                        case 'urgency': return (b.urgency_level || 0) - (a.urgency_level || 0);
-                        case 'title': return (a.title || '').localeCompare(b.title || '', 'ja');
-                        case 'status': {
-                            const aOrder = statuses.find(s => s.code === a.status_code)?.sort_order || 0;
-                            const bOrder = statuses.find(s => s.code === b.status_code)?.sort_order || 0;
-                            return aOrder - bOrder;
-                        }
-                        case 'tag': {
-                            const aTag = a.tags && a.tags.length > 0 ? a.tags[0].name : '\uFFFF';
-                            const bTag = b.tags && b.tags.length > 0 ? b.tags[0].name : '\uFFFF';
-                            return aTag.localeCompare(bTag, 'ja');
-                        }
-                        case 'priority':
-                        default: {
-                            if (aDone && !bDone) return 1;
-                            if (!aDone && bDone) return -1;
-                            const aImp = a.importance_level || 0;
-                            const bImp = b.importance_level || 0;
-                            if (aImp !== bImp) return bImp - aImp;
-                            const aUrg = a.urgency_level || 0;
-                            const bUrg = b.urgency_level || 0;
-                            if (aUrg !== bUrg) return bUrg - aUrg;
-                            return 0;
-                        }
-                    }
-                });
+                unified.sort(taskComparator(sortKey, statuses));
             }
 
             if (currentReq === activeRequestId.current) {
@@ -343,8 +292,7 @@ export default function TodayPage() {
             // 着手中(2)はUI表示のみ、DB操作不要
             if (code === 2) return;
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
 
                 if (code === 3) {
                     await db.execute('INSERT OR IGNORE INTO routine_completions (routine_id, completion_date) VALUES ($1, $2)', [item.routine_id, selectedDate]);
@@ -358,8 +306,7 @@ export default function TodayPage() {
             }
         } else {
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
 
                 if (code === 3) {
                     await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [code, taskId]);
@@ -377,8 +324,7 @@ export default function TodayPage() {
     const handleRemove = async (taskId) => {
         setTasks(prev => prev.filter(t => t.id !== taskId));
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute('UPDATE tasks SET today_date = NULL WHERE id = $1', [taskId]);
         } catch (e) { console.error(e); loadTasks(selectedDate); }
     };
@@ -388,8 +334,7 @@ export default function TodayPage() {
         const newMode = prevMode === 'auto' ? 'manual' : 'auto';
         setSortMode(newMode);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             await db.execute(
                 'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
                 ['sort_mode_today', newMode]
@@ -431,8 +376,7 @@ export default function TodayPage() {
         setTasks(newTasks);
         // Persist today_sort_order
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
             for (let idx = 0; idx < newTasks.length; idx++) {
                 const t = newTasks[idx];
                 if (t.is_routine) {
@@ -466,12 +410,6 @@ export default function TodayPage() {
     const currentTab = dateTabs.find(t => t.date === selectedDate) || dateTabs[0];
     const selectedD = new Date(selectedDate + 'T00:00:00');
     const dateStr = `${selectedD.getFullYear()}年${selectedD.getMonth() + 1}月${selectedD.getDate()}日（${currentTab.weekday}）`;
-
-    const formatMin = (m) => {
-        if (!m || m <= 0) return '0分';
-        if (m >= 60) return `${Math.floor(m / 60)}h ${m % 60 ? m % 60 + '分' : ''}`.trim();
-        return `${m}分`;
-    };
 
     return (
         <div className="today-root">

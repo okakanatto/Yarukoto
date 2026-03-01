@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import CalendarPicker from './CalendarPicker';
 import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
+import { fetchDb } from '@/lib/utils';
 
 export default function TaskEditModal({ task, onClose, onSaved }) {
     const [title, setTitle] = useState(task.title || '');
@@ -27,8 +28,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
         let cancelled = false;
         (async () => {
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
 
                 // BUG-6: Check if this task has children
                 const childRows = await db.select(
@@ -62,8 +62,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
         if (!title.trim() || saving) return;
         setSaving(true);
         try {
-            const { getDb } = await import('@/lib/db');
-            const db = await getDb();
+            const db = await fetchDb();
 
             // BUG-6: DB側バリデーション — 子タスクを持つタスクに親を設定させない
             if (parentId) {

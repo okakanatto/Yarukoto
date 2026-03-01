@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { fetchDb } from '@/lib/utils';
 
 export function useMasterData() {
     const [masters, setMasters] = useState({ importance: [], urgency: [], status: [] });
@@ -11,8 +12,7 @@ export function useMasterData() {
 
         const fetchData = async () => {
             try {
-                const { getDb } = await import('@/lib/db');
-                const db = await getDb();
+                const db = await fetchDb();
 
                 const [importance, urgency, status, tagsData] = await Promise.all([
                     db.select('SELECT * FROM importance_master ORDER BY level'),
