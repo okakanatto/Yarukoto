@@ -569,7 +569,7 @@ export default function Settings() {
                                             <span className="dm-icon">📤</span>
                                             <div>
                                                 <strong>CSVエクスポート</strong>
-                                                <p className="dm-desc">全タスクをCSVファイルとしてダウンロードします</p>
+                                                <p className="dm-desc">アクティブなタスクをCSVファイルとしてダウンロードします（アーカイブ済みは除外）</p>
                                             </div>
                                         </div>
                                         <button className="s-btn-primary" onClick={async () => {
@@ -583,6 +583,7 @@ export default function Settings() {
                                                     LEFT JOIN importance_master im ON t.importance_level = im.level
                                                     LEFT JOIN urgency_master um ON t.urgency_level = um.level
                                                     LEFT JOIN status_master sm ON t.status_code = sm.code
+                                                    WHERE t.archived_at IS NULL
                                                     ORDER BY t.id
                                                 `);
                                                 const header = 'id,title,status,importance,urgency,start_date,due_date,estimated_minutes,notes,created_at';

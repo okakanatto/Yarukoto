@@ -216,18 +216,22 @@ export default function TaskList() {
                     window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '未完了の子タスクがあるためアーカイブできません', type: 'error' } }));
                     return;
                 }
-                // Archive children together with parent
-                if (children.length > 0) {
-                    const childIds = children.filter(c => !tasks.find(t => t.id === c.id)?.archived_at).map(c => c.id);
-                    if (childIds.length > 0) {
-                        for (const cid of childIds) {
-                            await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [cid]);
-                        }
-                    }
-                }
             }
 
-            await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
+            // Use transaction for all-or-nothing parent+children archive
+            await db.execute('BEGIN');
+            try {
+                if (!task.parent_id) {
+                    // Archive children together with parent
+                    await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1 AND archived_at IS NULL", [taskId]);
+                }
+                await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
+                await db.execute('COMMIT');
+            } catch (txErr) {
+                await db.execute('ROLLBACK');
+                throw txErr;
+            }
+
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
             setRefreshKey(k => k + 1);
         } catch (e) {
@@ -240,20 +244,36 @@ export default function TaskList() {
         try {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
-
-            // If this is a parent task, restore children too
             const task = tasks.find(t => t.id === taskId);
-            if (task && !task.parent_id) {
-                await db.execute('UPDATE tasks SET archived_at = NULL WHERE parent_id = $1', [taskId]);
+
+            // Use transaction for all-or-nothing parent+children restore
+            await db.execute('BEGIN');
+            try {
+                // If this is a parent task, restore children too
+                if (task && !task.parent_id) {
+                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE parent_id = $1', [taskId]);
+                }
+
+                // If this is a child, also restore the parent
+                if (task && task.parent_id) {
+                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [task.parent_id]);
+                }
+
+                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
+                await db.execute('COMMIT');
+            } catch (txErr) {
+                await db.execute('ROLLBACK');
+                throw txErr;
             }
 
-            // If this is a child, also restore the parent
-            if (task && task.parent_id) {
-                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [task.parent_id]);
+            // Descriptive toast for parent-child restore
+            let toastMsg = '復元しました';
+            if (task && !task.parent_id && tasks.some(t => t.parent_id === taskId)) {
+                toastMsg = '親タスクと子タスクをまとめて復元しました';
+            } else if (task && task.parent_id) {
+                toastMsg = '子タスクと親タスクを復元しました';
             }
-
-            await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '復元しました', type: 'success' } }));
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: toastMsg, type: 'success' } }));
             setRefreshKey(k => k + 1);
         } catch (e) {
             console.error(e);
