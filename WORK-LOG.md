@@ -20,8 +20,11 @@
   - ROADMAP.md の R-4 を完了マーク（検証＋修正が完了したため）
   - v1.3.1 リリース前ビルド確認（`npm run tauri build`）
 - **注意事項・申し送り**:
-  - NG-1/NG-2 は SQL WHERE 句への条件追加のみ。他のクエリや画面への影響なし。
-  - NG-B-1 は `useEffect` の追加のみ。既存のフォーム機能やモーダル開閉ロジックへの影響なし。
+  - **【変更サマリー】**
+  - **変更した機能**: サイドバーの「今日やるタスク」進捗カウント（アーカイブ済みタスクの除外）/ 「今日やるタスク」画面のタスク一覧表示（キャンセル済みタスクの除外）/ ルーティン編集モーダルの Escape キーによる閉じ操作
+  - **変更したファイル**: `app/layout.js`（fetchTodayProgress SQL に AND archived_at IS NULL 追加）/ `hooks/useTodayTasks.js`（loadTasks SQL に AND t.status_code != 5 追加）/ `app/routines/_components/RoutineFormModal.js`（useEffect import 追加 + Escape キーリスナー追加）/ `qa-report.md`（修正済みマーク追加）/ `WORK-LOG.md`
+  - **変更の概要**: (1) NG-1: layout.js:79 の fetchTodayProgress SQL に AND archived_at IS NULL を追加。today/page.js はアーカイブ除外していたがサイドバーは除外しておらず件数不一致だった。(2) NG-2: useTodayTasks.js:184 の loadTasks SQL に AND t.status_code != 5 を追加。サイドバーやダッシュボードはキャンセル除外していたが今日やるタスク画面は除外していなかった。(3) NG-B-1: RoutineFormModal.js に TaskEditModal.js と同様の useEffect + keydown Escape キーリスナーを追加。
+  - **影響が想定される箇所**: `app/layout.js` の fetchTodayProgress（サイドバー進捗リング表示）/ `hooks/useTodayTasks.js` の loadTasks → `app/today/page.js`（今日やるタスク画面全体のタスク表示・件数・進捗リング）/ `app/routines/_components/RoutineFormModal.js` → `app/routines/page.js`（ルーティン新規作成・編集モーダルの開閉操作）/ `hooks/useTaskActions.js`（useTodayTasks.js から参照されるが SQL 変更のみのため影響なし）/ `components/TaskList.js`（独立した SQL クエリのため影響なし）
 
 ---
 
