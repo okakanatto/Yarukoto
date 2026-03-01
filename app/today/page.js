@@ -384,7 +384,8 @@ export default function TodayPage() {
     };
 
     const toggleSortMode = async () => {
-        const newMode = sortMode === 'auto' ? 'manual' : 'auto';
+        const prevMode = sortMode;
+        const newMode = prevMode === 'auto' ? 'manual' : 'auto';
         setSortMode(newMode);
         try {
             const { getDb } = await import('@/lib/db');
@@ -393,13 +394,18 @@ export default function TodayPage() {
                 'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
                 ['sort_mode_today', newMode]
             );
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            setSortMode(prevMode);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '設定の保存に失敗しました', type: 'error' } }));
+        }
     };
 
     // Native DnD handlers for manual sort
     const onTodayDragStart = (i) => (e) => {
-        dragIdx.current = i;
+        dragIdx.current = tasks[i]?.id;
         e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
         requestAnimationFrame(() => { e.target.style.opacity = '0.4'; });
     };
     const onTodayDragEnd = (e) => {
@@ -416,8 +422,9 @@ export default function TodayPage() {
     const onTodayDrop = (i) => async (e) => {
         e.preventDefault();
         setDragOverIdx(null);
-        const from = dragIdx.current;
-        if (from === null || from === i) return;
+        const fromId = dragIdx.current;
+        const from = tasks.findIndex(t => t.id === fromId);
+        if (from === -1 || from === i) return;
         const newTasks = [...tasks];
         const [moved] = newTasks.splice(from, 1);
         newTasks.splice(i, 0, moved);
@@ -434,7 +441,11 @@ export default function TodayPage() {
                     await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [idx + 1, t.id]);
                 }
             }
-        } catch (err) { console.error(err); loadTasks(selectedDate); }
+        } catch (err) {
+            console.error(err);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
+            loadTasks(selectedDate);
+        }
     };
 
     const stats = useMemo(() => {
@@ -813,7 +824,7 @@ export default function TodayPage() {
         .today-drag-handle:hover { opacity:1; }
         .today-drag-handle:active { cursor:grabbing; }
         .today-card.drag-over {
-          box-shadow:0 0 0 2px var(--color-accent), 0 4px 12px rgba(0,0,0,.1);
+          box-shadow:0 0 0 2px var(--color-primary), 0 4px 12px rgba(0,0,0,.1);
           transform:scale(1.01);
         }
 
