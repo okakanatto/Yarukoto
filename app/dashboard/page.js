@@ -119,13 +119,27 @@ export default function DashboardPage() {
                     ORDER BY due_date ASC
                 `, [dateStr]);
 
+                // 7. Today's completed tasks list (ENH-1)
+                const todayCompletedTasks = await db.select(`
+                    SELECT id, title, completed_at
+                    FROM tasks
+                    WHERE status_code = 3 AND date(completed_at) = $1 AND archived_at IS NULL
+                    ORDER BY completed_at DESC
+                `, [dateStr]);
+
+                // Today's completed routines (with title from routines table)
+                const todayCompletedRoutines = allRoutines
+                    .filter(r => todayCompSet.has(r.id))
+                    .map(r => ({ id: `routine_${r.id}`, title: r.title, is_routine: true }));
+
                 setData({
                     overall: { total: overallData[0]?.total || 0, completed: overallData[0]?.completed || 0 },
                     today: { total: todayTotal, completed: todayCompleted, remainingMinutes: todayRemainingMinutes },
                     biz3: { total: biz3Total, completed: biz3Completed },
                     dailyCompletions,
                     statusDistribution: stData,
-                    overdue: { count: overdueTasks.length, tasks: overdueTasks.slice(0, 5) }
+                    overdue: { count: overdueTasks.length, tasks: overdueTasks.slice(0, 5) },
+                    todayDone: [...todayCompletedTasks.map(t => ({ ...t, is_routine: false })), ...todayCompletedRoutines]
                 });
             } catch (err) {
                 console.error("Dashboard Tauri DB Error", err);
@@ -148,7 +162,7 @@ export default function DashboardPage() {
 
     if (!data) return null;
 
-    const { overall, today, biz3, dailyCompletions, statusDistribution, overdue } = data;
+    const { overall, today, biz3, dailyCompletions, statusDistribution, overdue, todayDone } = data;
     const overallPct = overall.total > 0 ? Math.round((overall.completed / overall.total) * 100) : 0;
     const todayPct = today.total > 0 ? Math.round((today.completed / today.total) * 100) : 0;
     const biz3Pct = biz3.total > 0 ? Math.round((biz3.completed / biz3.total) * 100) : 0;
@@ -223,6 +237,28 @@ export default function DashboardPage() {
                 </div>
             </div>
 
+            {/* Today's Completed Tasks (ENH-1) */}
+            {todayDone.length > 0 && (
+                <div className="db-card db-today-done">
+                    <h3 className="db-card-title">🎉 今日完了したタスク <span className="done-badge">{todayDone.length}件</span></h3>
+                    <div className="done-list">
+                        {todayDone.slice(0, 10).map(t => (
+                            <div key={t.id} className="done-item">
+                                <span className="done-check">✓</span>
+                                <span className="done-title">{t.title}</span>
+                                {t.is_routine && <span className="done-routine-badge">🔁</span>}
+                                {t.completed_at && (
+                                    <span className="done-time">{t.completed_at.split(' ')[1]?.slice(0, 5)}</span>
+                                )}
+                            </div>
+                        ))}
+                        {todayDone.length > 10 && (
+                            <div className="done-more">他 {todayDone.length - 10} 件</div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Overdue Warning */}
             {overdue.count > 0 && (
                 <div className="db-card db-overdue">
@@ -283,6 +319,28 @@ export default function DashboardPage() {
         .status-count { margin-left: auto; font-weight: 700; color: var(--color-text); font-size: 0.85rem; }
         .status-bar-track { height: 6px; background: var(--color-surface-hover); border-radius: 3px; overflow: hidden; }
         .status-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Today Done (ENH-1) */
+        .db-today-done { border-color: rgba(22, 163, 74, 0.2); background: rgba(22, 163, 74, 0.02); margin-bottom: 1rem; }
+        .done-badge {
+          background: var(--color-success); color: white; font-size: 0.7rem;
+          padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; font-weight: 700;
+        }
+        .done-list { display: flex; flex-direction: column; gap: 0.35rem; }
+        .done-item {
+          display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem;
+          border-radius: var(--radius-sm); transition: background 0.15s;
+        }
+        .done-item:hover { background: rgba(22, 163, 74, 0.04); }
+        .done-check {
+          color: var(--color-success); font-weight: 700; font-size: 0.78rem;
+          width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+          background: var(--color-success-bg); border-radius: 50%; flex-shrink: 0;
+        }
+        .done-title { font-size: 0.85rem; color: var(--color-text); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .done-routine-badge { font-size: 0.75rem; flex-shrink: 0; }
+        .done-time { font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0; }
+        .done-more { font-size: 0.8rem; color: var(--color-text-muted); text-align: center; padding-top: 0.3rem; }
 
         /* Overdue */
         .db-overdue { border-color: rgba(220, 38, 38, 0.2); background: rgba(220, 38, 38, 0.02); }

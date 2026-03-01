@@ -27,18 +27,45 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
 
     const handleStatusChange = useCallback(async (taskId, newStatusCode) => {
         addProcessing(taskId);
+        const code = parseInt(newStatusCode);
         const completedNow = new Date().toLocaleDateString('sv-SE') + ' ' + new Date().toLocaleTimeString('sv-SE');
         setTasks(prev => prev.map(t => t.id === taskId ? {
             ...t,
-            status_code: parseInt(newStatusCode),
-            completed_at: parseInt(newStatusCode) === 3 ? completedNow : null
+            status_code: code,
+            completed_at: code === 3 ? completedNow : null
         } : t));
         try {
             const db = await fetchDb();
-            if (parseInt(newStatusCode) === 3) {
+            if (code === 3) {
                 await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [newStatusCode, taskId]);
             } else {
                 await db.execute('UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2', [newStatusCode, taskId]);
+            }
+
+            // ENH-5: Auto-complete parent when all children are complete
+            if (code === 3) {
+                const settingRows = await db.select("SELECT value FROM app_settings WHERE key = 'auto_complete_parent'");
+                const enabled = settingRows[0]?.value === '1';
+                if (enabled) {
+                    const taskRows = await db.select('SELECT parent_id FROM tasks WHERE id = $1', [taskId]);
+                    const parentId = taskRows[0]?.parent_id;
+                    if (parentId) {
+                        const siblings = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [parentId]);
+                        const allComplete = siblings.every(s => s.id === taskId ? true : s.status_code === 3);
+                        if (allComplete) {
+                            const parentRows = await db.select('SELECT status_code FROM tasks WHERE id = $1', [parentId]);
+                            if (parentRows[0] && parentRows[0].status_code !== 3) {
+                                await db.execute("UPDATE tasks SET status_code = 3, completed_at = datetime('now', 'localtime') WHERE id = $1", [parentId]);
+                                setTasks(prev => prev.map(t => t.id === parentId ? {
+                                    ...t,
+                                    status_code: 3,
+                                    completed_at: completedNow
+                                } : t));
+                                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '子タスクがすべて完了したため、親タスクも完了にしました', type: 'success' } }));
+                            }
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.error(e);
@@ -70,7 +97,11 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         try {
             const db = await fetchDb();
             await db.execute('UPDATE tasks SET today_date = $1 WHERE id = $2', [newVal, taskId]);
-        } catch (e) { console.error(e); fetchTasks(); }
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '今日やるタスクの変更に失敗しました', type: 'error' } }));
+            fetchTasks();
+        }
     }, [setTasks, fetchTasks]);
 
     const handleArchive = useCallback(async (taskId) => {
@@ -133,6 +164,7 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
     const handleRestore = useCallback(async (taskId) => {
         const tasks = getTasks();
         const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
 
         addProcessing(taskId);
 

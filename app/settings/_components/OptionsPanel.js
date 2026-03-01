@@ -67,6 +67,26 @@ export default function OptionsPanel({ appSettings, setAppSettings, flash }) {
                 </div>
                 <div className="opt-card">
                     <div className="opt-info">
+                        <span className="opt-icon">✅</span>
+                        <div>
+                            <strong className="opt-title">子タスク全完了で親タスクも完了にする</strong>
+                            <p className="opt-desc">
+                                すべての子タスクが完了になったとき、親タスクのステータスも自動的に完了に変更します。
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className={`opt-toggle ${appSettings.auto_complete_parent === '1' ? 'on' : ''}`}
+                        onClick={() => toggleSetting('auto_complete_parent')}
+                        role="switch"
+                        aria-checked={appSettings.auto_complete_parent === '1'}
+                    >
+                        <span className="opt-toggle-knob" />
+                    </button>
+                </div>
+                <div className="opt-card">
+                    <div className="opt-info">
                         <span className="opt-icon">📦</span>
                         <div>
                             <strong className="opt-title">完了タスクの自動アーカイブ</strong>
