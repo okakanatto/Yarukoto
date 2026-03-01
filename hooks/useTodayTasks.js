@@ -25,13 +25,15 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
     const [allTags, setAllTags] = useState([]);
     const [allImportance, setAllImportance] = useState([]);
     const [allUrgency, setAllUrgency] = useState([]);
-    const [showOverdue, setShowOverdue] = useState(true);
+    const [showOverdue, setShowOverdue] = useState(false); // DB default is '0' (disabled)
 
     const [sortKey, setSortKey] = useState('priority');
     const [sortMode, setSortMode] = useState('auto');
 
     // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
     const activeRequestId = useRef(0);
+    // Guards against fetching tasks before master data (statuses, settings) is loaded
+    const masterDataReady = useRef(false);
 
     // Load master data once on mount
     useEffect(() => {
@@ -56,11 +58,18 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
 
                 const sortModeRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['sort_mode_today']);
                 if (sortModeRows.length > 0) setSortMode(sortModeRows[0].value);
+
+                // Mark master data as ready so loadTasks can proceed
+                masterDataReady.current = true;
             } catch (e) { console.error('Failed to load statuses/tags:', e); }
         })();
     }, []);
 
     const loadTasks = useCallback(async (date) => {
+        // Skip fetching until master data (statuses, settings) is loaded.
+        // The effect will re-run once master data updates change loadTasks dependencies.
+        if (!masterDataReady.current) return;
+
         const currentReq = ++activeRequestId.current;
         setLoading(true);
         try {
@@ -198,8 +207,14 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                 tags: parseTags(t)
             }));
 
-            // Combine and sort
-            const unified = [...routineTasks, ...standardTasks];
+            // Combine, deduplicate by id, and sort
+            const merged = [...routineTasks, ...standardTasks];
+            const seen = new Set();
+            const unified = merged.filter(t => {
+                if (seen.has(t.id)) return false;
+                seen.add(t.id);
+                return true;
+            });
 
             if (sortMode === 'manual') {
                 unified.sort((a, b) => {
