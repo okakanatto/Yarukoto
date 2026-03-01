@@ -295,6 +295,7 @@ export default function TaskList() {
                                 activeId={activeId}
                                 activeDragParentId={activeTaskData?.parent_id}
                                 isProcessing={processingIds.has(task.id)}
+                                processingIds={processingIds}
                             />
                             {/* Manual mode: ReorderGap after each root task */}
                             {!showArchived && sortMode === 'manual' && activeId && (
@@ -411,6 +412,7 @@ export default function TaskList() {
                 display: flex; align-items: center; justify-content: center;
                 width: 20px; height: 100%; align-self: stretch;
                 opacity: 0.5; transition: opacity 0.2s;
+                font-size: .85rem; user-select: none;
             }
             .tc-handle:hover, .tc-card:hover .tc-handle { opacity: 1; }
             .tc-handle:active { cursor: grabbing; }
@@ -432,7 +434,7 @@ export default function TaskList() {
             .tc-tag { font-size:.63rem; font-weight:600; padding:.1rem .5rem; border-radius:10px; color:#fff; }
 
             .tc-meta { display:flex; gap:.7rem; flex-wrap:wrap; }
-            .tc-meta-item { font-size:.76rem; color:var(--color-text-muted); display:flex; align-items:center; gap:.2rem; white-space:nowrap; }
+            .tc-meta-item { font-size:.75rem; color:var(--color-text-muted); display:flex; align-items:center; gap:.2rem; white-space:nowrap; }
             .tc-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
             .tc-badge { font-size:.6rem; font-weight:700; padding:.05rem .35rem; border-radius:6px; margin-left:.15rem; }
             .tc-badge-danger  { background:var(--color-danger-bg); color:var(--color-danger); }
@@ -459,6 +461,9 @@ export default function TaskList() {
             .tc-restore-btn { opacity:1 !important; }
             .tc-restore-btn:hover { background:rgba(79,110,247,.1); border-color:rgba(79,110,247,.2); color:var(--color-primary); }
             .tc-status-label { font-size:.78rem; font-weight:600; white-space:nowrap; }
+
+            .tc-act-btn:disabled { opacity:0.5; cursor:not-allowed; }
+            .tc-status-select:disabled { opacity:0.5; cursor:not-allowed; }
 
             /* Archive Tabs */
             .tl-archive-tabs {
@@ -492,21 +497,6 @@ export default function TaskList() {
               box-shadow:0 2px 8px rgba(79,110,247,.2);
             }
             .tl-sort-toggle.active:hover { filter:brightness(1.1); }
-
-            /* Reorder gap */
-            .tl-reorder-gap {
-              position:relative; padding:3px 0;
-              transition:padding .15s ease; animation:fadeIn .2s ease;
-            }
-            .tl-reorder-gap-line {
-              height:2px; border-radius:1px;
-              background:transparent; transition:all .15s ease;
-            }
-            .tl-reorder-gap.drag-over { padding:8px 0; }
-            .tl-reorder-gap.drag-over .tl-reorder-gap-line {
-              height:3px; background:var(--color-accent);
-              box-shadow:0 0 8px rgba(139,92,246,.35);
-            }
 
             .tc-sub-input { padding:0 1rem .85rem 2.75rem; animation:fadeSlideIn .3s ease; }
             .tc-children { margin-left:2.25rem; padding:.2rem .75rem .6rem 0; border-left:2px solid var(--border-color); }

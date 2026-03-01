@@ -229,7 +229,11 @@ export default function TodayPage() {
         try {
             const db = await fetchDb();
             await db.execute('UPDATE tasks SET today_date = NULL WHERE id = $1', [taskId]);
-        } catch (e) { console.error(e); reloadTasks(); }
+        } catch (e) {
+            console.error(e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '今日やるタスクの変更に失敗しました', type: 'error' } }));
+            reloadTasks();
+        }
     };
 
     // Computed values for rendering
@@ -491,7 +495,7 @@ export default function TodayPage() {
         .stat-icon { font-size: 0.85rem; }
 
         /* Task Cards */
-        .today-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .today-list { display: flex; flex-direction: column; gap: 0.6rem; }
         .today-placeholder { display: flex; align-items: center; gap: 0.5rem; padding: 2rem; color: var(--color-text-muted); justify-content: center; }
         .today-empty {
           display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
@@ -539,7 +543,7 @@ export default function TodayPage() {
 
         .today-card-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
         .today-status {
-          font-weight: 600; font-size: 0.75rem; padding: 0.25rem 0.4rem;
+          font-weight: 600; font-size: 0.78rem; padding: 0.3rem 0.5rem;
           border-radius: var(--radius-sm); cursor: pointer; border: 1px solid;
           background: transparent; font-family: inherit;
         }
@@ -570,11 +574,11 @@ export default function TodayPage() {
         .today-drag-handle {
           cursor:grab; color:var(--color-text-disabled);
           display:flex; align-items:center; justify-content:center;
-          width:20px; flex-shrink:0;
+          width:20px; height:100%; align-self:stretch; flex-shrink:0;
           opacity:0.5; transition:opacity .2s; user-select:none;
           font-size:.85rem;
         }
-        .today-drag-handle:hover { opacity:1; }
+        .today-drag-handle:hover, .today-card:hover .today-drag-handle { opacity:1; }
         .today-drag-handle:active { cursor:grabbing; }
 
         .today-milestone-banner {
@@ -602,24 +606,6 @@ export default function TodayPage() {
           animation: celebIn 0.5s cubic-bezier(.16,1,.3,1);
         }
         @keyframes celebIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
-      `}</style>
-
-                {/* Reorder gap styles (global for ReorderGap child component) */}
-                <style jsx global>{`
-        .tl-reorder-gap {
-          position:relative; padding:3px 0;
-          transition:padding .15s ease; animation:fadeIn .2s ease;
-        }
-        .tl-reorder-gap-line {
-          height:2px; border-radius:1px;
-          background:transparent; transition:all .15s ease;
-        }
-        .tl-reorder-gap.drag-over { padding:8px 0; }
-        .tl-reorder-gap.drag-over .tl-reorder-gap-line {
-          height:3px; background:var(--color-accent);
-          box-shadow:0 0 8px rgba(139,92,246,.35);
-        }
-        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
       `}</style>
 
                 {editingTask && (
