@@ -29,6 +29,7 @@ export default function TaskList() {
     const [filterImportance, setFilterImportance] = useState([]);
     const [filterUrgency, setFilterUrgency] = useState([]);
     const [sortKey, setSortKey] = useState('created_desc');
+    const [sortMode, setSortMode] = useState('auto'); // 'auto' or 'manual'
     const [refreshKey, setRefreshKey] = useState(0);
     const [editingTask, setEditingTask] = useState(null);
     const [activeId, setActiveId] = useState(null); // For DragOverlay
@@ -142,6 +143,31 @@ export default function TaskList() {
     }, [filterStatuses, filterTags, filterImportance, filterUrgency, showArchived]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
+
+    // Load sort mode setting on mount
+    useEffect(() => {
+        (async () => {
+            try {
+                const { getDb } = await import('@/lib/db');
+                const db = await getDb();
+                const rows = await db.select("SELECT value FROM app_settings WHERE key = 'sort_mode_tasks'");
+                if (rows.length > 0) setSortMode(rows[0].value);
+            } catch (e) { console.error(e); }
+        })();
+    }, []);
+
+    const toggleSortMode = async () => {
+        const newMode = sortMode === 'auto' ? 'manual' : 'auto';
+        setSortMode(newMode);
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+            await db.execute(
+                'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
+                ['sort_mode_tasks', newMode]
+            );
+        } catch (e) { console.error(e); }
+    };
 
     const handleTaskAdded = () => setRefreshKey(k => k + 1);
     const handleTaskEdited = () => setRefreshKey(k => k + 1);
@@ -285,6 +311,80 @@ export default function TaskList() {
         setActiveId(event.active.id);
     };
 
+    // Helper to persist sort_order for a list of task IDs
+    const persistSortOrder = async (orderedIds) => {
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+            for (let i = 0; i < orderedIds.length; i++) {
+                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [i + 1, orderedIds[i]]);
+            }
+        } catch (e) { console.error(e); fetchTasks(); }
+    };
+
+    // Handle DnD reorder (manual sort mode)
+    const handleReorder = async (activeTaskId, overId) => {
+        const overIdStr = String(overId);
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+        if (!activeTask) return;
+
+        let siblings, targetIndex, isRoot;
+
+        if (overIdStr.startsWith('reorder-root-')) {
+            targetIndex = parseInt(overIdStr.replace('reorder-root-', ''));
+            siblings = sortedParentTasks;
+            isRoot = true;
+        } else if (overIdStr.startsWith('reorder-child-')) {
+            const parts = overIdStr.replace('reorder-child-', '').split('-');
+            const parentId = parseInt(parts[0]);
+            targetIndex = parseInt(parts[1]);
+            siblings = getChildTasks(parentId);
+            isRoot = false;
+        } else {
+            return;
+        }
+
+        // Check if this is an unnest (child task dropped at root level)
+        const isUnnest = activeTask.parent_id && isRoot;
+
+        const currentOrder = siblings.map(t => t.id);
+        const oldIndex = currentOrder.indexOf(activeTaskId);
+
+        // Remove from current position if present
+        if (oldIndex >= 0) {
+            currentOrder.splice(oldIndex, 1);
+            // Adjust target index if we removed an item before it
+            if (oldIndex < targetIndex) targetIndex--;
+        }
+
+        // Insert at target position
+        currentOrder.splice(targetIndex, 0, activeTaskId);
+
+        // Optimistic UI update
+        setTasks(prev => {
+            let updated = [...prev];
+            if (isUnnest) {
+                updated = updated.map(t => t.id === activeTaskId ? { ...t, parent_id: null } : t);
+            }
+            // Update sort_order for all items in this group
+            currentOrder.forEach((id, i) => {
+                const idx = updated.findIndex(t => t.id === id);
+                if (idx >= 0) updated[idx] = { ...updated[idx], sort_order: i + 1 };
+            });
+            return updated;
+        });
+
+        // Persist to DB
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+            if (isUnnest) {
+                await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
+            }
+            await persistSortOrder(currentOrder);
+        } catch (e) { console.error(e); fetchTasks(); }
+    };
+
     const handleDragEnd = async (event) => {
         const { active, over } = event;
         setActiveId(null);
@@ -299,8 +399,21 @@ export default function TaskList() {
                 const { getDb } = await import('@/lib/db');
                 const db = await getDb();
                 await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
+                // In manual mode, assign sort_order at the end of root tasks
+                if (sortMode === 'manual') {
+                    const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL');
+                    const newOrder = (maxSort[0]?.ms || 0) + 1;
+                    await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
+                    fetchTasks();
+                }
             } catch (e) { console.error(e); fetchTasks(); }
         };
+
+        // REORDER: Dropped on a reorder gap (manual sort mode)
+        if (over && String(over.id).startsWith('reorder-')) {
+            await handleReorder(active.id, over.id);
+            return;
+        }
 
         // If a child task is dropped with no target (outside any droppable), un-nest
         if (!over) {
@@ -339,6 +452,16 @@ export default function TaskList() {
             const db = await getDb();
             await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
 
+            // In manual mode, assign sort_order at end of new parent's children
+            if (sortMode === 'manual') {
+                const maxSort = await db.select(
+                    'SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id = $1 AND archived_at IS NULL',
+                    [parentTask.id]
+                );
+                const newOrder = (maxSort[0]?.ms || 0) + 1;
+                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
+            }
+
             // Tag inheritance: copy parent tags to child if setting enabled
             try {
                 const settingRows = await db.select(
@@ -359,11 +482,13 @@ export default function TaskList() {
                     }
                     if (tagsAdded) {
                         fetchTasks(); // Refresh to show inherited tags
+                        return;
                     }
                 }
             } catch (tagErr) {
                 console.error('Tag inheritance error:', tagErr);
             }
+            fetchTasks(); // Refresh to get updated sort_order
         } catch (e) {
             console.error(e);
             fetchTasks(); // Revert on error
@@ -371,17 +496,25 @@ export default function TaskList() {
     };
 
     const parentTasks = useMemo(() => tasks.filter(t => !t.parent_id || !tasks.some(p => p.id === t.parent_id)), [tasks]);
-    const getChildTasks = (parentId) => {
-        return tasks.filter(t => t.parent_id === parentId).sort((a, b) => {
+    const getChildTasks = useCallback((parentId) => {
+        const children = tasks.filter(t => t.parent_id === parentId);
+        if (sortMode === 'manual') {
+            return children.sort((a, b) => a.sort_order - b.sort_order);
+        }
+        return children.sort((a, b) => {
             if (!a.due_date && !b.due_date) return new Date(a.created_at) - new Date(b.created_at);
             if (!a.due_date) return 1;
             if (!b.due_date) return -1;
             return new Date(a.due_date) - new Date(b.due_date);
         });
-    };
+    }, [tasks, sortMode]);
 
     const sortedParentTasks = useMemo(() => {
         const sorted = [...parentTasks];
+        if (sortMode === 'manual') {
+            sorted.sort((a, b) => a.sort_order - b.sort_order);
+            return sorted;
+        }
         switch (sortKey) {
             case 'created_desc': sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
             case 'created_asc': sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); break;
@@ -396,13 +529,13 @@ export default function TaskList() {
                 return aOrder - bOrder;
             }); break;
             case 'tag': sorted.sort((a, b) => {
-                const aTag = a.tags && a.tags.length > 0 ? a.tags[0].name : '\uFFFF'; // Push untagged to bottom
+                const aTag = a.tags && a.tags.length > 0 ? a.tags[0].name : '\uFFFF';
                 const bTag = b.tags && b.tags.length > 0 ? b.tags[0].name : '\uFFFF';
                 return aTag.localeCompare(bTag, 'ja');
             }); break;
         }
         return sorted;
-    }, [parentTasks, sortKey, allStatuses]);
+    }, [parentTasks, sortKey, sortMode, allStatuses]);
 
     const statusMap = useMemo(() => {
         const m = {};
@@ -432,11 +565,24 @@ export default function TaskList() {
                     {tagOptions.length > 0 && <MultiSelectFilter label="タグ" options={tagOptions} selected={filterTags} onChange={setFilterTags} />}
                     <MultiSelectFilter label="重要度" options={importanceOptions} selected={filterImportance} onChange={setFilterImportance} />
                     <MultiSelectFilter label="緊急度" options={urgencyOptions} selected={filterUrgency} onChange={setFilterUrgency} />
-                    <div className="tl-filter" style={{ marginLeft: 'auto' }}>
-                        <label>並び順</label>
-                        <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
-                            {SORT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-                        </select>
+                    <div className="tl-sort-group" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                        {!showArchived && (
+                            <button
+                                className={`tl-sort-toggle ${sortMode === 'manual' ? 'active' : ''}`}
+                                onClick={toggleSortMode}
+                                title={sortMode === 'manual' ? '自動ソートに切替' : '手動並び替えに切替'}
+                            >
+                                {sortMode === 'manual' ? '✋ 手動' : '🔀 自動'}
+                            </button>
+                        )}
+                        {sortMode === 'auto' && (
+                            <div className="tl-filter">
+                                <label>並び順</label>
+                                <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
+                                    {SORT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                </select>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -461,7 +607,12 @@ export default function TaskList() {
                     )}
                     {sortedParentTasks.map((task, i) => (
                         <React.Fragment key={task.id}>
-                            {!showArchived && isDraggingChild && i === 0 && (
+                            {/* Manual mode: ReorderGap between root tasks */}
+                            {!showArchived && sortMode === 'manual' && activeId && i === 0 && (
+                                <ReorderGap id="reorder-root-0" />
+                            )}
+                            {/* Auto mode: UnnestGap for children being dragged */}
+                            {!showArchived && sortMode === 'auto' && isDraggingChild && i === 0 && (
                                 <UnnestGap id={`unnest-gap-top`} />
                             )}
                             <TaskItem task={task} childTasks={getChildTasks(task.id)}
@@ -470,10 +621,22 @@ export default function TaskList() {
                                 onTodayToggle={handleTodayToggle}
                                 onArchive={handleArchive} onRestore={handleRestore}
                                 index={i} statusMap={statusMap} allStatuses={allStatuses}
-                                isDraggable={!showArchived && getChildTasks(task.id).length === 0}
+                                isDraggable={!showArchived && (sortMode === 'manual' || getChildTasks(task.id).length === 0)}
                                 isArchived={showArchived}
+                                sortMode={sortMode}
+                                activeId={activeId}
+                                activeDragParentId={activeTaskData?.parent_id}
                             />
-                            {!showArchived && isDraggingChild && (
+                            {/* Manual mode: ReorderGap after each root task */}
+                            {!showArchived && sortMode === 'manual' && activeId && (
+                                <ReorderGap id={`reorder-root-${i + 1}`} />
+                            )}
+                            {/* Auto mode: UnnestGap after each root task */}
+                            {!showArchived && sortMode === 'auto' && isDraggingChild && (
+                                <UnnestGap id={`unnest-gap-${task.id}`} />
+                            )}
+                            {/* Manual mode: UnnestGap when dragging a child */}
+                            {!showArchived && sortMode === 'manual' && isDraggingChild && (
                                 <UnnestGap id={`unnest-gap-${task.id}`} />
                             )}
                         </React.Fragment>
@@ -646,6 +809,36 @@ export default function TaskList() {
               box-shadow:0 2px 10px rgba(79,110,247,.18);
             }
     
+            /* Sort mode toggle */
+            .tl-sort-toggle {
+              padding:.35rem .7rem; border:1px solid var(--border-color);
+              border-radius:var(--radius-sm); font-size:.78rem; font-weight:600;
+              cursor:pointer; transition:all .2s; font-family:inherit;
+              background:var(--color-surface); color:var(--color-text-muted);
+              white-space:nowrap;
+            }
+            .tl-sort-toggle:hover { border-color:var(--border-color-hover); color:var(--color-text); }
+            .tl-sort-toggle.active {
+              background:var(--color-primary); color:#fff; border-color:var(--color-primary);
+              box-shadow:0 2px 8px rgba(79,110,247,.2);
+            }
+            .tl-sort-toggle.active:hover { filter:brightness(1.1); }
+
+            /* Reorder gap */
+            .tl-reorder-gap {
+              position:relative; padding:3px 0;
+              transition:padding .15s ease; animation:fadeIn .2s ease;
+            }
+            .tl-reorder-gap-line {
+              height:2px; border-radius:1px;
+              background:transparent; transition:all .15s ease;
+            }
+            .tl-reorder-gap.drag-over { padding:8px 0; }
+            .tl-reorder-gap.drag-over .tl-reorder-gap-line {
+              height:3px; background:var(--color-accent);
+              box-shadow:0 0 8px rgba(139,92,246,.35);
+            }
+
             .tc-sub-input { padding:0 1rem .85rem 2.75rem; animation:fadeSlideIn .3s ease; }
             .tc-children { margin-left:2.25rem; padding:.2rem .75rem .6rem 0; border-left:2px solid var(--border-color); }
           `}</style>
@@ -667,7 +860,19 @@ function UnnestGap({ id }) {
     );
 }
 
-function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false }) {
+function ReorderGap({ id }) {
+    const { setNodeRef, isOver } = useDroppable({ id });
+    return (
+        <div
+            ref={setNodeRef}
+            className={`tl-reorder-gap ${isOver ? 'drag-over' : ''}`}
+        >
+            <div className="tl-reorder-gap-line" />
+        </div>
+    );
+}
+
+function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined }) {
     const [expanded, setExpanded] = useState(true);
     const [showSub, setShowSub] = useState(false);
 
@@ -719,7 +924,7 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
             <div className="tc-body">
                 {/* Drag Handle */}
                 {isDraggable && (
-                    <div className="tc-handle" {...attributes} {...listeners} title={isChild ? 'ドラッグして親から外す' : 'ドラッグして他のタスクの子にする'}>
+                    <div className="tc-handle" {...attributes} {...listeners} title={sortMode === 'manual' ? 'ドラッグして並び替え' : isChild ? 'ドラッグして親から外す' : 'ドラッグして他のタスクの子にする'}>
                         ⋮⋮
                     </div>
                 )}
@@ -797,14 +1002,26 @@ function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onE
             {expanded && childTasks.length > 0 && (
                 <div className="tc-children">
                     {childTasks.map((c, i) => (
-                        <TaskItem key={c.id} task={c} childTasks={[]} onStatusChange={onStatusChange}
-                            onDelete={onDelete} onTaskAdded={() => { }} onEdit={onEdit}
-                            onTodayToggle={onTodayToggle}
-                            onArchive={onArchive} onRestore={onRestore}
-                            index={i} isChild statusMap={statusMap} allStatuses={allStatuses}
-                            isDraggable={!isArchived} // Children can be dragged to un-nest (but not in archived view)
-                            isArchived={isArchived}
-                        />
+                        <React.Fragment key={c.id}>
+                            {/* ReorderGap between children in manual mode */}
+                            {sortMode === 'manual' && activeId && activeDragParentId === task.id && i === 0 && (
+                                <ReorderGap id={`reorder-child-${task.id}-0`} />
+                            )}
+                            <TaskItem task={c} childTasks={[]} onStatusChange={onStatusChange}
+                                onDelete={onDelete} onTaskAdded={() => { }} onEdit={onEdit}
+                                onTodayToggle={onTodayToggle}
+                                onArchive={onArchive} onRestore={onRestore}
+                                index={i} isChild statusMap={statusMap} allStatuses={allStatuses}
+                                isDraggable={!isArchived}
+                                isArchived={isArchived}
+                                sortMode={sortMode}
+                                activeId={activeId}
+                            />
+                            {/* ReorderGap after each child in manual mode */}
+                            {sortMode === 'manual' && activeId && activeDragParentId === task.id && (
+                                <ReorderGap id={`reorder-child-${task.id}-${i + 1}`} />
+                            )}
+                        </React.Fragment>
                     ))}
                 </div>
             )}

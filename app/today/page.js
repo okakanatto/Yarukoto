@@ -49,11 +49,16 @@ export default function TodayPage() {
     const [filterImportance, setFilterImportance] = useState([]);
     const [filterUrgency, setFilterUrgency] = useState([]);
     const [sortKey, setSortKey] = useState('priority'); // default sort
+    const [sortMode, setSortMode] = useState('auto'); // 'auto' or 'manual'
 
     const [allTags, setAllTags] = useState([]);
     const [allImportance, setAllImportance] = useState([]);
     const [allUrgency, setAllUrgency] = useState([]);
     const [showOverdue, setShowOverdue] = useState(true);
+
+    // DnD state for manual sort (native HTML5 drag)
+    const dragIdx = useRef(null);
+    const [dragOverIdx, setDragOverIdx] = useState(null);
 
     // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
     const activeRequestId = useRef(0);
@@ -83,6 +88,9 @@ export default function TodayPage() {
                 if (settingsRows.length > 0) {
                     setShowOverdue(settingsRows[0].value !== '0');
                 }
+
+                const sortModeRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['sort_mode_today']);
+                if (sortModeRows.length > 0) setSortMode(sortModeRows[0].value);
             } catch (e) { console.error('Failed to load statuses/tags:', e); }
         })();
     }, []);
@@ -197,6 +205,7 @@ export default function TodayPage() {
                     urgency_level: r.urgency_level,
                     estimated_hours: r.estimated_hours,
                     due_date: null,
+                    today_sort_order: r.today_sort_order || 0,
                     tags: JSON.parse(r.tag_ids || '[]').map((id, index) => ({
                         id,
                         name: JSON.parse(r.tag_names || '[]')[index],
@@ -238,49 +247,62 @@ export default function TodayPage() {
 
             // Combine and sort
             const unified = [...routineTasks, ...standardTasks];
-            unified.sort((a, b) => {
-                // Done items always go to the bottom unless specific sorting overrides it
-                const aDone = a.status_code === 3;
-                const bDone = b.status_code === 3;
 
-                switch (sortKey) {
-                    case 'created_desc': return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-                    case 'created_asc': return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-                    case 'due_asc': {
-                        if (!a.due_date) return 1; if (!b.due_date) return -1;
-                        return new Date(a.due_date) - new Date(b.due_date);
+            if (sortMode === 'manual') {
+                // Manual sort: by today_sort_order with priority fallback for ties
+                unified.sort((a, b) => {
+                    const orderDiff = (a.today_sort_order || 0) - (b.today_sort_order || 0);
+                    if (orderDiff !== 0) return orderDiff;
+                    const aDone = a.status_code === 3;
+                    const bDone = b.status_code === 3;
+                    if (aDone && !bDone) return 1;
+                    if (!aDone && bDone) return -1;
+                    return (b.importance_level || 0) - (a.importance_level || 0);
+                });
+            } else {
+                unified.sort((a, b) => {
+                    const aDone = a.status_code === 3;
+                    const bDone = b.status_code === 3;
+
+                    switch (sortKey) {
+                        case 'created_desc': return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                        case 'created_asc': return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+                        case 'due_asc': {
+                            if (!a.due_date) return 1; if (!b.due_date) return -1;
+                            return new Date(a.due_date) - new Date(b.due_date);
+                        }
+                        case 'due_desc': {
+                            if (!a.due_date) return 1; if (!b.due_date) return -1;
+                            return new Date(b.due_date) - new Date(a.due_date);
+                        }
+                        case 'importance': return (b.importance_level || 0) - (a.importance_level || 0);
+                        case 'urgency': return (b.urgency_level || 0) - (a.urgency_level || 0);
+                        case 'title': return (a.title || '').localeCompare(b.title || '', 'ja');
+                        case 'status': {
+                            const aOrder = statuses.find(s => s.code === a.status_code)?.sort_order || 0;
+                            const bOrder = statuses.find(s => s.code === b.status_code)?.sort_order || 0;
+                            return aOrder - bOrder;
+                        }
+                        case 'tag': {
+                            const aTag = a.tags && a.tags.length > 0 ? a.tags[0].name : '\uFFFF';
+                            const bTag = b.tags && b.tags.length > 0 ? b.tags[0].name : '\uFFFF';
+                            return aTag.localeCompare(bTag, 'ja');
+                        }
+                        case 'priority':
+                        default: {
+                            if (aDone && !bDone) return 1;
+                            if (!aDone && bDone) return -1;
+                            const aImp = a.importance_level || 0;
+                            const bImp = b.importance_level || 0;
+                            if (aImp !== bImp) return bImp - aImp;
+                            const aUrg = a.urgency_level || 0;
+                            const bUrg = b.urgency_level || 0;
+                            if (aUrg !== bUrg) return bUrg - aUrg;
+                            return 0;
+                        }
                     }
-                    case 'due_desc': {
-                        if (!a.due_date) return 1; if (!b.due_date) return -1;
-                        return new Date(b.due_date) - new Date(a.due_date);
-                    }
-                    case 'importance': return (b.importance_level || 0) - (a.importance_level || 0);
-                    case 'urgency': return (b.urgency_level || 0) - (a.urgency_level || 0);
-                    case 'title': return (a.title || '').localeCompare(b.title || '', 'ja');
-                    case 'status': {
-                        const aOrder = statuses.find(s => s.code === a.status_code)?.sort_order || 0;
-                        const bOrder = statuses.find(s => s.code === b.status_code)?.sort_order || 0;
-                        return aOrder - bOrder;
-                    }
-                    case 'tag': {
-                        const aTag = a.tags && a.tags.length > 0 ? a.tags[0].name : '\uFFFF';
-                        const bTag = b.tags && b.tags.length > 0 ? b.tags[0].name : '\uFFFF';
-                        return aTag.localeCompare(bTag, 'ja');
-                    }
-                    case 'priority':
-                    default: {
-                        if (aDone && !bDone) return 1;
-                        if (!aDone && bDone) return -1;
-                        const aImp = a.importance_level || 0;
-                        const bImp = b.importance_level || 0;
-                        if (aImp !== bImp) return bImp - aImp;
-                        const aUrg = a.urgency_level || 0;
-                        const bUrg = b.urgency_level || 0;
-                        if (aUrg !== bUrg) return bUrg - aUrg;
-                        return 0;
-                    }
-                }
-            });
+                });
+            }
 
             if (currentReq === activeRequestId.current) {
                 setTasks(unified);
@@ -292,7 +314,7 @@ export default function TodayPage() {
                 setLoading(false);
             }
         }
-    }, [filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, showOverdue, statuses]);
+    }, [filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, sortMode, showOverdue, statuses]);
 
     useEffect(() => {
         loadTasks(selectedDate);
@@ -361,6 +383,60 @@ export default function TodayPage() {
         } catch (e) { console.error(e); loadTasks(selectedDate); }
     };
 
+    const toggleSortMode = async () => {
+        const newMode = sortMode === 'auto' ? 'manual' : 'auto';
+        setSortMode(newMode);
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+            await db.execute(
+                'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
+                ['sort_mode_today', newMode]
+            );
+        } catch (e) { console.error(e); }
+    };
+
+    // Native DnD handlers for manual sort
+    const onTodayDragStart = (i) => (e) => {
+        dragIdx.current = i;
+        e.dataTransfer.effectAllowed = 'move';
+        requestAnimationFrame(() => { e.target.style.opacity = '0.4'; });
+    };
+    const onTodayDragEnd = (e) => {
+        e.target.style.opacity = '1';
+        dragIdx.current = null;
+        setDragOverIdx(null);
+    };
+    const onTodayDragOver = (i) => (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverIdx(i);
+    };
+    const onTodayDragLeave = () => { setDragOverIdx(null); };
+    const onTodayDrop = (i) => async (e) => {
+        e.preventDefault();
+        setDragOverIdx(null);
+        const from = dragIdx.current;
+        if (from === null || from === i) return;
+        const newTasks = [...tasks];
+        const [moved] = newTasks.splice(from, 1);
+        newTasks.splice(i, 0, moved);
+        setTasks(newTasks);
+        // Persist today_sort_order
+        try {
+            const { getDb } = await import('@/lib/db');
+            const db = await getDb();
+            for (let idx = 0; idx < newTasks.length; idx++) {
+                const t = newTasks[idx];
+                if (t.is_routine) {
+                    await db.execute('UPDATE routines SET today_sort_order = $1 WHERE id = $2', [idx + 1, t.routine_id]);
+                } else {
+                    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [idx + 1, t.id]);
+                }
+            }
+        } catch (err) { console.error(err); loadTasks(selectedDate); }
+    };
+
     const stats = useMemo(() => {
         const total = tasks.length;
         const completed = tasks.filter(t => t.status_code === 3).length;
@@ -414,19 +490,30 @@ export default function TodayPage() {
                 {tagOptions.length > 0 && <MultiSelectFilter label="タグ" options={tagOptions} selected={filterTags} onChange={setFilterTags} />}
                 <MultiSelectFilter label="重要度" options={importanceOptions} selected={filterImportance} onChange={setFilterImportance} />
                 <MultiSelectFilter label="緊急度" options={urgencyOptions} selected={filterUrgency} onChange={setFilterUrgency} />
-                <div className="today-filter" style={{ marginLeft: 'auto' }}>
-                    <label>並び順</label>
-                    <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
-                        <option value="priority">優先度順（デフォルト）</option>
-                        <option value="status">ステータス順</option>
-                        <option value="tag">タグ順</option>
-                        <option value="due_asc">期限日（近い順）</option>
-                        <option value="due_desc">期限日（遠い順）</option>
-                        <option value="created_desc">作成日（新しい順）</option>
-                        <option value="created_asc">作成日（古い順）</option>
-                        <option value="importance">重要度（高い順）</option>
-                        <option value="urgency">緊急度（高い順）</option>
-                    </select>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                    <button
+                        className={`today-sort-toggle ${sortMode === 'manual' ? 'active' : ''}`}
+                        onClick={toggleSortMode}
+                        title={sortMode === 'manual' ? '自動ソートに切替' : '手動並び替えに切替'}
+                    >
+                        {sortMode === 'manual' ? '✋ 手動' : '🔀 自動'}
+                    </button>
+                    {sortMode === 'auto' && (
+                        <div className="today-filter">
+                            <label>並び順</label>
+                            <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
+                                <option value="priority">優先度順（デフォルト）</option>
+                                <option value="status">ステータス順</option>
+                                <option value="tag">タグ順</option>
+                                <option value="due_asc">期限日（近い順）</option>
+                                <option value="due_desc">期限日（遠い順）</option>
+                                <option value="created_desc">作成日（新しい順）</option>
+                                <option value="created_asc">作成日（古い順）</option>
+                                <option value="importance">重要度（高い順）</option>
+                                <option value="urgency">緊急度（高い順）</option>
+                            </select>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -486,9 +573,22 @@ export default function TodayPage() {
                     const isDone = task.status_code === 3;
                     const isRoutine = !!task.is_routine;
                     const isPickedForToday = task.today_date === selectedDate;
+                    const isManual = sortMode === 'manual';
 
                     return (
-                        <div key={task.id} className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''}`} style={{ animationDelay: `${i * 40}ms` }}>
+                        <div key={task.id}
+                            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${dragOverIdx === i ? 'drag-over' : ''}`}
+                            style={{ animationDelay: `${i * 40}ms` }}
+                            draggable={isManual}
+                            onDragStart={isManual ? onTodayDragStart(i) : undefined}
+                            onDragEnd={isManual ? onTodayDragEnd : undefined}
+                            onDragOver={isManual ? onTodayDragOver(i) : undefined}
+                            onDragLeave={isManual ? onTodayDragLeave : undefined}
+                            onDrop={isManual ? onTodayDrop(i) : undefined}
+                        >
+                            {isManual && (
+                                <div className="today-drag-handle" title="ドラッグして並び替え">⋮⋮</div>
+                            )}
                             <StatusCheckbox
                                 statusCode={task.status_code}
                                 onChange={(newCode) => handleStatusChange(task.id, newCode, isRoutine)}
@@ -686,6 +786,36 @@ export default function TodayPage() {
           border-radius: var(--radius-sm); transition: all 0.15s;
         }
         .today-remove:hover { background: var(--color-danger-bg); color: var(--color-danger); border-color: rgba(220,38,38,.2); }
+
+        /* Sort mode toggle */
+        .today-sort-toggle {
+          padding:.35rem .7rem; border:1px solid var(--border-color);
+          border-radius:var(--radius-sm); font-size:.78rem; font-weight:600;
+          cursor:pointer; transition:all .2s; font-family:inherit;
+          background:var(--color-surface); color:var(--color-text-muted);
+          white-space:nowrap;
+        }
+        .today-sort-toggle:hover { border-color:var(--border-color-hover); color:var(--color-text); }
+        .today-sort-toggle.active {
+          background:var(--color-primary); color:#fff; border-color:var(--color-primary);
+          box-shadow:0 2px 8px rgba(79,110,247,.2);
+        }
+        .today-sort-toggle.active:hover { filter:brightness(1.1); }
+
+        /* Drag handle */
+        .today-drag-handle {
+          cursor:grab; color:var(--color-text-disabled);
+          display:flex; align-items:center; justify-content:center;
+          width:20px; flex-shrink:0;
+          opacity:0.5; transition:opacity .2s; user-select:none;
+          font-size:.85rem;
+        }
+        .today-drag-handle:hover { opacity:1; }
+        .today-drag-handle:active { cursor:grabbing; }
+        .today-card.drag-over {
+          box-shadow:0 0 0 2px var(--color-accent), 0 4px 12px rgba(0,0,0,.1);
+          transform:scale(1.01);
+        }
 
         .today-milestone-banner {
           margin-top: 1rem; padding: 0.85rem 1.25rem;

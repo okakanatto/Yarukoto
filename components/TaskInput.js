@@ -56,12 +56,27 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
             const { getDb } = await import('@/lib/db');
             const db = await getDb();
 
+            // Calculate sort_order to insert at top of list (IMP-4)
+            let newSortOrder = 0;
+            if (actualParentId) {
+                const minSort = await db.select(
+                    'SELECT MIN(sort_order) as min_so FROM tasks WHERE parent_id = $1 AND archived_at IS NULL',
+                    [actualParentId]
+                );
+                newSortOrder = (minSort[0]?.min_so ?? 1) - 1;
+            } else {
+                const minSort = await db.select(
+                    'SELECT MIN(sort_order) as min_so FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL'
+                );
+                newSortOrder = (minSort[0]?.min_so ?? 1) - 1;
+            }
+
             // Insert task
             const result = await db.execute(`
               INSERT INTO tasks (
                 title, parent_id, status_code, importance_level,
-                urgency_level, start_date, due_date, estimated_hours, notes
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                urgency_level, start_date, due_date, estimated_hours, notes, sort_order
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             `, [
                 title,
                 actualParentId,
@@ -71,7 +86,8 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                 startDate || null,
                 dueDate || null,
                 estimatedMinutes ? parseInt(estimatedMinutes) : null,
-                notes || ''
+                notes || '',
+                newSortOrder
             ]);
 
             const newTaskId = result.lastInsertId;
