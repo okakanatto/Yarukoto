@@ -29,6 +29,7 @@ Tauri v2 デスクトップアプリとして動作する。
 - **DB**: SQLite (`@tauri-apps/plugin-sql` 経由), ファイル: `tasks.db` (プロジェクトルート)
 - **デスクトップ**: Tauri v2
 - **その他**: date-fns
+- **テスト**: Vitest, better-sqlite3 (Tauri IPCモック), @testing-library/react
 - **フォント**: Inter (本文), Outfit (見出し) - Google Fonts
 
 ## コマンド
@@ -37,6 +38,8 @@ Tauri v2 デスクトップアプリとして動作する。
 npm run tauri dev     # Tauri 開発モード (Rust バックエンド + Next.js 同時起動) ★必須
 npm run tauri build   # 本番用 Tauri インストーラー・バイナリ生成 (.msi, .exe)
 npm run lint          # ESLint 実行
+npm test              # Vitest によるユニットテスト実行 (Tauri不要、Node.js単体で動作)
+npm run test:watch    # テストをウォッチモードで実行
 ```
 
 > **注意**: `npm run dev` だけでは動かない。ブラウザからは Tauri IPC にアクセスできないため、必ず `npm run tauri dev` で起動すること。
@@ -103,6 +106,16 @@ lib/
   holidayService.js  # 祝日キャッシュ管理 (内閣府CSV取得・INSERT), 祝日/週末判定, ルーティン実施日計算 (globalThis シングルトン)
   utils.js           # 共通ユーティリティ (getDb, formatMin, todayStr, parseTags 等, v1.3.1)
   taskSorter.js      # タスクソートロジック (v1.3.1 共通化)
+
+tests/
+  __mocks__/
+    tauri-plugin-sql.js   # @tauri-apps/plugin-sql モック (better-sqlite3 インメモリDB)
+    tauri-plugin-http.js  # @tauri-apps/plugin-http モック (503スタブ)
+  __helpers__/
+    setup.js              # グローバルテストセットアップ (モック登録, window スタブ)
+    testDb.js             # テストDB ファクトリ + シードヘルパー
+  lib/                    # lib/ のユニットテスト
+  db/                     # DB操作・スキーマのユニットテスト
 
 src-tauri/
   tauri.conf.json    # Tauri設定 (frontendDist: "../out")
