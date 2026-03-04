@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { fetchDb } from '@/lib/utils';
+import { fetchDb, safeTransaction } from '@/lib/utils';
 
 /**
  * Custom hook that provides task CRUD operation handlers.
@@ -138,18 +138,13 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
                 }
             }
 
-            // Use transaction for all-or-nothing parent+children archive
-            await db.execute('BEGIN');
-            try {
+            // Use safe transaction for all-or-nothing parent+children archive
+            await safeTransaction(db, async () => {
                 if (!task.parent_id) {
                     await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1 AND archived_at IS NULL", [taskId]);
                 }
                 await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
-                await db.execute('COMMIT');
-            } catch (txErr) {
-                await db.execute('ROLLBACK');
-                throw txErr;
-            }
+            });
 
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
         } catch (e) {
@@ -181,9 +176,8 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         try {
             const db = await fetchDb();
 
-            // Use transaction for all-or-nothing parent+children restore
-            await db.execute('BEGIN');
-            try {
+            // Use safe transaction for all-or-nothing parent+children restore
+            await safeTransaction(db, async () => {
                 if (task && !task.parent_id) {
                     await db.execute('UPDATE tasks SET archived_at = NULL WHERE parent_id = $1', [taskId]);
                 }
@@ -191,11 +185,7 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
                     await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [task.parent_id]);
                 }
                 await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
-                await db.execute('COMMIT');
-            } catch (txErr) {
-                await db.execute('ROLLBACK');
-                throw txErr;
-            }
+            });
 
             // Descriptive toast for parent-child restore
             let toastMsg = '復元しました';
