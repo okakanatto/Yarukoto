@@ -44,3 +44,36 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE / editor
+.vscode/
+.idea/
+.obsidian/
+
+# Claude Code / AI agent
+.claude/
+
+# Internal dev docs (not published)
+CLAUDE.md
+WORK-LOG.md
+ISSUES.md
+ROADMAP.md
+AI_CHANGELOG.md
+qa-report.md
+OSS_RELEASE_GUIDE.md
+refactoring-plan.md
+dev-flow-guide/
+dev-flow-guide.md
+
+# Temp / build artifacts
+build.log
+diff_output.txt
+diff_roadmap.txt
+tmp_finalize.js
+Readme.txt
+
+# Release binaries (managed via GitHub Releases)
+releases/
+
+# Archives
+archives/

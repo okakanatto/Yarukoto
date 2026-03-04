@@ -12,7 +12,7 @@ import { formatMin } from '@/lib/utils';
  * Individual task card component with DnD support, status controls, and child task rendering.
  * Extracted from TaskList.js (Phase 1-1).
  */
-export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false }) {
+export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false, processingIds = new Set() }) {
     const [expanded, setExpanded] = useState(true);
     const [showSub, setShowSub] = useState(false);
 
@@ -159,7 +159,8 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                                 isArchived={isArchived}
                                 sortMode={sortMode}
                                 activeId={activeId}
-                                isProcessing={isProcessing}
+                                isProcessing={isProcessing || processingIds.has(c.id)}
+                                processingIds={processingIds}
                             />
                             {/* ReorderGap after each child in manual mode */}
                             {sortMode === 'manual' && activeId && activeDragParentId === task.id && (
