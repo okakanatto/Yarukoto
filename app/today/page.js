@@ -49,7 +49,7 @@ function buildDateTabs() {
 function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index, isProcessing }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
-        disabled: !isManual,
+        disabled: !isManual || !!task.is_archived,
     });
 
     const style = transform ? {
@@ -61,22 +61,23 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
     const st = statusMap[task.status_code] || { label: task.status_label || '不明', color: task.status_color || '#94a3b8' };
     const isDone = task.status_code === 3;
     const isRoutine = !!task.is_routine;
+    const isArchived = !!task.is_archived;
     const isPickedForToday = task.today_date === selectedDate;
 
     return (
         <div
             ref={setNodeRef}
             style={{ ...style, animationDelay: `${index * 40}ms` }}
-            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''}`}
+            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${isArchived ? 'archived' : ''}`}
         >
-            {isManual && (
+            {isManual && !isArchived && (
                 <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
             )}
             <StatusCheckbox
                 statusCode={task.status_code}
                 onChange={(newCode) => onStatusChange(task.id, newCode, isRoutine)}
                 sparkle={justCompletedId === task.id}
-                disabled={isProcessing}
+                disabled={isProcessing || isArchived}
             />
             <div className="today-card-info">
                 {task.parent_title && (
@@ -84,12 +85,13 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
                 )}
                 <div className="today-card-title-row">
                     {isRoutine && <span className="today-routine-badge">🔄</span>}
+                    {isArchived && <span className="today-archived-badge" title="アーカイブ済み">📦</span>}
                     <span
-                        className={`today-card-title ${isDone ? 'strike' : ''} ${!isRoutine ? 'clickable' : ''}`}
+                        className={`today-card-title ${isDone ? 'strike' : ''} ${!isRoutine && !isArchived ? 'clickable' : ''}`}
                         onClick={() => {
-                            if (!isRoutine) onEdit(task);
+                            if (!isRoutine && !isArchived) onEdit(task);
                         }}
-                        title={!isRoutine ? "クリックして編集" : ""}
+                        title={isArchived ? "アーカイブ済み" : (!isRoutine ? "クリックして編集" : "")}
                     >
                         {task.title}
                     </span>
@@ -106,14 +108,14 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
                 </div>
             </div>
             <div className="today-card-actions">
-                {!isRoutine && (
+                {!isRoutine && !isArchived && (
                     <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value, false)}
                         className="today-status" style={{ borderColor: st.color, color: st.color }}
                         disabled={isProcessing}>
                         {statuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
                     </select>
                 )}
-                {!isRoutine && isPickedForToday && (
+                {!isRoutine && isPickedForToday && !isArchived && (
                     <button className="today-remove" onClick={() => onRemove(task.id)} title="今日やるから外す" disabled={isProcessing}>✕</button>
                 )}
             </div>
@@ -520,6 +522,8 @@ export default function TodayPage() {
         .today-card:hover { border-color: var(--border-color-hover); box-shadow: var(--shadow-card-hover); }
         .today-card.done { opacity: 0.55; }
         .today-card.done:hover { opacity: 0.75; }
+        .today-card.archived { opacity: 0.4; background: var(--color-surface-hover); }
+        .today-card.archived:hover { opacity: 0.55; }
         .today-card.routine { border-left: 3px solid var(--color-primary); }
         .today-card.picked { border-left: 3px solid var(--color-warning); }
 
@@ -532,6 +536,9 @@ export default function TodayPage() {
         .today-card-title-row { display: flex; align-items: center; gap: 0.35rem; }
         .today-routine-badge {
           font-size: 0.8rem; flex-shrink: 0;
+        }
+        .today-archived-badge {
+          font-size: 0.75rem; flex-shrink: 0; opacity: 0.7;
         }
         .today-picked-badge {
           font-size: 0.8rem; flex-shrink: 0; filter: grayscale(0.2);

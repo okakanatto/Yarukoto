@@ -180,6 +180,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                 }));
 
             // Get tasks assigned to this date OR overdue standard tasks
+            // IMP-14: Include archived completed tasks (archived_at IS NULL OR status=3)
             const tasksSql = `
               SELECT t.*,
                      p.title as parent_title,
@@ -190,7 +191,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
               LEFT JOIN tasks p ON t.parent_id = p.id
               LEFT JOIN task_tags tt ON t.id = tt.task_id
               LEFT JOIN tags tg ON tt.tag_id = tg.id
-              WHERE t.archived_at IS NULL AND t.status_code != 5
+              WHERE (t.archived_at IS NULL OR t.status_code = 3) AND t.status_code != 5
                 AND (
                   t.today_date = $1
                   OR t.due_date = $2
@@ -204,6 +205,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
 
             const standardTasks = rawTasks.map(t => ({
                 ...t,
+                is_archived: !!t.archived_at,
                 tags: parseTags(t)
             }));
 
