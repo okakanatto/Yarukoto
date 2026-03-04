@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { safeTransaction } from '@/lib/utils';
+import { runAutoArchive } from '@/lib/db';
 import { createTestDb, seedTasks } from '../__helpers__/testDb.js';
 
 let db;
@@ -195,6 +196,82 @@ describe('safeTransactionによるアーカイブ・復元', () => {
     const children = await db.select('SELECT archived_at FROM tasks WHERE parent_id = $1', [parentId]);
     for (const child of children) {
       expect(child.archived_at).toBeNull();
+    }
+  });
+});
+
+describe('runAutoArchive（自動アーカイブ）', () => {
+  it('auto_archive_daysが0の場合、何もアーカイブしない', async () => {
+    // デフォルトで auto_archive_days = '0'
+    const [id] = await seedTasks(db, [{ title: 'テスト', status_code: 3 }]);
+    await db.execute(
+      "UPDATE tasks SET completed_at = datetime('now', 'localtime', '-30 days') WHERE id = $1",
+      [id]
+    );
+
+    await runAutoArchive(db);
+
+    const row = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
+    expect(row[0].archived_at).toBeNull();
+  });
+
+  it('完了タスクが期限超過で自動アーカイブされる', async () => {
+    await db.execute("UPDATE app_settings SET value = '7' WHERE key = 'auto_archive_days'");
+    const [id] = await seedTasks(db, [{ title: 'テスト', status_code: 3 }]);
+    await db.execute(
+      "UPDATE tasks SET completed_at = datetime('now', 'localtime', '-10 days') WHERE id = $1",
+      [id]
+    );
+
+    await runAutoArchive(db);
+
+    const row = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
+    expect(row[0].archived_at).not.toBeNull();
+  });
+
+  it('完了から日数が不足しているタスクはアーカイブされない', async () => {
+    await db.execute("UPDATE app_settings SET value = '7' WHERE key = 'auto_archive_days'");
+    const [id] = await seedTasks(db, [{ title: 'テスト', status_code: 3 }]);
+    await db.execute(
+      "UPDATE tasks SET completed_at = datetime('now', 'localtime', '-3 days') WHERE id = $1",
+      [id]
+    );
+
+    await runAutoArchive(db);
+
+    const row = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
+    expect(row[0].archived_at).toBeNull();
+  });
+
+  it('未完了タスクは自動アーカイブされない', async () => {
+    await db.execute("UPDATE app_settings SET value = '7' WHERE key = 'auto_archive_days'");
+    const [id] = await seedTasks(db, [{ title: 'テスト', status_code: 1 }]);
+
+    await runAutoArchive(db);
+
+    const row = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
+    expect(row[0].archived_at).toBeNull();
+  });
+
+  it('親が自動アーカイブされると子もまとめてアーカイブされる（STEP B NG#1 再発防止）', async () => {
+    await db.execute("UPDATE app_settings SET value = '7' WHERE key = 'auto_archive_days'");
+    const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
+    const childIds = await seedTasks(db, [
+      { title: '子1', parent_id: parentId, status_code: 3 },
+      { title: '子2', parent_id: parentId, status_code: 2 },
+    ]);
+    await db.execute(
+      "UPDATE tasks SET completed_at = datetime('now', 'localtime', '-10 days') WHERE id = $1",
+      [parentId]
+    );
+
+    await runAutoArchive(db);
+
+    const parent = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [parentId]);
+    expect(parent[0].archived_at).not.toBeNull();
+    for (const id of childIds) {
+      const child = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
+      expect(child[0].archived_at).not.toBeNull();
     }
   });
 });
