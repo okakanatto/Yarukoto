@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -46,10 +46,10 @@ function buildDateTabs() {
 /**
  * Individual today-card with @dnd-kit draggable support.
  */
-function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index, isProcessing }) {
+function TodayCardItem({ task, isManual, isChild = false, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index, isProcessing }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
-        disabled: !isManual || !!task.is_archived,
+        disabled: !isManual || !!task.is_archived || isChild,
     });
 
     const style = transform ? {
@@ -70,7 +70,7 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
             style={{ ...style, animationDelay: `${index * 40}ms` }}
             className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${isArchived ? 'archived' : ''}`}
         >
-            {isManual && !isArchived && (
+            {isManual && !isArchived && !isChild && (
                 <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
             )}
             <StatusCheckbox
@@ -80,7 +80,7 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
                 disabled={isProcessing || isArchived}
             />
             <div className="today-card-info">
-                {task.parent_title && (
+                {!isChild && task.parent_title && (
                     <span className="today-parent-label">📌 {task.parent_title} ›</span>
                 )}
                 <div className="today-card-title-row">
@@ -123,6 +123,34 @@ function TodayCardItem({ task, isManual, statuses, statusMap, selectedDate, onSt
     );
 }
 
+/**
+ * Ghost parent header for children whose parent is not in today's list.
+ * Draggable in manual mode so the group can be reordered.
+ */
+function TodayGroupHeader({ parentId, title, isManual }) {
+    const ghostId = `ghost_${parentId}`;
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: ghostId,
+        disabled: !isManual,
+    });
+
+    const style = transform ? {
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.3 : 1,
+        zIndex: isDragging ? 100 : 'auto',
+    } : undefined;
+
+    return (
+        <div ref={setNodeRef} style={style} className="today-ghost-header">
+            {isManual && (
+                <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
+            )}
+            <span className="today-ghost-icon">📌</span>
+            <span className="today-ghost-title">{title}</span>
+        </div>
+    );
+}
+
 export default function TodayPage() {
     const dateTabs = useMemo(() => buildDateTabs(), []);
     const [selectedDate, setSelectedDate] = useState(() => dateTabs[0].date);
@@ -155,21 +183,78 @@ export default function TodayPage() {
         getTasks: () => tasks,
     });
 
+    // Compute parent-child groups for today's tasks (IMP-15)
+    const { rootItems, childrenByParent } = useMemo(() => {
+        const todayTaskIds = new Set(tasks.filter(t => !t.is_routine).map(t => t.id));
+        const cMap = {};
+        const asChild = new Set();
+
+        // Pass 1: identify children
+        for (const task of tasks) {
+            if (task.is_routine || !task.parent_id) continue;
+            if (!cMap[task.parent_id]) cMap[task.parent_id] = [];
+            cMap[task.parent_id].push(task);
+            asChild.add(task.id);
+        }
+
+        // Pass 2: build root items (preserving sort order)
+        const roots = [];
+        const ghostInserted = new Set();
+
+        for (const task of tasks) {
+            if (asChild.has(task.id)) {
+                // Insert ghost parent header at first child's position
+                if (!todayTaskIds.has(task.parent_id) && !ghostInserted.has(task.parent_id)) {
+                    roots.push({
+                        id: `ghost_${task.parent_id}`,
+                        real_id: task.parent_id,
+                        title: task.parent_title || '親タスク',
+                        is_ghost_parent: true,
+                    });
+                    ghostInserted.add(task.parent_id);
+                }
+                continue;
+            }
+            roots.push(task);
+        }
+
+        return { rootItems: roots, childrenByParent: cMap };
+    }, [tasks]);
+
+    const rootItemsRef = useRef([]);
+    const childrenByParentRef = useRef({});
+    useEffect(() => {
+        rootItemsRef.current = rootItems;
+        childrenByParentRef.current = childrenByParent;
+    }, [rootItems, childrenByParent]);
+
     // @dnd-kit sensors
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
     );
 
-    // Persist today_sort_order to DB after reorder
-    const persistTodaySortOrder = useCallback(async (newTasks) => {
+    // Persist today_sort_order to DB after reorder (group-aware)
+    const persistTodaySortOrder = useCallback(async (newRootItems) => {
         try {
             const db = await fetchDb();
-            for (let idx = 0; idx < newTasks.length; idx++) {
-                const t = newTasks[idx];
-                if (t.is_routine) {
-                    await db.execute('UPDATE routines SET today_sort_order = $1 WHERE id = $2', [idx + 1, t.routine_id]);
-                } else {
-                    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [idx + 1, t.id]);
+            const currentChildren = childrenByParentRef.current;
+            let orderIdx = 1;
+
+            for (const item of newRootItems) {
+                const pid = item.is_ghost_parent ? item.real_id : item.id;
+
+                if (!item.is_ghost_parent) {
+                    if (item.is_routine) {
+                        await db.execute('UPDATE routines SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.routine_id]);
+                    } else {
+                        await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.id]);
+                    }
+                }
+
+                // Update children's sort order
+                const children = currentChildren[pid] || [];
+                for (const child of children) {
+                    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child.id]);
                 }
             }
         } catch (err) {
@@ -192,8 +277,11 @@ export default function TodayPage() {
         const overIdStr = String(over.id);
         if (!overIdStr.startsWith('reorder-today-')) return;
 
+        const currentRoots = rootItemsRef.current;
+        const currentChildren = childrenByParentRef.current;
+
         let targetIndex = parseInt(overIdStr.replace('reorder-today-', ''));
-        const currentOrder = tasks.map(t => t.id);
+        const currentOrder = currentRoots.map(t => t.id);
         const oldIndex = currentOrder.indexOf(active.id);
         if (oldIndex < 0) return;
 
@@ -204,12 +292,22 @@ export default function TodayPage() {
         // Insert at target position
         currentOrder.splice(targetIndex, 0, active.id);
 
-        // Optimistic UI update
-        const reordered = currentOrder.map(id => tasks.find(t => t.id === id)).filter(Boolean);
-        setTasks(reordered);
+        const reorderedRoots = currentOrder.map(id => currentRoots.find(t => t.id === id)).filter(Boolean);
 
-        await persistTodaySortOrder(reordered);
-    }, [tasks, setTasks, persistTodaySortOrder]);
+        // Rebuild flat task list from reordered roots
+        const newFlat = [];
+        for (const item of reorderedRoots) {
+            const pid = item.is_ghost_parent ? item.real_id : item.id;
+            if (!item.is_ghost_parent) {
+                newFlat.push(item);
+            }
+            const children = currentChildren[pid] || [];
+            newFlat.push(...children);
+        }
+        setTasks(newFlat);
+
+        await persistTodaySortOrder(reorderedRoots);
+    }, [setTasks, persistTodaySortOrder]);
 
     // Status change wrapper: adds justCompleted animation + routes to routine/task handler
     const handleStatusChange = (taskId, newCode, isRoutine = false) => {
@@ -261,7 +359,9 @@ export default function TodayPage() {
     const dateStr = `${selectedD.getFullYear()}年${selectedD.getMonth() + 1}月${selectedD.getDate()}日（${currentTab.weekday}）`;
 
     const isManual = sortMode === 'manual';
-    const activeTaskData = activeId ? tasks.find(t => t.id === activeId) : null;
+    const activeTaskData = activeId
+        ? (tasks.find(t => t.id === activeId) || rootItems.find(t => t.id === activeId))
+        : null;
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -370,29 +470,63 @@ export default function TodayPage() {
                         </div>
                     )}
 
-                    {tasks.map((task, i) => (
-                        <React.Fragment key={task.id}>
-                            {isManual && activeId && i === 0 && (
-                                <ReorderGap id="reorder-today-0" />
-                            )}
-                            <TodayCardItem
-                                task={task}
-                                isManual={isManual}
-                                statuses={statuses}
-                                statusMap={statusMap}
-                                selectedDate={selectedDate}
-                                onStatusChange={handleStatusChange}
-                                onRemove={handleRemove}
-                                onEdit={setEditingTask}
-                                justCompletedId={justCompletedId}
-                                index={i}
-                                isProcessing={actions.processingIds.has(task.id)}
-                            />
-                            {isManual && activeId && (
-                                <ReorderGap id={`reorder-today-${i + 1}`} />
-                            )}
-                        </React.Fragment>
-                    ))}
+                    {rootItems.map((item, i) => {
+                        const parentId = item.is_ghost_parent ? item.real_id : item.id;
+                        const children = childrenByParent[parentId] || [];
+                        const isGhost = !!item.is_ghost_parent;
+
+                        return (
+                            <React.Fragment key={item.id}>
+                                {isManual && activeId && i === 0 && (
+                                    <ReorderGap id="reorder-today-0" />
+                                )}
+                                {isGhost ? (
+                                    <div className="today-parent-group">
+                                        <TodayGroupHeader parentId={item.real_id} title={item.title} isManual={isManual} />
+                                        <div className="today-children">
+                                            {children.map((child, ci) => (
+                                                <TodayCardItem key={child.id} task={child} isManual={isManual} isChild
+                                                    statuses={statuses} statusMap={statusMap} selectedDate={selectedDate}
+                                                    onStatusChange={handleStatusChange} onRemove={handleRemove}
+                                                    onEdit={setEditingTask} justCompletedId={justCompletedId}
+                                                    index={ci} isProcessing={actions.processingIds.has(child.id)} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className={children.length > 0 ? 'today-parent-group' : undefined}>
+                                        <TodayCardItem
+                                            task={item}
+                                            isManual={isManual}
+                                            statuses={statuses}
+                                            statusMap={statusMap}
+                                            selectedDate={selectedDate}
+                                            onStatusChange={handleStatusChange}
+                                            onRemove={handleRemove}
+                                            onEdit={setEditingTask}
+                                            justCompletedId={justCompletedId}
+                                            index={i}
+                                            isProcessing={actions.processingIds.has(item.id)}
+                                        />
+                                        {children.length > 0 && (
+                                            <div className="today-children">
+                                                {children.map((child, ci) => (
+                                                    <TodayCardItem key={child.id} task={child} isManual={isManual} isChild
+                                                        statuses={statuses} statusMap={statusMap} selectedDate={selectedDate}
+                                                        onStatusChange={handleStatusChange} onRemove={handleRemove}
+                                                        onEdit={setEditingTask} justCompletedId={justCompletedId}
+                                                        index={ci} isProcessing={actions.processingIds.has(child.id)} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {isManual && activeId && (
+                                    <ReorderGap id={`reorder-today-${i + 1}`} />
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
                 </div>
 
                 {currentTab.isToday && stats.total > 0 && stats.completed >= 1 && stats.pct < 50 && (
@@ -413,14 +547,21 @@ export default function TodayPage() {
 
                 <DragOverlay>
                     {activeTaskData ? (
-                        <div className="today-card" style={{ opacity: 0.8, transform: 'scale(1.02)', cursor: 'grabbing', animation: 'none' }}>
+                        <div className={activeTaskData.is_ghost_parent ? 'today-ghost-header' : 'today-card'} style={{ opacity: 0.8, transform: 'scale(1.02)', cursor: 'grabbing', animation: 'none' }}>
                             <div className="today-drag-handle" style={{ opacity: 1 }}>⋮⋮</div>
-                            <div className="today-card-info">
-                                <div className="today-card-title-row">
-                                    {activeTaskData.is_routine && <span className="today-routine-badge">🔄</span>}
-                                    <span className="today-card-title">{activeTaskData.title}</span>
+                            {activeTaskData.is_ghost_parent ? (
+                                <>
+                                    <span className="today-ghost-icon">📌</span>
+                                    <span className="today-ghost-title">{activeTaskData.title}</span>
+                                </>
+                            ) : (
+                                <div className="today-card-info">
+                                    <div className="today-card-title-row">
+                                        {activeTaskData.is_routine && <span className="today-routine-badge">🔄</span>}
+                                        <span className="today-card-title">{activeTaskData.title}</span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     ) : null}
                 </DragOverlay>
@@ -498,6 +639,37 @@ export default function TodayPage() {
         .stat-details { display: flex; flex-direction: column; gap: 0.5rem; }
         .stat-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--color-text-secondary); }
         .stat-icon { font-size: 0.85rem; }
+
+        /* Parent-child grouping (IMP-15) */
+        .today-parent-group { }
+        .today-children {
+          margin-left: 2rem;
+          padding: 0.3rem 0 0.3rem 0.75rem;
+          border-left: 2px solid var(--border-color);
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+        .today-ghost-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background: var(--color-surface-hover);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius-md);
+          font-size: 0.85rem;
+          touch-action: none;
+          animation: tcIn 0.3s cubic-bezier(.16,1,.3,1) both;
+        }
+        .today-ghost-icon {
+          font-size: 0.8rem;
+          flex-shrink: 0;
+        }
+        .today-ghost-title {
+          font-weight: 600;
+          color: var(--color-text-secondary);
+        }
 
         /* Task Cards */
         .today-list { display: flex; flex-direction: column; gap: 0.6rem; }
@@ -588,7 +760,7 @@ export default function TodayPage() {
           opacity:0.5; transition:opacity .2s; user-select:none;
           font-size:.85rem;
         }
-        .today-drag-handle:hover, .today-card:hover .today-drag-handle { opacity:1; }
+        .today-drag-handle:hover, .today-card:hover .today-drag-handle, .today-ghost-header:hover .today-drag-handle { opacity:1; }
         .today-drag-handle:active { cursor:grabbing; }
 
         .today-milestone-banner {
