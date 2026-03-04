@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { safeTransaction } from '@/lib/utils';
 import { createTestDb, seedTasks } from '../__helpers__/testDb.js';
 
 let db;
@@ -81,5 +82,119 @@ describe('アーカイブ・復元', () => {
     await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [id]);
     const row = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
     expect(row[0].archived_at).toBeNull();
+  });
+});
+
+describe('safeTransactionによるアーカイブ・復元', () => {
+  it('親+子をsafeTransactionでまとめてアーカイブできる', async () => {
+    const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
+    const childIds = await seedTasks(db, [
+      { title: '子1', parent_id: parentId, status_code: 3 },
+      { title: '子2', parent_id: parentId, status_code: 5 },
+    ]);
+
+    await safeTransaction(db, async () => {
+      await db.execute(
+        "UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1 AND archived_at IS NULL",
+        [parentId]
+      );
+      await db.execute(
+        "UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1",
+        [parentId]
+      );
+    });
+
+    const parent = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [parentId]);
+    expect(parent[0].archived_at).not.toBeNull();
+    for (const id of childIds) {
+      const child = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
+      expect(child[0].archived_at).not.toBeNull();
+    }
+  });
+
+  it('親+子をsafeTransactionでまとめて復元できる', async () => {
+    const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
+    const childIds = await seedTasks(db, [
+      { title: '子1', parent_id: parentId, status_code: 3 },
+      { title: '子2', parent_id: parentId, status_code: 3 },
+    ]);
+
+    // まずアーカイブ
+    await safeTransaction(db, async () => {
+      await db.execute(
+        "UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1",
+        [parentId]
+      );
+      await db.execute(
+        "UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1",
+        [parentId]
+      );
+    });
+
+    // 親を指定して復元（handleRestoreの親復元パターン）
+    await safeTransaction(db, async () => {
+      await db.execute('UPDATE tasks SET archived_at = NULL WHERE parent_id = $1', [parentId]);
+      await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [parentId]);
+    });
+
+    const parent = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [parentId]);
+    expect(parent[0].archived_at).toBeNull();
+    for (const id of childIds) {
+      const child = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
+      expect(child[0].archived_at).toBeNull();
+    }
+  });
+
+  it('子を復元すると親も一緒に復元される', async () => {
+    const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
+    const [childId] = await seedTasks(db, [
+      { title: '子', parent_id: parentId, status_code: 3 },
+    ]);
+
+    // アーカイブ
+    await safeTransaction(db, async () => {
+      await db.execute(
+        "UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1",
+        [parentId]
+      );
+      await db.execute(
+        "UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1",
+        [parentId]
+      );
+    });
+
+    // 子を指定して復元（handleRestoreの子復元パターン: 親も復元）
+    await safeTransaction(db, async () => {
+      await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [parentId]);
+      await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [childId]);
+    });
+
+    const parent = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [parentId]);
+    expect(parent[0].archived_at).toBeNull();
+    const child = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [childId]);
+    expect(child[0].archived_at).toBeNull();
+  });
+
+  it('safeTransactionでアーカイブ中にエラーが発生すると全てロールバックされる', async () => {
+    const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
+    await seedTasks(db, [
+      { title: '子', parent_id: parentId, status_code: 3 },
+    ]);
+
+    await expect(
+      safeTransaction(db, async () => {
+        await db.execute(
+          "UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1 AND archived_at IS NULL",
+          [parentId]
+        );
+        throw new Error('途中エラー');
+      })
+    ).rejects.toThrow('途中エラー');
+
+    // 子タスクもロールバックされている
+    const children = await db.select('SELECT archived_at FROM tasks WHERE parent_id = $1', [parentId]);
+    for (const child of children) {
+      expect(child.archived_at).toBeNull();
+    }
   });
 });
