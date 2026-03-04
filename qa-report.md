@@ -48,8 +48,54 @@ NG はないが、リリース前検証 STEP A 用に洗い出した参照元を
 |---|------|------|------|------------|----------------|
 | 1 | アーカイブのトランザクション管理 | `handleArchive` / `handleRestore` | `runAutoArchive` | 手動アーカイブは `safeTransaction` でトランザクション保護されているが、自動アーカイブは保護なし | `hooks/useTaskActions.js:142,180` / `lib/db.js:266-292` | ✅ 修正済み |
 
-**#1 詳細**:
-- **問題**: `hooks/useTaskActions.js` の `handleArchive`（142行）と `handleRestore`（180行）は 4-5 で `safeTransaction` を使うよう修正され、親タスク＋子タスクのアーカイブ/復元が all-or-nothing で実行されるようになった。一方、`lib/db.js` の `runAutoArchive`（266-292行）は同じく「親の完了タスクをアーカイブ → その子をまとめてアーカイブ」という2段階 UPDATE を実行するが、トランザクション保護なしで2つの `db.execute()` を逐次実行している。
-- **リスク**: `runAutoArchive` で1本目の UPDATE（親タスクアーカイブ、273行）が成功し、2本目の UPDATE（子タスクアーカイブ、284行）が失敗した場合、親だけアーカイブされて子が取り残される不整合状態が発生しうる。
-- **推奨**: `runAutoArchive` 内の2段階 UPDATE を `safeTransaction` でラップし、手動アーカイブと同じトランザクション保護を適用する。`lib/db.js` は `lib/utils.js` をインポートしていないため、`safeTransaction` のインポート追加が必要。または `runAutoArchive` を `lib/utils.js` に移動するか、`lib/db.js` 内にローカルなトランザクションラップを記述する。
-- **緊急度**: 低（起動時バッチ処理であり、2本目の UPDATE が失敗する可能性は極めて低い。また失敗しても子タスクはアクティブ一覧に残るためデータ喪失はない）
+**NG-1**: runAutoArchive にトランザクション保護なし → safeTransaction を適用（`lib/db.js:274`）✅ 修正済み
+
+---
+
+## STEP R：リグレッションテスト（v1.4.0 枝番4-5 2026-03-04）
+
+**対象**: BUG-7（残存）アーカイブ／復元トランザクション管理の根本修正
+
+**変更サマリー**:
+- `lib/utils.js` — `safeTransaction` ヘルパー関数を追加
+- `hooks/useTaskActions.js` — `handleArchive`/`handleRestore` のトランザクション管理を `safeTransaction` に置換
+- `lib/db.js` — `runAutoArchive` に `safeTransaction` を適用 + インポート追加
+
+### ユニットテスト
+
+`npm test` 結果: **81/81 全件パス**（10ファイル、705ms）
+
+### 第1段階：変更箇所の直接テスト
+
+✅ 全6件パス（直接テスト6件）
+
+確認項目:
+1. `safeTransaction` 関数の実装（BEGIN/COMMIT/ROLLBACK フロー、エラー時 ROLLBACK 後 re-throw、ROLLBACK 二重実行耐性）— `lib/utils.js:24-33`
+2. `handleArchive` が `safeTransaction` でラップされ、親+子の all-or-nothing アーカイブが動作 — `hooks/useTaskActions.js:142-147`
+3. `handleRestore` が `safeTransaction` でラップされ、親+子の all-or-nothing 復元が動作 — `hooks/useTaskActions.js:180-188`
+4. `runAutoArchive` が `safeTransaction` でラップされ、自動アーカイブ+子連動が動作 — `lib/db.js:274-293`
+5. `safeTransaction` ユニットテスト3件（正常COMMIT・エラーROLLBACK・ROLLBACK二重耐性）— `tests/lib/utils.test.js:67-121`
+6. アーカイブ関連ユニットテスト9件（safeTransaction経由アーカイブ/復元4件 + runAutoArchive5件）— `tests/db/archive.test.js:89-277`
+
+### 第2段階：影響範囲の特定とテスト
+
+**影響範囲の洗い出し結果**:
+
+| # | 確認対象ファイル・関数 | 接続経路 | 確認内容 |
+|---|----------------------|----------|----------|
+| 1 | `components/TaskItem.js:134` `onArchive(task.id)` | props経由で `handleArchive` を呼出 | 関数シグネチャ不変（`taskId`→void）、`disabled={isProcessing}` 制御も不変 |
+| 2 | `components/TaskItem.js:116` `onRestore(task.id)` | props経由で `handleRestore` を呼出 | 関数シグネチャ不変（`taskId`→void）|
+| 3 | `components/TaskList.js:201,290` | `useTaskActions()` の返り値を TaskItem に props 伝播 | 返り値オブジェクト構造（handleArchive, handleRestore, processingIds 等）不変 |
+| 4 | `app/today/page.js:149-154` | `useTaskActions()` を呼出（handleArchive/handleRestore は未使用）| フック内部の状態変更が他ハンドラ（handleStatusChange 等）に影響しないことを確認 |
+| 5 | `app/settings/_components/OptionsPanel.js:118-119` | `runAutoArchive(db)` を動的インポートで呼出 | 関数シグネチャ不変（`db`→void）、export 維持（`lib/db.js:299`）|
+| 6 | `lib/db.js:255` `initDb()` → `runAutoArchive(db)` | 起動時に呼出 | エラーは外側の try-catch（257行）で捕捉、起動フローに影響なし |
+| 7 | `lib/db.js:3` ↔ `lib/utils.js:12` 循環依存チェック | `db.js` が `utils.js` を static import、`utils.js` が `db.js` を dynamic import | dynamic import のため循環依存なし |
+| 8 | `hooks/useTaskActions.js` の他ハンドラ | handleStatusChange, handleDelete, handleTodayToggle, handleRoutineStatusChange | 4-5 で変更なし、safeTransaction 未使用 |
+
+✅ 全8件パス（影響範囲テスト8件）
+
+### 総合結果
+
+✅ 全14件パス（直接テスト6件、影響範囲テスト8件）
+
+⚠️ 要実機確認: タスク一覧画面で完了済みタスクの📦ボタンを押す → 「アーカイブしました」と表示されタスクが消える → 「アーカイブ済み」タブで📤ボタンを押す → 「復元しました」と表示されタスクが戻る（Tauri SQL プラグイン固有の自動ロールバック挙動はテスト環境で再現不可のため）
