@@ -231,6 +231,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
             }
         } catch (e) {
             console.error("Tauri DB fetch today error:", e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'タスクの読み込みに失敗しました', type: 'error' } }));
         } finally {
             if (currentReq === activeRequestId.current) {
                 setLoading(false);

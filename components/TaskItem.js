@@ -72,7 +72,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                 <StatusCheckbox
                     statusCode={task.status_code}
                     onChange={(newCode) => onStatusChange(task.id, newCode)}
-                    disabled={isProcessing}
+                    disabled={isProcessing || isArchived}
                 />
 
                 {childTasks.length > 0 && (
