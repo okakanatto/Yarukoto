@@ -643,8 +643,8 @@ export default function TodayPage() {
         /* Parent-child grouping (IMP-15) */
         .today-parent-group { }
         .today-children {
-          margin-left: 2rem;
-          padding: 0.3rem 0 0.3rem 0.75rem;
+          margin-left: 2.25rem;
+          padding: .2rem .75rem .6rem 0;
           border-left: 2px solid var(--border-color);
           display: flex;
           flex-direction: column;
