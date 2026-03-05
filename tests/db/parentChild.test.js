@@ -109,6 +109,33 @@ describe('親子タスクの関係', () => {
     expect(rows[0].title).toBe('ルートタスク');
   });
 
+  it('孤児タスク（親が削除済み）はLEFT JOINでparent_titleがNULLになる', async () => {
+    const [parentId] = await seedTasks(db, [{ title: '削除される親' }]);
+    const [childId] = await seedTasks(db, [{ title: '孤児になる子', parent_id: parentId }]);
+
+    // CASCADE FK があるため、FK を一時無効にして親だけ削除し孤児状態を再現
+    await db.execute('PRAGMA foreign_keys = OFF', []);
+    await db.execute('DELETE FROM tasks WHERE id = $1', [parentId]);
+    await db.execute('PRAGMA foreign_keys = ON', []);
+
+    // 子のparent_idはまだ残っている
+    const child = await db.select('SELECT parent_id FROM tasks WHERE id = $1', [childId]);
+    expect(child[0].parent_id).toBe(parentId);
+
+    // LEFT JOINでparent_titleがNULLになることを検証（孤児検出の基盤）
+    const rows = await db.select(
+      `SELECT t.*, p.title as parent_title
+       FROM tasks t
+       LEFT JOIN tasks p ON t.parent_id = p.id
+       WHERE t.id = $1`,
+      [childId]
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].parent_id).toBe(parentId);  // parent_idは残存
+    expect(rows[0].parent_title).toBeNull();     // 親が存在しないのでNULL
+  });
+
   it('today_sort_orderで親子グループの並び順を永続化できる (IMP-15)', async () => {
     const today = new Date().toLocaleDateString('sv-SE');
     const [parentId] = await seedTasks(db, [{ title: '親タスク', today_date: today }]);
