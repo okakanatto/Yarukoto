@@ -190,8 +190,9 @@ export default function TodayPage() {
         const asChild = new Set();
 
         // Pass 1: identify children
+        // Skip orphaned children whose parent was deleted (parent_title is null from LEFT JOIN)
         for (const task of tasks) {
-            if (task.is_routine || !task.parent_id) continue;
+            if (task.is_routine || !task.parent_id || !task.parent_title) continue;
             if (!cMap[task.parent_id]) cMap[task.parent_id] = [];
             cMap[task.parent_id].push(task);
             asChild.add(task.id);
