@@ -130,6 +130,7 @@ export default function RootLayout({ children }) {
     const navItems = [
         { href: '/dashboard', label: 'ダッシュボード', icon: '📊' },
         { href: '/today', label: '今日やるタスク', icon: '☀️' },
+        { href: '/done', label: 'やったタスク', icon: '✅' },
         { href: '/tasks', label: 'タスク一覧', icon: '📋' },
         { href: '/routines', label: 'ルーティン', icon: '🔄' },
         { href: '/settings', label: '設定', icon: '⚙️' },
