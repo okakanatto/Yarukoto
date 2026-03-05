@@ -73,4 +73,72 @@ describe('親子タスクの関係', () => {
       expect(rows[0].parent_id).toBeNull();
     }
   });
+
+  it('SELF JOINで子タスクからparent_titleを取得できる (IMP-15)', async () => {
+    const [parentId] = await seedTasks(db, [{ title: '買い物リスト' }]);
+    const [childId] = await seedTasks(db, [{ title: '牛乳を買う', parent_id: parentId }]);
+
+    // useTodayTasks.js と同じ SELF JOIN パターン
+    const rows = await db.select(
+      `SELECT t.*, p.title as parent_title
+       FROM tasks t
+       LEFT JOIN tasks p ON t.parent_id = p.id
+       WHERE t.id = $1`,
+      [childId]
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].parent_title).toBe('買い物リスト');
+    expect(rows[0].title).toBe('牛乳を買う');
+    expect(rows[0].parent_id).toBe(parentId);
+  });
+
+  it('ルートタスクのparent_titleはNULLになる (IMP-15)', async () => {
+    const [rootId] = await seedTasks(db, [{ title: 'ルートタスク' }]);
+
+    const rows = await db.select(
+      `SELECT t.*, p.title as parent_title
+       FROM tasks t
+       LEFT JOIN tasks p ON t.parent_id = p.id
+       WHERE t.id = $1`,
+      [rootId]
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].parent_title).toBeNull();
+    expect(rows[0].title).toBe('ルートタスク');
+  });
+
+  it('today_sort_orderで親子グループの並び順を永続化できる (IMP-15)', async () => {
+    const today = new Date().toLocaleDateString('sv-SE');
+    const [parentId] = await seedTasks(db, [{ title: '親タスク', today_date: today }]);
+    const [child1, child2] = await seedTasks(db, [
+      { title: '子タスク1', parent_id: parentId, today_date: today },
+      { title: '子タスク2', parent_id: parentId, today_date: today },
+    ]);
+    const [standalone] = await seedTasks(db, [{ title: '独立タスク', today_date: today }]);
+
+    // persistTodaySortOrder と同じパターン: 親→子→独立 の順で sort_order を設定
+    let orderIdx = 1;
+    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, parentId]);
+    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child1]);
+    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child2]);
+    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, standalone]);
+
+    // today_sort_order 順に取得して検証
+    const rows = await db.select(
+      'SELECT id, title, today_sort_order FROM tasks WHERE today_date = $1 ORDER BY today_sort_order',
+      [today]
+    );
+
+    expect(rows).toHaveLength(4);
+    expect(rows[0].title).toBe('親タスク');
+    expect(rows[0].today_sort_order).toBe(1);
+    expect(rows[1].title).toBe('子タスク1');
+    expect(rows[1].today_sort_order).toBe(2);
+    expect(rows[2].title).toBe('子タスク2');
+    expect(rows[2].today_sort_order).toBe(3);
+    expect(rows[3].title).toBe('独立タスク');
+    expect(rows[3].today_sort_order).toBe(4);
+  });
 });
