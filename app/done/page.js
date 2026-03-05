@@ -83,6 +83,7 @@ export default function DonePage() {
             setPeriodStats({ tasks: totalT, routines: totalR });
         } catch (err) {
             console.error('Done summary load error', err);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'データの読み込みに失敗しました', type: 'error' } }));
         } finally {
             setSummaryLoading(false);
         }
@@ -128,6 +129,7 @@ export default function DonePage() {
             setDayTasks(items);
         } catch (err) {
             console.error('Done detail load error', err);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'データの読み込みに失敗しました', type: 'error' } }));
         } finally {
             setDetailLoading(false);
         }
@@ -480,8 +482,8 @@ export default function DonePage() {
                     text-align: center; font-size: 0.72rem; font-weight: 600;
                     color: var(--color-text-muted); padding: 0.35rem 0;
                 }
-                .done-cal-wd.sun { color: #ef4444; }
-                .done-cal-wd.sat { color: #3b82f6; }
+                .done-cal-wd.sun { color: var(--color-danger); }
+                .done-cal-wd.sat { color: var(--color-saturday); }
                 .done-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
                 .done-cal-cell {
                     display: flex; flex-direction: column; align-items: center;
@@ -595,8 +597,8 @@ export default function DonePage() {
                 }
                 .done-task-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.2rem; }
                 .done-tag {
-                    font-size: 0.6rem; font-weight: 600; padding: 0.08rem 0.4rem;
-                    border-radius: 8px; color: #fff;
+                    font-size: 0.63rem; font-weight: 600; padding: 0.1rem 0.5rem;
+                    border-radius: 10px; color: #fff;
                 }
                 .done-meta-text { font-size: 0.72rem; color: var(--color-text-muted); }
                 .done-time {
