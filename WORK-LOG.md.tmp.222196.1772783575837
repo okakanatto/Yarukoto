@@ -1,0 +1,62 @@
+# Work Log
+
+## 最新の作業（2026-03-06）
+
+- **フェーズ**: 6-3 実装（ENH-2 後半：プロジェクト機能 Part 2 — UI 統合）
+- **対象バージョン**: v1.6.0
+- **ステータス**: ✅ 完了
+- **やったこと**:
+  - サイドバーの「タスク一覧」直下にプロジェクト一覧をネスト表示（折りたたみトグル付き、Todoistの「マイプロジェクト」パターン）
+  - `/projects?id=X` でプロジェクト別タスク一覧ページを新規作成
+  - TaskList に `projectId` フィルタ prop を追加（プロジェクトページでのフィルタリングに使用）
+  - TaskInput に `defaultProjectId` prop を追加（プロジェクトページからのタスク追加時にプロジェクト自動選択）
+  - 今日やるタスク（TodayCardItem）にプロジェクトバッジ表示を追加（カラードット + プロジェクト名）
+  - タスク一覧（TaskItem）にプロジェクトバッジ表示を追加（タイトル横に配置）
+  - `useTodayTasks.js` の tasks/routines SQL クエリに projects テーブル JOIN を追加
+  - `TaskList.js` の SQL クエリに projects テーブル JOIN を追加
+  - Static Export 対応のため、動的ルート `[id]` ではなくクエリパラメータ方式 `/projects?id=X` を採用
+  - プロジェクトページ閲覧時は「タスク一覧」ナビもアクティブ状態に
+  - lint エラーなし、既存テスト全93件パス
+- **次にやるべきこと**:
+  - 4-T（自動テスト）の実行
+- **注意事項・申し送り**:
+  - 【変更サマリー】
+  - ■ 変更した機能：
+    - サイドバーにプロジェクト一覧を「タスク一覧」の直下にネスト表示（折りたたみトグル付き）
+    - プロジェクト別タスク一覧ページ（/projects?id=X）の新規追加
+    - 今日やるタスク画面にプロジェクトバッジ表示（カラードット + プロジェクト名）
+    - タスク一覧画面にプロジェクトバッジ表示（タイトル横に配置）
+    - タスク一覧の projectId フィルタリング対応（プロジェクトページ用）
+    - タスク入力フォームの defaultProjectId 対応（プロジェクトページからの追加時に自動選択）
+    - プロジェクトページ閲覧時は「タスク一覧」ナビもアクティブ状態に
+  - ■ 変更したファイル：
+    - `app/layout.js` — useSearchParams 追加、projects fetch、navItems を Top/Bottom に分割、「タスク一覧」li 内にプロジェクトサブリスト（トグル + 一覧）をネスト表示、プロジェクトページ時のアクティブ判定
+    - `app/globals.css` — .nav-link-row / .sidebar-projects-toggle / .sidebar-projects-list 等のスタイル追加（タスク一覧内ネスト用）、collapsed 時の非表示
+    - `app/projects/page.js` — 新規作成。useSearchParams で id 取得、プロジェクト情報 DB fetch、TaskInput（defaultProjectId付き）+ TaskList（projectId付き）を配置
+    - `components/TaskList.js` — projectId prop 追加、SQL に projects テーブル LEFT JOIN 追加（project_name, project_color 取得）、projectId による WHERE 条件追加、依存配列に projectId 追加、プロジェクトバッジ CSS 追加
+    - `components/TaskItem.js` — タイトル行にプロジェクトバッジ（.tc-project-badge：カラードット + プロジェクト名）を表示追加
+    - `components/TaskInput.js` — defaultProjectId prop 追加、projectId 初期値設定、resetForm で defaultProjectId 保持、defaultProjectId 時はプロジェクトセレクタ非表示
+    - `hooks/useTodayTasks.js` — tasks SQL に projects テーブル LEFT JOIN 追加（project_name, project_color 取得）、routines SQL にも同様の JOIN 追加、routine マッピングに project_name/project_color 追加
+    - `app/today/page.js` — TodayCardItem のメタ行にプロジェクトバッジ（.today-project-badge）表示追加、CSS 追加
+  - ■ 変更の概要：
+    - ENH-2（後半）として、プロジェクト機能のフロントエンド UI 統合を実装した。サイドバーでは「タスク一覧」ナビアイテムの直下にプロジェクト一覧を折りたたみ可能なサブリストとしてネスト表示（Todoist の「マイプロジェクト」パターン）。navItems を navItemsTop / navItemsBottom に分割し、タスク一覧の `<li>` 内に `.nav-link-row`（Link + トグルボタン）と `.sidebar-projects-list` を配置。プロジェクトクリックで `/projects?id=X` に遷移し、プロジェクト別タスク一覧を表示。Static Export（output: 'export'）との互換性のため動的ルート [id] ではなくクエリパラメータ方式を採用。タスク一覧・今日やるタスクの SQL クエリに projects テーブルを LEFT JOIN し、タスクカード上にプロジェクトバッジ（カラードット + プロジェクト名）を表示。プロジェクトページからのタスク追加では対象プロジェクトが自動選択される。
+  - ■ 影響が想定される箇所：
+    - `app/routines/page.js` — ルーティン一覧でのプロジェクトバッジ表示は未対応
+    - `app/done/page.js` — やったタスクでのプロジェクトバッジ表示は未対応
+    - `app/dashboard/page.js` — ダッシュボードでのプロジェクト別統計は未対応
+    - `hooks/useTaskActions.js` — タスク操作ハンドラ（project_id は透過的に保持される、影響なし）
+    - `hooks/useTaskDnD.js` — DnD操作（project_id は透過的に保持される、影響なし）
+    - `app/settings/_components/ProjectsPanel.js` — プロジェクト追加・削除・名前変更時に `yarukoto:projectsChanged` イベントを dispatch する必要あり（サイドバーのリフレッシュ用）
+    - `tests/` — テストモック（tauri-plugin-sql.js）の initDb で projects テーブルが自動作成される、既存テスト93件はパス済み
+
+---
+
+## 過去の作業（直近2件まで保持。3件目以降は削除すること）
+
+### 2026-03-06 — 6-2 実装（ENH-2 前半：プロジェクト機能 Part 1）
+- ステータス: ✅ 完了
+- やったこと: projects テーブル新設、tasks/routines に project_id カラム追加、設定画面にプロジェクト管理タブ追加、各フォームにプロジェクト選択ドロップダウン追加。
+
+### 2026-03-06 — 完了処理（6-1 BUG-8 実装完了）
+- ステータス: ✅ 完了
+- やったこと: qa-report.md に STEP R リグレッションテストの結果を追記、ISSUES.md の BUG-8 を 🟢 完了 に更新、ROADMAP.md の枝番 6-1 に ✅ 完了 マークを付与。
