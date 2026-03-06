@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchDb, parseTags } from '@/lib/utils';
+import { useMasterData } from '@/hooks/useMasterData';
+import MultiSelectFilter from '@/components/MultiSelectFilter';
 import RoutineFormModal from './_components/RoutineFormModal';
 
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -10,6 +12,14 @@ export default function RoutinesPage() {
     const [routines, setRoutines] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('active');
+    const [filterProjects, setFilterProjects] = useState([]);
+
+    // Master data for project filter
+    const { projects: allProjects } = useMasterData();
+    const projectOptions = useMemo(
+        () => allProjects.map(p => ({ value: p.id, label: p.name, color: p.color })),
+        [allProjects]
+    );
 
     // Modal State
     const [modalOpen, setModalOpen] = useState(false);
@@ -23,18 +33,36 @@ export default function RoutinesPage() {
         setLoading(true);
         try {
             const db = await fetchDb();
-            const sql = `
+            let sql = `
               SELECT r.*,
+                     pj.name as project_name,
+                     pj.color as project_color,
                      json_group_array(tg.name) as tag_names,
                      json_group_array(tg.color) as tag_colors,
                      json_group_array(tg.id) as tag_ids
               FROM routines r
+              LEFT JOIN projects pj ON r.project_id = pj.id
               LEFT JOIN routine_tags rt ON r.id = rt.routine_id
               LEFT JOIN tags tg ON rt.tag_id = tg.id
-              GROUP BY r.id
-              ORDER BY r.created_at DESC
             `;
-            const rawRoutines = await db.select(sql);
+
+            const conditions = [];
+            const params = [];
+            let paramIndex = 1;
+
+            if (filterProjects.length > 0) {
+                const placeholders = filterProjects.map(() => `$${paramIndex++}`).join(',');
+                conditions.push(`r.project_id IN (${placeholders})`);
+                params.push(...filterProjects);
+            }
+
+            if (conditions.length > 0) {
+                sql += ' WHERE ' + conditions.join(' AND ');
+            }
+
+            sql += ' GROUP BY r.id ORDER BY r.created_at DESC';
+
+            const rawRoutines = await db.select(sql, params);
             const parsedRoutines = rawRoutines.map(r => ({
                 ...r,
                 tags: parseTags(r)
@@ -42,7 +70,7 @@ export default function RoutinesPage() {
             setRoutines(parsedRoutines);
         } catch (e) { console.error("Tauri DB fetch routines error:", e); }
         finally { setLoading(false); }
-    }, []);
+    }, [filterProjects]);
 
     useEffect(() => { loadRoutines(); }, [loadRoutines]);
 
@@ -99,6 +127,13 @@ export default function RoutinesPage() {
                 </button>
             </div>
 
+            {/* Project Filter */}
+            {projectOptions.length > 1 && (
+                <div className="rt-toolbar">
+                    <MultiSelectFilter label="プロジェクト" options={projectOptions} selected={filterProjects} onChange={setFilterProjects} />
+                </div>
+            )}
+
             {/* Tabs */}
             <div className="rt-tabs">
                 <button
@@ -135,6 +170,12 @@ export default function RoutinesPage() {
                             <div className="rt-card-main">
                                 <span className="rt-card-title">{r.title}</span>
                                 <span className="rt-freq-badge">{getFreqLabel(r)}</span>
+                                {r.project_name && (
+                                    <span className="rt-project-badge" style={{ backgroundColor: `${r.project_color}18`, color: r.project_color, borderColor: `${r.project_color}30` }}>
+                                        <span className="rt-project-dot" style={{ backgroundColor: r.project_color }} />
+                                        {r.project_name}
+                                    </span>
+                                )}
                             </div>
                             <div className="rt-card-meta">
                                 {r.tags && r.tags.map(t => (
@@ -217,6 +258,19 @@ export default function RoutinesPage() {
         .rt-tag { font-size: 0.63rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 10px; color: #fff; }
         .rt-meta-item { font-size: 0.75rem; color: var(--color-text-muted); }
         .rt-end-date { color: var(--color-warning); }
+
+        .rt-toolbar {
+            display: flex; align-items: center; gap: .85rem; flex-wrap: wrap;
+            margin-bottom: 1rem; padding: .65rem .85rem;
+            background: var(--color-surface); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+        }
+        .rt-project-badge {
+            display: inline-flex; align-items: center; gap: .25rem;
+            font-size: .63rem; font-weight: 600; padding: .1rem .5rem;
+            border-radius: 10px; border: 1px solid; white-space: nowrap;
+        }
+        .rt-project-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
         .rt-empty { text-align: center; padding: 3rem; color: var(--color-text-muted); display: flex; flex-direction: column; align-items: center; }
         .rt-empty-icon { font-size: 3rem; margin-bottom: 0.5rem; opacity: 0.5; }

@@ -20,6 +20,7 @@ export default function TaskList({ projectId = null }) {
     const [filterTags, setFilterTags] = useState([]);
     const [filterImportance, setFilterImportance] = useState([]);
     const [filterUrgency, setFilterUrgency] = useState([]);
+    const [filterProjects, setFilterProjects] = useState([]);
     const [sortKey, setSortKey] = useState('created_desc');
     const [sortMode, setSortMode] = useState('auto'); // 'auto' or 'manual'
     const [refreshKey, setRefreshKey] = useState(0);
@@ -32,12 +33,12 @@ export default function TaskList({ projectId = null }) {
     tasksRef.current = tasks;
     const sortedParentTasksRef = useRef([]);
 
-    const { masters, tags: allTags } = useMasterData();
+    const { masters, tags: allTags, projects: allProjects } = useMasterData();
     const allStatuses = useMemo(() => masters.status || [], [masters.status]);
     const allImportance = useMemo(() => masters.importance || [], [masters.importance]);
     const allUrgency = useMemo(() => masters.urgency || [], [masters.urgency]);
 
-    const { statusOptions, tagOptions, importanceOptions, urgencyOptions } = useFilterOptions(allStatuses, allTags, allImportance, allUrgency);
+    const { statusOptions, tagOptions, importanceOptions, urgencyOptions, projectOptions } = useFilterOptions(allStatuses, allTags, allImportance, allUrgency, allProjects);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -108,10 +109,17 @@ export default function TaskList({ projectId = null }) {
                 params.push(...filterUrgency);
             }
 
-            // Filter by project
+            // Filter by project (single prop)
             if (projectId) {
                 conditions.push(`t.project_id = $${paramIndex++}`);
                 params.push(projectId);
+            }
+
+            // Filter by projects (multi-select)
+            if (filterProjects.length > 0) {
+                const placeholders = filterProjects.map(() => `$${paramIndex++}`).join(',');
+                conditions.push(`t.project_id IN (${placeholders})`);
+                params.push(...filterProjects);
             }
 
             if (conditions.length > 0) {
@@ -137,7 +145,7 @@ export default function TaskList({ projectId = null }) {
                 setLoading(false);
             }
         }
-    }, [filterStatuses, filterTags, filterImportance, filterUrgency, showArchived, projectId]);
+    }, [filterStatuses, filterTags, filterImportance, filterUrgency, filterProjects, showArchived, projectId]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
 
@@ -253,6 +261,7 @@ export default function TaskList({ projectId = null }) {
                     {tagOptions.length > 0 && <MultiSelectFilter label="タグ" options={tagOptions} selected={filterTags} onChange={setFilterTags} />}
                     <MultiSelectFilter label="重要度" options={importanceOptions} selected={filterImportance} onChange={setFilterImportance} />
                     <MultiSelectFilter label="緊急度" options={urgencyOptions} selected={filterUrgency} onChange={setFilterUrgency} />
+                    {projectOptions.length > 1 && <MultiSelectFilter label="プロジェクト" options={projectOptions} selected={filterProjects} onChange={setFilterProjects} />}
                     <div className="tl-sort-group" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                         {!showArchived && (
                             <button
