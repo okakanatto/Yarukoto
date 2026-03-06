@@ -152,11 +152,13 @@ export default function RootLayout({ children }) {
         return () => clearInterval(interval);
     }, [mounted, fetchTodayProgress, pathname]);
 
-    const navItems = [
+    const navItemsTop = [
         { href: '/dashboard', label: 'ダッシュボード', icon: '📊' },
         { href: '/today', label: '今日やるタスク', icon: '☀️' },
         { href: '/done', label: 'やったタスク', icon: '✅' },
         { href: '/tasks', label: 'タスク一覧', icon: '📋' },
+    ];
+    const navItemsBottom = [
         { href: '/routines', label: 'ルーティン', icon: '🔄' },
         { href: '/settings', label: '設定', icon: '⚙️' },
     ];
@@ -184,7 +186,47 @@ export default function RootLayout({ children }) {
                             </button>
                         </div>
                         <ul className="nav-links" suppressHydrationWarning>
-                            {navItems.map(item => (
+                            {navItemsTop.map(item => {
+                                const isTasksItem = item.href === '/tasks';
+                                const showProjects = isTasksItem && mounted && projects.length > 0 && !isCollapsed;
+                                const isTasksActive = pathname === item.href || (isTasksItem && pathname === '/projects');
+                                return (
+                                    <li key={item.href} suppressHydrationWarning>
+                                        <div className="nav-link-row" suppressHydrationWarning>
+                                            <Link href={item.href} className={isTasksActive ? 'active' : ''} suppressHydrationWarning>
+                                                <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
+                                                <span className="nav-label" suppressHydrationWarning>{item.label}</span>
+                                            </Link>
+                                            {showProjects && (
+                                                <button
+                                                    className="sidebar-projects-toggle"
+                                                    onClick={() => setProjectsExpanded(!projectsExpanded)}
+                                                    suppressHydrationWarning
+                                                >
+                                                    <span className={`sidebar-projects-chev ${projectsExpanded ? 'open' : ''}`}>›</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                        {showProjects && projectsExpanded && (
+                                            <ul className="sidebar-projects-list" suppressHydrationWarning>
+                                                {projects.map(p => (
+                                                    <li key={p.id} suppressHydrationWarning>
+                                                        <Link
+                                                            href={`/projects?id=${p.id}`}
+                                                            className={pathname === '/projects' && searchParams.get('id') === String(p.id) ? 'active' : ''}
+                                                            suppressHydrationWarning
+                                                        >
+                                                            <span className="sidebar-project-dot" style={{ backgroundColor: p.color }} suppressHydrationWarning />
+                                                            <span className="nav-label" suppressHydrationWarning>{p.name}</span>
+                                                        </Link>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </li>
+                                );
+                            })}
+                            {navItemsBottom.map(item => (
                                 <li key={item.href} suppressHydrationWarning>
                                     <Link href={item.href} className={pathname === item.href ? 'active' : ''} suppressHydrationWarning>
                                         <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
@@ -193,36 +235,6 @@ export default function RootLayout({ children }) {
                                 </li>
                             ))}
                         </ul>
-                        {mounted && projects.length > 0 && !isCollapsed && (
-                            <div className="sidebar-projects" suppressHydrationWarning>
-                                <div className="sidebar-projects-header" suppressHydrationWarning>
-                                    <button
-                                        className="sidebar-projects-toggle"
-                                        onClick={() => setProjectsExpanded(!projectsExpanded)}
-                                        suppressHydrationWarning
-                                    >
-                                        <span className={`sidebar-projects-chev ${projectsExpanded ? 'open' : ''}`}>›</span>
-                                        <span className="sidebar-projects-label">プロジェクト</span>
-                                    </button>
-                                </div>
-                                {projectsExpanded && (
-                                    <ul className="sidebar-projects-list" suppressHydrationWarning>
-                                        {projects.map(p => (
-                                            <li key={p.id} suppressHydrationWarning>
-                                                <Link
-                                                    href={`/projects?id=${p.id}`}
-                                                    className={pathname === '/projects' && searchParams.get('id') === String(p.id) ? 'active' : ''}
-                                                    suppressHydrationWarning
-                                                >
-                                                    <span className="sidebar-project-dot" style={{ backgroundColor: p.color }} suppressHydrationWarning />
-                                                    <span className="nav-label" suppressHydrationWarning>{p.name}</span>
-                                                </Link>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-                        )}
                         {mounted && todayProgress.total > 0 && (
                             <div className="sidebar-progress" suppressHydrationWarning>
                                 <div className="sidebar-progress-label" suppressHydrationWarning>
