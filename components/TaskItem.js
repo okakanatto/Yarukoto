@@ -12,7 +12,7 @@ import { formatMin } from '@/lib/utils';
  * Individual task card component with DnD support, status controls, and child task rendering.
  * Extracted from TaskList.js (Phase 1-1).
  */
-export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false, processingIds = new Set() }) {
+export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false, processingIds = new Set(), justCompletedId = null }) {
     const [expanded, setExpanded] = useState(true);
     const [showSub, setShowSub] = useState(false);
 
@@ -73,6 +73,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                     statusCode={task.status_code}
                     onChange={(newCode) => onStatusChange(task.id, newCode)}
                     disabled={isProcessing || isArchived}
+                    sparkle={justCompletedId === task.id}
                 />
 
                 {childTasks.length > 0 && (
@@ -161,6 +162,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                                 activeId={activeId}
                                 isProcessing={isProcessing || processingIds.has(c.id)}
                                 processingIds={processingIds}
+                                justCompletedId={justCompletedId}
                             />
                             {/* ReorderGap after each child in manual mode */}
                             {sortMode === 'manual' && activeId && activeDragParentId === task.id && (

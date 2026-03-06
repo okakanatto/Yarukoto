@@ -25,6 +25,7 @@ export default function TaskList() {
     const [refreshKey, setRefreshKey] = useState(0);
     const [editingTask, setEditingTask] = useState(null);
     const [showArchived, setShowArchived] = useState(false);
+    const [justCompletedId, setJustCompletedId] = useState(null);
 
     const activeRequestId = useRef(0);
     const tasksRef = useRef(tasks);
@@ -198,12 +199,22 @@ export default function TaskList() {
     }, [allStatuses]);
 
     // Custom hooks
-    const { handleStatusChange, handleDelete, handleTodayToggle, handleArchive, handleRestore, processingIds } = useTaskActions({
+    const { handleStatusChange: rawHandleStatusChange, handleDelete, handleTodayToggle, handleArchive, handleRestore, processingIds } = useTaskActions({
         setTasks,
         fetchTasks,
         refresh,
         getTasks: useCallback(() => tasksRef.current, []),
     });
+
+    // Wrap status change to trigger sparkle animation on completion
+    const handleStatusChange = useCallback((taskId, newCode) => {
+        const code = parseInt(newCode);
+        if (code === 3) {
+            setJustCompletedId(taskId);
+            setTimeout(() => setJustCompletedId(null), 700);
+        }
+        rawHandleStatusChange(taskId, newCode);
+    }, [rawHandleStatusChange]);
 
     const { activeId, activeTaskData, isDraggingChild, handleDragStart, handleDragEnd } = useTaskDnD({
         tasks,
@@ -296,6 +307,7 @@ export default function TaskList() {
                                 activeDragParentId={activeTaskData?.parent_id}
                                 isProcessing={processingIds.has(task.id)}
                                 processingIds={processingIds}
+                                justCompletedId={justCompletedId}
                             />
                             {/* Manual mode: ReorderGap after each root task */}
                             {!showArchived && sortMode === 'manual' && activeId && (
