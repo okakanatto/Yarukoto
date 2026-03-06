@@ -143,6 +143,8 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
             const routinesSql = `
               SELECT r.*,
                      rc.completion_date,
+                     pj.name as project_name,
+                     pj.color as project_color,
                      json_group_array(tg.name) as tag_names,
                      json_group_array(tg.color) as tag_colors,
                      json_group_array(tg.id) as tag_ids
@@ -150,6 +152,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
               LEFT JOIN routine_tags rt ON r.id = rt.routine_id
               LEFT JOIN tags tg ON rt.tag_id = tg.id
               LEFT JOIN routine_completions rc ON r.id = rc.routine_id AND rc.completion_date = $1
+              LEFT JOIN projects pj ON r.project_id = pj.id
               WHERE r.enabled = 1
                 AND (r.end_date IS NULL OR r.end_date >= $2)
                 ${rConditionStr}
@@ -176,6 +179,8 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                     estimated_hours: r.estimated_hours,
                     due_date: null,
                     today_sort_order: r.today_sort_order || 0,
+                    project_name: r.project_name,
+                    project_color: r.project_color,
                     tags: parseTags(r)
                 }));
 
@@ -184,11 +189,14 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
             const tasksSql = `
               SELECT t.*,
                      p.title as parent_title,
+                     pj.name as project_name,
+                     pj.color as project_color,
                      json_group_array(tg.name) as tag_names,
                      json_group_array(tg.color) as tag_colors,
                      json_group_array(tg.id) as tag_ids
               FROM tasks t
               LEFT JOIN tasks p ON t.parent_id = p.id
+              LEFT JOIN projects pj ON t.project_id = pj.id
               LEFT JOIN task_tags tt ON t.id = tt.task_id
               LEFT JOIN tags tg ON tt.tag_id = tg.id
               WHERE (t.archived_at IS NULL OR t.status_code = 3) AND t.status_code != 5

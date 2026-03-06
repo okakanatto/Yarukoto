@@ -3,7 +3,7 @@
 import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import TaskInput from '@/components/TaskInput';
 import { fetchDb } from '@/lib/utils';
@@ -13,12 +13,15 @@ const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
 
 export default function RootLayout({ children }) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [mounted, setMounted] = useState(false);
     const [todayProgress, setTodayProgress] = useState({ total: 0, completed: 0 });
     const [fabOpen, setFabOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [toast, setToast] = useState(null); // { message, type }
     const [dbError, setDbError] = useState(null);
+    const [projects, setProjects] = useState([]);
+    const [projectsExpanded, setProjectsExpanded] = useState(true);
     const modalRef = useRef(null);
 
     useEffect(() => {
@@ -38,6 +41,28 @@ export default function RootLayout({ children }) {
         window.addEventListener('yarukoto:dberror', hd);
         return () => window.removeEventListener('yarukoto:dberror', hd);
     }, [mounted]);
+
+    // Fetch projects for sidebar
+    const fetchProjects = useCallback(async () => {
+        if (!mounted) return;
+        try {
+            const db = await fetchDb();
+            const rows = await db.select('SELECT * FROM projects WHERE archived_at IS NULL ORDER BY sort_order, id');
+            setProjects(rows);
+        } catch (e) { console.error('Failed to fetch projects:', e); }
+    }, [mounted]);
+
+    useEffect(() => {
+        if (!mounted) return;
+        fetchProjects();
+        const handleProjectsChanged = () => fetchProjects();
+        window.addEventListener('yarukoto:projectsChanged', handleProjectsChanged);
+        window.addEventListener('yarukoto:taskAdded', handleProjectsChanged);
+        return () => {
+            window.removeEventListener('yarukoto:projectsChanged', handleProjectsChanged);
+            window.removeEventListener('yarukoto:taskAdded', handleProjectsChanged);
+        };
+    }, [mounted, fetchProjects]);
 
     if (dbError) throw dbError; // Throws during render so Next.js error.js catches it
 
@@ -168,6 +193,36 @@ export default function RootLayout({ children }) {
                                 </li>
                             ))}
                         </ul>
+                        {mounted && projects.length > 0 && !isCollapsed && (
+                            <div className="sidebar-projects" suppressHydrationWarning>
+                                <div className="sidebar-projects-header" suppressHydrationWarning>
+                                    <button
+                                        className="sidebar-projects-toggle"
+                                        onClick={() => setProjectsExpanded(!projectsExpanded)}
+                                        suppressHydrationWarning
+                                    >
+                                        <span className={`sidebar-projects-chev ${projectsExpanded ? 'open' : ''}`}>›</span>
+                                        <span className="sidebar-projects-label">プロジェクト</span>
+                                    </button>
+                                </div>
+                                {projectsExpanded && (
+                                    <ul className="sidebar-projects-list" suppressHydrationWarning>
+                                        {projects.map(p => (
+                                            <li key={p.id} suppressHydrationWarning>
+                                                <Link
+                                                    href={`/projects?id=${p.id}`}
+                                                    className={pathname === '/projects' && searchParams.get('id') === String(p.id) ? 'active' : ''}
+                                                    suppressHydrationWarning
+                                                >
+                                                    <span className="sidebar-project-dot" style={{ backgroundColor: p.color }} suppressHydrationWarning />
+                                                    <span className="nav-label" suppressHydrationWarning>{p.name}</span>
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
                         {mounted && todayProgress.total > 0 && (
                             <div className="sidebar-progress" suppressHydrationWarning>
                                 <div className="sidebar-progress-label" suppressHydrationWarning>

@@ -97,6 +97,12 @@ function TodayCardItem({ task, isManual, isChild = false, statuses, statusMap, s
                     </span>
                 </div>
                 <div className="today-card-meta">
+                    {task.project_name && (
+                        <span className="today-project-badge" style={{ backgroundColor: `${task.project_color}18`, color: task.project_color, borderColor: `${task.project_color}30` }}>
+                            <span className="today-project-dot" style={{ backgroundColor: task.project_color }} />
+                            {task.project_name}
+                        </span>
+                    )}
                     {task.tags && task.tags.map(t => (
                         <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
                     ))}
@@ -721,6 +727,13 @@ export default function TodayPage() {
         .today-card-title.clickable { cursor: pointer; transition: color 0.15s; }
         .today-card-title.clickable:hover { color: var(--color-primary); text-decoration: underline; }
         .today-card-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
+        .today-project-badge {
+          display:inline-flex; align-items:center; gap:.25rem;
+          font-size:.63rem; font-weight:600; padding:.1rem .5rem;
+          border-radius:10px; border:1px solid;
+          white-space:nowrap;
+        }
+        .today-project-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
         .today-tag { font-size: 0.63rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 10px; color: #fff; }
         .today-meta-item { font-size: 0.75rem; color: var(--color-text-muted); }
 

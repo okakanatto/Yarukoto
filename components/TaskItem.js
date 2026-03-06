@@ -88,6 +88,12 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                     )}
                     <div className="tc-title-row">
                         <span className={`tc-title ${isDone || isCancelled ? 'strike' : ''}`}>{task.title}</span>
+                        {task.project_name && (
+                            <span className="tc-project-badge" style={{ backgroundColor: `${task.project_color}18`, color: task.project_color, borderColor: `${task.project_color}30` }}>
+                                <span className="tc-project-dot" style={{ backgroundColor: task.project_color }} />
+                                {task.project_name}
+                            </span>
+                        )}
                         {task.tags && task.tags.map(t => <span key={t.id} className="tc-tag" style={{ backgroundColor: t.color }}>{t.name}</span>)}
                     </div>
                     <div className="tc-meta">

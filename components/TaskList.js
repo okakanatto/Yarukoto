@@ -13,7 +13,7 @@ import { useTaskDnD } from '../hooks/useTaskDnD';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 
-export default function TaskList() {
+export default function TaskList({ projectId = null }) {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatuses, setFilterStatuses] = useState([]);
@@ -55,6 +55,8 @@ export default function TaskList() {
             let sql = `
               SELECT t.*,
                      p.title as parent_title,
+                     pj.name as project_name,
+                     pj.color as project_color,
                      im.label as importance_label, im.color as importance_color,
                      um.label as urgency_label, um.color as urgency_color,
                      sm.label as status_label, sm.color as status_color,
@@ -63,6 +65,7 @@ export default function TaskList() {
                      json_group_array(tg.id) as tag_ids
               FROM tasks t
               LEFT JOIN tasks p ON t.parent_id = p.id
+              LEFT JOIN projects pj ON t.project_id = pj.id
               LEFT JOIN task_tags tt ON t.id = tt.task_id
               LEFT JOIN tags tg ON tt.tag_id = tg.id
               LEFT JOIN importance_master im ON t.importance_level = im.level
@@ -105,6 +108,12 @@ export default function TaskList() {
                 params.push(...filterUrgency);
             }
 
+            // Filter by project
+            if (projectId) {
+                conditions.push(`t.project_id = $${paramIndex++}`);
+                params.push(projectId);
+            }
+
             if (conditions.length > 0) {
                 sql += ' WHERE ' + conditions.join(' AND ');
             }
@@ -128,7 +137,7 @@ export default function TaskList() {
                 setLoading(false);
             }
         }
-    }, [filterStatuses, filterTags, filterImportance, filterUrgency, showArchived]);
+    }, [filterStatuses, filterTags, filterImportance, filterUrgency, showArchived, projectId]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
 
@@ -443,6 +452,13 @@ export default function TaskList() {
             .tc-title-row { display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; margin-bottom:.3rem; }
             .tc-title { font-weight:600; font-size:.92rem; color:var(--color-text); line-height:1.4; }
             .tc-title.strike { text-decoration:line-through; color:var(--color-text-disabled); }
+            .tc-project-badge {
+              display:inline-flex; align-items:center; gap:.25rem;
+              font-size:.63rem; font-weight:600; padding:.1rem .5rem;
+              border-radius:10px; border:1px solid;
+              white-space:nowrap;
+            }
+            .tc-project-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
             .tc-tag { font-size:.63rem; font-weight:600; padding:.1rem .5rem; border-radius:10px; color:#fff; }
 
             .tc-meta { display:flex; gap:.7rem; flex-wrap:wrap; }

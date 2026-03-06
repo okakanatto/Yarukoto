@@ -6,7 +6,7 @@ import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
 import { fetchDb } from '@/lib/utils';
 
-export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
+export default function TaskInput({ onTaskAdded, predefinedParentId = null, defaultProjectId = null }) {
     const [title, setTitle] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -25,7 +25,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
     const [parentOptions, setParentOptions] = useState([]);
 
     const { masters, tags: allTags, projects } = useMasterData();
-    const [projectId, setProjectId] = useState('');
+    const [projectId, setProjectId] = useState(defaultProjectId ? String(defaultProjectId) : '');
 
     // Fetch eligible parent tasks when the form expands (only for root task creation)
     useEffect(() => {
@@ -202,7 +202,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
         setNotes('');
         setSelectedTags([]);
         setParentId('');
-        if (!predefinedParentId) setProjectId('');
+        if (!predefinedParentId && !defaultProjectId) setProjectId('');
         // setIsExpanded(false); // Removed to allow continuous input
     };
 
@@ -261,8 +261,8 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                             </div>
                         )}
 
-                        {/* 4. プロジェクト - only when not in inline child creation mode */}
-                        {!predefinedParentId && projects.length > 1 && (
+                        {/* 4. プロジェクト - only when not in inline child creation mode and not on project page */}
+                        {!predefinedParentId && !defaultProjectId && projects.length > 1 && (
                             <div className="form-field">
                                 <label>プロジェクト</label>
                                 <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
