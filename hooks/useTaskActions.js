@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { fetchDb, safeTransaction } from '@/lib/utils';
+import { fetchDb } from '@/lib/utils';
 
 /**
  * Custom hook that provides task CRUD operation handlers.
@@ -138,13 +138,12 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
                 }
             }
 
-            // Use safe transaction for all-or-nothing parent+children archive
-            await safeTransaction(db, async () => {
-                if (!task.parent_id) {
-                    await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE parent_id = $1 AND archived_at IS NULL", [taskId]);
-                }
+            // Archive parent + children in a single atomic statement (avoids manual transaction issues with connection pool)
+            if (!task.parent_id) {
+                await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE (id = $1 OR parent_id = $1) AND archived_at IS NULL", [taskId]);
+            } else {
                 await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
-            });
+            }
 
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
         } catch (e) {
@@ -176,16 +175,16 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         try {
             const db = await fetchDb();
 
-            // Use safe transaction for all-or-nothing parent+children restore
-            await safeTransaction(db, async () => {
-                if (task && !task.parent_id) {
-                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE parent_id = $1', [taskId]);
-                }
-                if (task && task.parent_id) {
-                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [task.parent_id]);
-                }
+            // Restore parent + children or child + parent in single atomic statements
+            if (task && !task.parent_id) {
+                // Parent: restore self + all children
+                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR parent_id = $1', [taskId]);
+            } else if (task && task.parent_id) {
+                // Child: restore self + parent
+                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR id = $2', [taskId, task.parent_id]);
+            } else {
                 await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
-            });
+            }
 
             // Descriptive toast for parent-child restore
             let toastMsg = '復元しました';
