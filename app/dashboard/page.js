@@ -143,6 +143,7 @@ export default function DashboardPage() {
                 });
             } catch (err) {
                 console.error("Dashboard Tauri DB Error", err);
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ダッシュボードの読み込みに失敗しました', type: 'error' } }));
             } finally {
                 setLoading(false);
             }

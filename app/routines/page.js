@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchDb, parseTags } from '@/lib/utils';
+import { fetchDb, parseTags, formatMin } from '@/lib/utils';
 import { useMasterData } from '@/hooks/useMasterData';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
 import RoutineFormModal from './_components/RoutineFormModal';
@@ -182,7 +182,7 @@ export default function RoutinesPage() {
                                     <span key={t.id} className="rt-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
                                 ))}
                                 {r.estimated_hours > 0 && (
-                                    <span className="rt-meta-item">⏱ {r.estimated_hours}分</span>
+                                    <span className="rt-meta-item">⏱ {formatMin(r.estimated_hours)}</span>
                                 )}
                                 {r.end_date && (
                                     <span className="rt-meta-item rt-end-date">📅 〜{r.end_date}</span>
