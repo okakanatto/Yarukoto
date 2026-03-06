@@ -19,7 +19,7 @@ function getEmptyForm() {
         day_of_month: new Date().getDate(), holiday_action: 'none', monthly_type: 'date',
         importance_level: '', urgency_level: '',
         estimated_hours: '', notes: '', tags: [], enabled: true,
-        end_date: '',
+        end_date: '', project_id: '',
     };
 }
 
@@ -41,12 +41,13 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
                 tags: routine.tags ? routine.tags.map(t => t.id) : [],
                 enabled: !!routine.enabled,
                 end_date: routine.end_date || '',
+                project_id: routine.project_id != null ? String(routine.project_id) : '',
             };
         }
         return getEmptyForm();
     });
 
-    const { masters, tags } = useMasterData();
+    const { masters, tags, projects } = useMasterData();
 
     // Close on Escape
     useEffect(() => {
@@ -85,17 +86,24 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         try {
             const db = await fetchDb();
 
+            // Resolve project_id: use selected, or default project
+            let resolvedProjectId = payload.project_id ? parseInt(payload.project_id) : null;
+            if (!resolvedProjectId) {
+                const defaultProj = await db.select('SELECT id FROM projects WHERE is_default = 1 LIMIT 1');
+                resolvedProjectId = defaultProj[0]?.id || null;
+            }
+
             if (editingId) {
                 await db.execute(`
                     UPDATE routines
                     SET title=$1, frequency=$2, days_of_week=$3, day_of_month=$4,
                         holiday_action=$5, monthly_type=$6, importance_level=$7, urgency_level=$8,
-                        estimated_hours=$9, notes=$10, enabled=$11, end_date=$12, weekdays_only=0, updated_at=datetime('now', 'localtime')
-                    WHERE id=$13
+                        estimated_hours=$9, notes=$10, enabled=$11, end_date=$12, project_id=$13, weekdays_only=0, updated_at=datetime('now', 'localtime')
+                    WHERE id=$14
                 `, [
                     payload.title, payload.frequency, payload.days_of_week, payload.day_of_month,
                     payload.holiday_action, payload.monthly_type, payload.importance_level, payload.urgency_level,
-                    payload.estimated_hours, payload.notes, payload.enabled ? 1 : 0, payload.end_date, editingId
+                    payload.estimated_hours, payload.notes, payload.enabled ? 1 : 0, payload.end_date, resolvedProjectId, editingId
                 ]);
 
                 await db.execute('DELETE FROM routine_tags WHERE routine_id=$1', [editingId]);
@@ -109,12 +117,12 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
                 const result = await db.execute(`
                     INSERT INTO routines (
                         title, frequency, days_of_week, day_of_month, holiday_action, monthly_type, weekdays_only,
-                        importance_level, urgency_level, estimated_hours, notes, enabled, end_date
-                    ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, $10, $11, $12)
+                        importance_level, urgency_level, estimated_hours, notes, enabled, end_date, project_id
+                    ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, $10, $11, $12, $13)
                 `, [
                     payload.title, payload.frequency, payload.days_of_week, payload.day_of_month,
                     payload.holiday_action, payload.monthly_type, payload.importance_level, payload.urgency_level,
-                    payload.estimated_hours, payload.notes, payload.enabled ? 1 : 0, payload.end_date
+                    payload.estimated_hours, payload.notes, payload.enabled ? 1 : 0, payload.end_date, resolvedProjectId
                 ]);
 
                 const newId = result.lastInsertId;
@@ -311,6 +319,16 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
                                     placeholder="30" />
                             </div>
                         </div>
+                        {projects.length > 1 && (
+                            <div className="rt-field">
+                                <label>プロジェクト</label>
+                                <select className="rt-select" value={form.project_id}
+                                    onChange={e => setForm({ ...form, project_id: e.target.value })}>
+                                    <option value="">デフォルト</option>
+                                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <div className="rt-field">
                             <label>タグ</label>
                             <TagSelect allTags={tags} selectedTagIds={form.tags}

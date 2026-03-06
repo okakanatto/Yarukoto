@@ -20,8 +20,9 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
     const [parentId, setParentId] = useState(task.parent_id || '');
     const [parentOptions, setParentOptions] = useState([]);
     const [hasChildren, setHasChildren] = useState(false);
+    const [projectId, setProjectId] = useState(task.project_id != null ? String(task.project_id) : '');
 
-    const { masters, tags: allTags } = useMasterData();
+    const { masters, tags: allTags, projects } = useMasterData();
 
     // Fetch eligible parent tasks and check if this task has children
     useEffect(() => {
@@ -80,19 +81,19 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
             }
 
             // Update the main task record
-            const result = await db.execute(`
+            await db.execute(`
                 UPDATE tasks
                 SET title = $1, start_date = $2, due_date = $3,
                 importance_level = $4, urgency_level = $5,
                 estimated_hours = $6, notes = $7, status_code = $8,
-                parent_id = $9,
+                parent_id = $9, project_id = $10,
                 updated_at = datetime('now', 'localtime'),
-                completed_at = CASE 
+                completed_at = CASE
                         WHEN CAST($8 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
-                        WHEN CAST($8 AS INTEGER) != 3 THEN NULL 
-                        ELSE completed_at 
+                        WHEN CAST($8 AS INTEGER) != 3 THEN NULL
+                        ELSE completed_at
                     END
-                WHERE id = $10
+                WHERE id = $11
                 `, [
                 title,
                 startDate || null,
@@ -103,6 +104,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 notes || '',
                 parseInt(statusCode),
                 parentId || null,
+                projectId ? parseInt(projectId) : null,
                 task.id
             ]);
 
@@ -187,7 +189,20 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         />
                     </div>
 
-                    {/* 5. 親タスク */}
+                    {/* 5. プロジェクト */}
+                    {projects.length > 1 && (
+                        <div className="te-field">
+                            <label className="te-label">プロジェクト</label>
+                            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="te-select">
+                                <option value="">未選択</option>
+                                {projects.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* 6. 親タスク */}
                     <div className="te-field">
                         <label className="te-label">親タスク</label>
                         <select

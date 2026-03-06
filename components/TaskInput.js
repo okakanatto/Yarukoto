@@ -24,7 +24,8 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
     const [parentId, setParentId] = useState('');
     const [parentOptions, setParentOptions] = useState([]);
 
-    const { masters, tags: allTags } = useMasterData();
+    const { masters, tags: allTags, projects } = useMasterData();
+    const [projectId, setProjectId] = useState('');
 
     // Fetch eligible parent tasks when the form expands (only for root task creation)
     useEffect(() => {
@@ -43,6 +44,20 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
         })();
         return () => { cancelled = true; };
     }, [isExpanded, predefinedParentId]);
+
+    // For inline child creation, inherit parent's project_id
+    useEffect(() => {
+        if (!predefinedParentId) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const db = await fetchDb();
+                const rows = await db.select('SELECT project_id FROM tasks WHERE id = $1', [predefinedParentId]);
+                if (!cancelled && rows[0]?.project_id) setProjectId(String(rows[0].project_id));
+            } catch (e) { console.error('Failed to fetch parent project:', e); }
+        })();
+        return () => { cancelled = true; };
+    }, [predefinedParentId]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -70,12 +85,19 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                 newSortOrder = (minSort[0]?.min_so ?? 1) - 1;
             }
 
+            // Resolve project_id: use selected, or default project
+            let resolvedProjectId = projectId ? parseInt(projectId) : null;
+            if (!resolvedProjectId) {
+                const defaultProj = await db.select('SELECT id FROM projects WHERE is_default = 1 LIMIT 1');
+                resolvedProjectId = defaultProj[0]?.id || null;
+            }
+
             // Insert task
             const result = await db.execute(`
               INSERT INTO tasks (
                 title, parent_id, status_code, importance_level,
-                urgency_level, start_date, due_date, estimated_hours, notes, sort_order
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                urgency_level, start_date, due_date, estimated_hours, notes, sort_order, project_id
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             `, [
                 title,
                 actualParentId,
@@ -86,7 +108,8 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                 dueDate || null,
                 estimatedMinutes ? parseInt(estimatedMinutes) : null,
                 notes || '',
-                newSortOrder
+                newSortOrder,
+                resolvedProjectId
             ]);
 
             const newTaskId = result.lastInsertId;
@@ -179,6 +202,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
         setNotes('');
         setSelectedTags([]);
         setParentId('');
+        if (!predefinedParentId) setProjectId('');
         // setIsExpanded(false); // Removed to allow continuous input
     };
 
@@ -237,7 +261,20 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null }) {
                             </div>
                         )}
 
-                        {/* 4. 親タスク - only when not in inline child creation mode */}
+                        {/* 4. プロジェクト - only when not in inline child creation mode */}
+                        {!predefinedParentId && projects.length > 1 && (
+                            <div className="form-field">
+                                <label>プロジェクト</label>
+                                <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+                                    <option value="">デフォルト</option>
+                                    {projects.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* 5. 親タスク - only when not in inline child creation mode */}
                         {!predefinedParentId && (
                             <div className="form-field">
                                 <label>親タスク</label>

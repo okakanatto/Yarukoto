@@ -4,19 +4,21 @@ import { useState, useEffect } from 'react';
 import { fetchDb } from '@/lib/utils';
 import TagsPanel from './_components/TagsPanel';
 import StatusPanel from './_components/StatusPanel';
+import ProjectsPanel from './_components/ProjectsPanel';
 import OptionsPanel from './_components/OptionsPanel';
 import DataPanel from './_components/DataPanel';
 
 const TABS = [
     { key: 'tags', label: 'タグ', icon: '🏷️' },
     { key: 'status', label: 'ステータス', icon: '📊' },
+    { key: 'projects', label: 'プロジェクト', icon: '📁' },
     { key: 'options', label: 'オプション', icon: '🔧' },
     { key: 'data', label: 'データ管理', icon: '💾' },
 ];
 
 export default function Settings() {
     const [tab, setTab] = useState('tags');
-    const [data, setData] = useState({ tags: [], importance: [], urgency: [], status: [] });
+    const [data, setData] = useState({ tags: [], importance: [], urgency: [], status: [], projects: [] });
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
     const [appSettings, setAppSettings] = useState({});
@@ -28,13 +30,14 @@ export default function Settings() {
         setLoading(true);
         try {
             const db = await fetchDb();
-            const [importance, urgency, status, tagsData] = await Promise.all([
+            const [importance, urgency, status, tagsData, projectsData] = await Promise.all([
                 db.select('SELECT * FROM importance_master ORDER BY level'),
                 db.select('SELECT * FROM urgency_master ORDER BY level'),
                 db.select('SELECT * FROM status_master ORDER BY sort_order, code'),
                 db.select('SELECT * FROM tags ORDER BY sort_order, id'),
+                db.select('SELECT * FROM projects ORDER BY sort_order, id'),
             ]);
-            setData({ importance, urgency, status, tags: tagsData });
+            setData({ importance, urgency, status, tags: tagsData, projects: projectsData });
             const settingsRows = await db.select('SELECT key, value FROM app_settings');
             const settingsMap = {};
             settingsRows.forEach(r => { settingsMap[r.key] = r.value; });
@@ -64,6 +67,7 @@ export default function Settings() {
                     <>
                         {tab === 'tags' && <TagsPanel data={data} setData={setData} flash={flash} />}
                         {tab === 'status' && <StatusPanel data={data} setData={setData} flash={flash} />}
+                        {tab === 'projects' && <ProjectsPanel data={data} setData={setData} flash={flash} />}
                         {tab === 'options' && <OptionsPanel appSettings={appSettings} setAppSettings={setAppSettings} flash={flash} />}
                         {tab === 'data' && <DataPanel flash={flash} />}
                     </>
