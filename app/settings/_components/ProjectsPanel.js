@@ -12,8 +12,15 @@ export default function ProjectsPanel({ data, setData, flash }) {
 
     const tp = (key) => setOpenPalette(openPalette === key ? null : key);
 
+    const [showArchived, setShowArchived] = useState(false);
+
     const activeProjects = useMemo(
         () => (data.projects || []).filter(p => !p.archived_at),
+        [data.projects]
+    );
+
+    const archivedProjects = useMemo(
+        () => (data.projects || []).filter(p => p.archived_at),
         [data.projects]
     );
 
@@ -121,6 +128,42 @@ export default function ProjectsPanel({ data, setData, flash }) {
         } catch (e) { console.error(e); flash('err', '削除に失敗しました'); }
     };
 
+    const archiveProject = async (id) => {
+        const proj = (data.projects || []).find(p => p.id === id);
+        if (!proj || proj.is_default) return;
+        if (!confirm(`「${proj.name}」をアーカイブしますか？`)) return;
+        try {
+            const db = await fetchDb();
+            await db.execute(
+                'UPDATE projects SET archived_at = datetime(\'now\', \'localtime\'), updated_at = datetime(\'now\', \'localtime\') WHERE id = $1',
+                [id]
+            );
+            const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+            setData(p => ({
+                ...p,
+                projects: (p.projects || []).map(pr => pr.id === id ? { ...pr, archived_at: now } : pr)
+            }));
+            flash('ok', 'アーカイブしました');
+            window.dispatchEvent(new Event('yarukoto:projectsChanged'));
+        } catch (e) { console.error(e); flash('err', 'アーカイブに失敗しました'); }
+    };
+
+    const restoreProject = async (id) => {
+        try {
+            const db = await fetchDb();
+            await db.execute(
+                'UPDATE projects SET archived_at = NULL, updated_at = datetime(\'now\', \'localtime\') WHERE id = $1',
+                [id]
+            );
+            setData(p => ({
+                ...p,
+                projects: (p.projects || []).map(pr => pr.id === id ? { ...pr, archived_at: null } : pr)
+            }));
+            flash('ok', '復元しました');
+            window.dispatchEvent(new Event('yarukoto:projectsChanged'));
+        } catch (e) { console.error(e); flash('err', '復元に失敗しました'); }
+    };
+
     const moveProject = (index, direction) => {
         const active = (data.projects || []).filter(p => !p.archived_at);
         const newIndex = index + direction;
@@ -172,6 +215,9 @@ export default function ProjectsPanel({ data, setData, flash }) {
                                 : <input className="s-input" type="text" value={proj.name} onChange={e => updProject(proj.id, 'name', e.target.value)} onBlur={() => commitProject(proj.id)} />
                             }
                             {!proj.is_default && (
+                                <button className="s-archive-btn" onClick={() => archiveProject(proj.id)} type="button" title="アーカイブ">&#x1F4E6;</button>
+                            )}
+                            {!proj.is_default && (
                                 <button className="s-del" onClick={() => delProject(proj.id)} type="button" title="削除">&#x1F5D1;</button>
                             )}
                         </div>
@@ -183,6 +229,28 @@ export default function ProjectsPanel({ data, setData, flash }) {
                     </div>
                 ))}
             </div>
+            {archivedProjects.length > 0 && (
+                <div className="s-archived-section">
+                    <button className="s-archived-toggle" onClick={() => setShowArchived(!showArchived)} type="button">
+                        <span className={`s-archived-chev ${showArchived ? 'open' : ''}`}>&#x203A;</span>
+                        アーカイブ済み ({archivedProjects.length})
+                    </button>
+                    {showArchived && (
+                        <div className="s-list">
+                            {archivedProjects.map(proj => (
+                                <div className="s-item s-item-archived" key={`proj-arch-${proj.id}`}>
+                                    <div className="s-row">
+                                        <div className="s-swatch" style={{ backgroundColor: proj.color, opacity: 0.5 }} />
+                                        <div className="s-bar" style={{ backgroundColor: proj.color, opacity: 0.3 }} />
+                                        <span className="s-label s-label-archived">{proj.name}</span>
+                                        <button className="s-del s-unarchive-btn" onClick={() => restoreProject(proj.id)} type="button" title="復元">&#x21A9;</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
             <p className="s-hint">※ デフォルトプロジェクト（General）は名前の変更・削除ができません</p>
         </>
     );

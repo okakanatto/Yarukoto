@@ -199,6 +199,17 @@ export default function Settings() {
           border-top:1px solid var(--border-color);
         }
         .s-archived-label { font-size:.82rem; font-weight:600; color:var(--color-text-muted); }
+
+        .s-archived-section { margin-top:1rem; }
+        .s-archived-toggle {
+          background:none; border:none; cursor:pointer; font-size:.82rem;
+          font-weight:600; color:var(--color-text-muted); padding:.4rem 0;
+          display:flex; align-items:center; gap:.35rem; font-family:inherit;
+        }
+        .s-archived-toggle:hover { color:var(--color-text-secondary); }
+        .s-archived-chev { display:inline-block; transition:transform .2s; font-size:1rem; line-height:1; }
+        .s-archived-chev.open { transform:rotate(90deg); }
+        .s-label-archived { flex:1; font-size:.85rem; color:var(--color-text-muted); padding:.35rem .55rem; opacity:.7; }
         .s-list-archived { opacity:.75; }
         .s-item-archived { cursor:default; }
         .s-item-archived .s-row { background:var(--color-surface); }
