@@ -24,6 +24,7 @@ describe('DBスキーマの初期化', () => {
     expect(tableNames).toContain('status_master');
     expect(tableNames).toContain('app_settings');
     expect(tableNames).toContain('holidays');
+    expect(tableNames).toContain('projects');
   });
 
   it('importance_masterに3レベルがシードされている', async () => {
@@ -70,5 +71,7 @@ describe('DBスキーマの初期化', () => {
     expect(names).toContain('idx_tasks_today_date');
     expect(names).toContain('idx_tasks_archived_at');
     expect(names).toContain('idx_tasks_sort_order');
+    expect(names).toContain('idx_tasks_project_id');
+    expect(names).toContain('idx_routines_project_id');
   });
 });

@@ -28,8 +28,8 @@ export async function seedTasks(db, tasks) {
   for (const t of tasks) {
     const result = await db.execute(
       `INSERT INTO tasks (title, parent_id, status_code, importance_level, urgency_level,
-       start_date, due_date, estimated_hours, today_date, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+       start_date, due_date, estimated_hours, today_date, notes, project_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         t.title || 'テストタスク',
         t.parent_id ?? null,
@@ -41,6 +41,7 @@ export async function seedTasks(db, tasks) {
         t.estimated_hours ?? null,
         t.today_date ?? null,
         t.notes ?? null,
+        t.project_id ?? null,
       ]
     );
     ids.push(result.lastInsertId);
@@ -76,13 +77,30 @@ export async function linkTaskTags(db, taskId, tagIds) {
 }
 
 /**
+ * Inserts a test project and returns its ID.
+ */
+export async function seedProject(db, project) {
+  const result = await db.execute(
+    `INSERT INTO projects (name, color, sort_order, is_default)
+     VALUES ($1, $2, $3, $4)`,
+    [
+      project.name || 'テストプロジェクト',
+      project.color || '#3b82f6',
+      project.sort_order ?? 0,
+      project.is_default ?? 0,
+    ]
+  );
+  return result.lastInsertId;
+}
+
+/**
  * Inserts a test routine and returns its ID.
  */
 export async function seedRoutine(db, routine) {
   const result = await db.execute(
     `INSERT INTO routines (title, frequency, days_of_week, day_of_month, weekdays_only,
-     holiday_action, monthly_type, importance_level, urgency_level, estimated_hours, notes, enabled, end_date)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+     holiday_action, monthly_type, importance_level, urgency_level, estimated_hours, notes, enabled, end_date, project_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       routine.title || 'テストルーティン',
       routine.frequency || 'daily',
@@ -97,6 +115,7 @@ export async function seedRoutine(db, routine) {
       routine.notes ?? null,
       routine.enabled ?? 1,
       routine.end_date ?? null,
+      routine.project_id ?? null,
     ]
   );
   return result.lastInsertId;
