@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import TaskInput from '@/components/TaskInput';
 import TaskList from '@/components/TaskList';
 import { fetchDb } from '@/lib/utils';
 
 export default function ProjectPage() {
+    return (
+        <Suspense fallback={<div style={{ padding: '2rem', color: 'var(--color-text-muted)' }}><span className="spinner" /> 読み込み中...</div>}>
+            <ProjectPageInner />
+        </Suspense>
+    );
+}
+
+function ProjectPageInner() {
     const searchParams = useSearchParams();
     const projectId = parseInt(searchParams.get('id')) || null;
     const [project, setProject] = useState(null);

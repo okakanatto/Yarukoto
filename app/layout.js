@@ -4,7 +4,7 @@ import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import TaskInput from '@/components/TaskInput';
 import { fetchDb } from '@/lib/utils';
 
@@ -12,6 +12,18 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
 
 export default function RootLayout({ children }) {
+    return (
+        <html lang="ja" suppressHydrationWarning>
+            <body className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
+                <Suspense fallback={null}>
+                    <LayoutInner>{children}</LayoutInner>
+                </Suspense>
+            </body>
+        </html>
+    );
+}
+
+function LayoutInner({ children }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [mounted, setMounted] = useState(false);
@@ -164,142 +176,141 @@ export default function RootLayout({ children }) {
     ];
 
     return (
-        <html lang="ja" suppressHydrationWarning>
-            <body className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
-                <div className="layout-container" suppressHydrationWarning>
-                    <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`} suppressHydrationWarning>
-                        <div className="sidebar-header" suppressHydrationWarning>
-                            <div className="logo" suppressHydrationWarning>
-                                <h1 suppressHydrationWarning>
-                                    <span className="title-gradient" suppressHydrationWarning>
-                                        {isCollapsed ? 'Y' : 'Yarukoto'}
-                                    </span>
-                                </h1>
-                            </div>
-                            <button
-                                className="sidebar-toggle"
-                                onClick={() => setIsCollapsed(!isCollapsed)}
-                                title={isCollapsed ? "サイドバーを開く" : "サイドバーをたたむ"}
-                                suppressHydrationWarning
-                            >
-                                {isCollapsed ? '»' : '«'}
-                            </button>
+        <>
+            <div className="layout-container" suppressHydrationWarning>
+                <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`} suppressHydrationWarning>
+                    <div className="sidebar-header" suppressHydrationWarning>
+                        <div className="logo" suppressHydrationWarning>
+                            <h1 suppressHydrationWarning>
+                                <span className="title-gradient" suppressHydrationWarning>
+                                    {isCollapsed ? 'Y' : 'Yarukoto'}
+                                </span>
+                            </h1>
                         </div>
-                        <ul className="nav-links" suppressHydrationWarning>
-                            {navItemsTop.map(item => {
-                                const isTasksItem = item.href === '/tasks';
-                                const showProjects = isTasksItem && mounted && projects.length > 0 && !isCollapsed;
-                                const isTasksActive = pathname === item.href || (isTasksItem && pathname === '/projects');
-                                return (
-                                    <li key={item.href} suppressHydrationWarning>
-                                        <div className="nav-link-row" suppressHydrationWarning>
-                                            <Link href={item.href} className={isTasksActive ? 'active' : ''} suppressHydrationWarning>
-                                                <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
-                                                <span className="nav-label" suppressHydrationWarning>{item.label}</span>
-                                            </Link>
-                                            {showProjects && (
-                                                <button
-                                                    className="sidebar-projects-toggle"
-                                                    onClick={() => setProjectsExpanded(!projectsExpanded)}
-                                                    suppressHydrationWarning
-                                                >
-                                                    <span className={`sidebar-projects-chev ${projectsExpanded ? 'open' : ''}`}>›</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                        {showProjects && projectsExpanded && (
-                                            <ul className="sidebar-projects-list" suppressHydrationWarning>
-                                                {projects.map(p => (
-                                                    <li key={p.id} suppressHydrationWarning>
-                                                        <Link
-                                                            href={`/projects?id=${p.id}`}
-                                                            className={pathname === '/projects' && searchParams.get('id') === String(p.id) ? 'active' : ''}
-                                                            suppressHydrationWarning
-                                                        >
-                                                            <span className="sidebar-project-dot" style={{ backgroundColor: p.color }} suppressHydrationWarning />
-                                                            <span className="nav-label" suppressHydrationWarning>{p.name}</span>
-                                                        </Link>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                            {navItemsBottom.map(item => (
-                                <li key={item.href} suppressHydrationWarning>
-                                    <Link href={item.href} className={pathname === item.href ? 'active' : ''} suppressHydrationWarning>
-                                        <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
-                                        <span className="nav-label" suppressHydrationWarning>{item.label}</span>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                        {mounted && todayProgress.total > 0 && (
-                            <div className="sidebar-progress" suppressHydrationWarning>
-                                <div className="sidebar-progress-label" suppressHydrationWarning>
-                                    <span>今日 {todayProgress.completed}/{todayProgress.total}</span>
-                                    <span>{todayProgress.total > 0 ? Math.round((todayProgress.completed / todayProgress.total) * 100) : 0}%</span>
-                                </div>
-                                <div className="sidebar-progress-track" suppressHydrationWarning>
-                                    <div
-                                        className="sidebar-progress-fill"
-                                        style={{
-                                            width: `${todayProgress.total > 0 ? (todayProgress.completed / todayProgress.total) * 100 : 0}%`,
-                                            background: todayProgress.completed === todayProgress.total ? 'var(--color-success)' : 'var(--color-primary)'
-                                        }}
-                                        suppressHydrationWarning
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </nav>
-                    <main className="content" suppressHydrationWarning>
-                        {mounted && children}
-                    </main>
-                </div>
-
-                {/* Floating Action Button */}
-                {mounted && (
-                    <>
                         <button
-                            className={`fab ${fabOpen ? 'fab-open' : ''}`}
-                            onClick={() => setFabOpen(v => !v)}
-                            title="新しいタスクを追加"
-                            aria-label="新しいタスクを追加"
+                            className="sidebar-toggle"
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                            title={isCollapsed ? "サイドバーを開く" : "サイドバーをたたむ"}
+                            suppressHydrationWarning
                         >
-                            <span className="fab-icon">{fabOpen ? '✕' : '+'}</span>
+                            {isCollapsed ? '»' : '«'}
                         </button>
-
-                        {fabOpen && (
-                            <>
-                                <div className="fab-backdrop" onClick={() => setFabOpen(false)} />
-                                <div className="fab-modal" ref={modalRef}>
-                                    <div className="fab-modal-header">
-                                        <span className="fab-modal-title">新しいタスク</span>
-                                        <button className="fab-modal-close" onClick={() => setFabOpen(false)}>✕</button>
-                                    </div>
-                                    <TaskInput
-                                        onTaskAdded={() => {
-                                            setFabOpen(false);
-                                            // Dispatch custom event so pages can refresh their list
-                                            window.dispatchEvent(new CustomEvent('yarukoto:taskAdded'));
-                                        }}
-                                    />
-                                </div>
-                            </>
-                        )}
-                    </>
-                )}
-
-                {/* Global Toast */}
-                {toast && (
-                    <div className={`global-toast ${toast.type === 'error' ? 'toast-err' : 'toast-ok'}`}>
-                        {toast.type === 'error' ? '❌' : '✅'} {toast.message}
                     </div>
-                )}
+                    <ul className="nav-links" suppressHydrationWarning>
+                        {navItemsTop.map(item => {
+                            const isTasksItem = item.href === '/tasks';
+                            const showProjects = isTasksItem && mounted && projects.length > 0 && !isCollapsed;
+                            const isTasksActive = pathname === item.href || (isTasksItem && pathname === '/projects');
+                            return (
+                                <li key={item.href} suppressHydrationWarning>
+                                    <div className="nav-link-row" suppressHydrationWarning>
+                                        <Link href={item.href} className={isTasksActive ? 'active' : ''} suppressHydrationWarning>
+                                            <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
+                                            <span className="nav-label" suppressHydrationWarning>{item.label}</span>
+                                        </Link>
+                                        {showProjects && (
+                                            <button
+                                                className="sidebar-projects-toggle"
+                                                onClick={() => setProjectsExpanded(!projectsExpanded)}
+                                                suppressHydrationWarning
+                                            >
+                                                <span className={`sidebar-projects-chev ${projectsExpanded ? 'open' : ''}`}>›</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                    {showProjects && projectsExpanded && (
+                                        <ul className="sidebar-projects-list" suppressHydrationWarning>
+                                            {projects.map(p => (
+                                                <li key={p.id} suppressHydrationWarning>
+                                                    <Link
+                                                        href={`/projects?id=${p.id}`}
+                                                        className={pathname === '/projects' && searchParams.get('id') === String(p.id) ? 'active' : ''}
+                                                        suppressHydrationWarning
+                                                    >
+                                                        <span className="sidebar-project-dot" style={{ backgroundColor: p.color }} suppressHydrationWarning />
+                                                        <span className="nav-label" suppressHydrationWarning>{p.name}</span>
+                                                    </Link>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </li>
+                            );
+                        })}
+                        {navItemsBottom.map(item => (
+                            <li key={item.href} suppressHydrationWarning>
+                                <Link href={item.href} className={pathname === item.href ? 'active' : ''} suppressHydrationWarning>
+                                    <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
+                                    <span className="nav-label" suppressHydrationWarning>{item.label}</span>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                    {mounted && todayProgress.total > 0 && (
+                        <div className="sidebar-progress" suppressHydrationWarning>
+                            <div className="sidebar-progress-label" suppressHydrationWarning>
+                                <span>今日 {todayProgress.completed}/{todayProgress.total}</span>
+                                <span>{todayProgress.total > 0 ? Math.round((todayProgress.completed / todayProgress.total) * 100) : 0}%</span>
+                            </div>
+                            <div className="sidebar-progress-track" suppressHydrationWarning>
+                                <div
+                                    className="sidebar-progress-fill"
+                                    style={{
+                                        width: `${todayProgress.total > 0 ? (todayProgress.completed / todayProgress.total) * 100 : 0}%`,
+                                        background: todayProgress.completed === todayProgress.total ? 'var(--color-success)' : 'var(--color-primary)'
+                                    }}
+                                    suppressHydrationWarning
+                                />
+                            </div>
+                        </div>
+                    )}
+                </nav>
+                <main className="content" suppressHydrationWarning>
+                    {mounted && children}
+                </main>
+            </div>
 
-                <style jsx global>{`
+            {/* Floating Action Button */}
+            {mounted && (
+                <>
+                    <button
+                        className={`fab ${fabOpen ? 'fab-open' : ''}`}
+                        onClick={() => setFabOpen(v => !v)}
+                        title="新しいタスクを追加"
+                        aria-label="新しいタスクを追加"
+                    >
+                        <span className="fab-icon">{fabOpen ? '✕' : '+'}</span>
+                    </button>
+
+                    {fabOpen && (
+                        <>
+                            <div className="fab-backdrop" onClick={() => setFabOpen(false)} />
+                            <div className="fab-modal" ref={modalRef}>
+                                <div className="fab-modal-header">
+                                    <span className="fab-modal-title">新しいタスク</span>
+                                    <button className="fab-modal-close" onClick={() => setFabOpen(false)}>✕</button>
+                                </div>
+                                <TaskInput
+                                    onTaskAdded={() => {
+                                        setFabOpen(false);
+                                        // Dispatch custom event so pages can refresh their list
+                                        window.dispatchEvent(new CustomEvent('yarukoto:taskAdded'));
+                                    }}
+                                />
+                            </div>
+                        </>
+                    )}
+                </>
+            )}
+
+            {/* Global Toast */}
+            {toast && (
+                <div className={`global-toast ${toast.type === 'error' ? 'toast-err' : 'toast-ok'}`}>
+                    {toast.type === 'error' ? '❌' : '✅'} {toast.message}
+                </div>
+            )}
+
+            <style jsx global>{`
                     .fab {
                         position: fixed;
                         bottom: 1.75rem;
@@ -441,7 +452,6 @@ export default function RootLayout({ children }) {
                         to   { opacity: 1; transform: translateY(0); } 
                     }
                 `}</style>
-            </body>
-        </html>
+        </>
     );
 }
