@@ -1,4 +1,6 @@
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { spawnSync } = require('child_process');
 
 try {
@@ -51,18 +53,25 @@ try {
 
     console.log(`[抽出したリリースノート]\n---\n${notesText}\n---\n`);
 
-    // 4. gh コマンドの組み立てと実行
+    // 4. リリースノートを一時ファイルに書き出し（shell経由の日本語エスケープ問題を回避）
+    const tmpNotesFile = path.join(os.tmpdir(), `yarukoto-release-notes-${Date.now()}.md`);
+    fs.writeFileSync(tmpNotesFile, notesText, 'utf8');
+
+    // 5. gh コマンドの組み立てと実行
     const args = [
         'release', 'create', vVersion,
         setupExe, portableExe,
         '--title', vVersion,
-        '--notes', notesText
+        '--notes-file', tmpNotesFile
     ];
 
     console.log('GitHub CLI (gh) を実行中...\n');
 
     // shell: true を指定してWindows環境で正常にコマンドが通るようにする
     const result = spawnSync('gh', args, { stdio: 'inherit', shell: true });
+
+    // 一時ファイルを削除
+    try { fs.unlinkSync(tmpNotesFile); } catch (_) { /* ignore */ }
 
     if (result.status !== 0) {
         throw new Error('ghコマンドが失敗しました。');
