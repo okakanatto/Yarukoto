@@ -80,6 +80,13 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 }
             }
 
+            // Resolve project_id: use selected, or default project
+            let resolvedProjectId = projectId ? parseInt(projectId) : null;
+            if (!resolvedProjectId) {
+                const defaultProj = await db.select('SELECT id FROM projects WHERE is_default = 1 LIMIT 1');
+                resolvedProjectId = defaultProj[0]?.id || null;
+            }
+
             // Update the main task record
             await db.execute(`
                 UPDATE tasks
@@ -104,7 +111,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 notes || '',
                 parseInt(statusCode),
                 parentId || null,
-                projectId ? parseInt(projectId) : null,
+                resolvedProjectId,
                 task.id
             ]);
 
@@ -194,7 +201,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         <div className="te-field">
                             <label className="te-label">プロジェクト</label>
                             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="te-select">
-                                <option value="">未選択</option>
+                                <option value="">デフォルト</option>
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}

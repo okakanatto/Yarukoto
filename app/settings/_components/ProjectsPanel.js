@@ -40,6 +40,7 @@ export default function ProjectsPanel({ data, setData, flash }) {
                 );
             }
             flash('ok', '保存しました');
+            window.dispatchEvent(new Event('yarukoto:projectsChanged'));
         } catch (e) { console.error(e); flash('err', '保存に失敗しました'); }
         finally { setSaving(false); }
     };
@@ -65,6 +66,7 @@ export default function ProjectsPanel({ data, setData, flash }) {
             }));
             setNewProject({ name: '', color: '#8b5cf6' });
             flash('ok', 'プロジェクトを追加しました');
+            window.dispatchEvent(new Event('yarukoto:projectsChanged'));
         } catch (e) { console.error(e); flash('err', '追加に失敗しました'); }
     };
 
@@ -75,16 +77,19 @@ export default function ProjectsPanel({ data, setData, flash }) {
         }));
     };
 
-    const commitProject = async (id) => {
+    const commitProject = async (id, overrides = {}) => {
         const proj = (data.projects || []).find(p => p.id === id);
         if (!proj) return;
+        const name = overrides.name ?? proj.name;
+        const color = overrides.color ?? proj.color;
         try {
             const db = await fetchDb();
             await db.execute(
                 'UPDATE projects SET name = $1, color = $2, updated_at = datetime(\'now\', \'localtime\') WHERE id = $3',
-                [proj.name, proj.color, id]
+                [name, color, id]
             );
-        } catch (e) { console.error(e); }
+            window.dispatchEvent(new Event('yarukoto:projectsChanged'));
+        } catch (e) { console.error(e); flash('err', '保存に失敗しました'); }
     };
 
     const delProject = async (id) => {
@@ -112,6 +117,7 @@ export default function ProjectsPanel({ data, setData, flash }) {
             await db.execute('DELETE FROM projects WHERE id = $1', [id]);
             setData(p => ({ ...p, projects: (p.projects || []).filter(pr => pr.id !== id) }));
             flash('ok', 'プロジェクトを削除しました');
+            window.dispatchEvent(new Event('yarukoto:projectsChanged'));
         } catch (e) { console.error(e); flash('err', '削除に失敗しました'); }
     };
 
@@ -171,7 +177,7 @@ export default function ProjectsPanel({ data, setData, flash }) {
                         </div>
                         {openPalette === `proj-${proj.id}` && (
                             <div className="s-palette">
-                                <ColorPalette value={proj.color} onChange={c => { updProject(proj.id, 'color', c); commitProject(proj.id); }} />
+                                <ColorPalette value={proj.color} onChange={c => { updProject(proj.id, 'color', c); commitProject(proj.id, { color: c }); }} />
                             </div>
                         )}
                     </div>

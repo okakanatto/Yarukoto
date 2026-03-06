@@ -95,14 +95,14 @@ function TodayCardItem({ task, isManual, isChild = false, statuses, statusMap, s
                     >
                         {task.title}
                     </span>
-                </div>
-                <div className="today-card-meta">
                     {task.project_name && (
                         <span className="today-project-badge" style={{ backgroundColor: `${task.project_color}18`, color: task.project_color, borderColor: `${task.project_color}30` }}>
                             <span className="today-project-dot" style={{ backgroundColor: task.project_color }} />
                             {task.project_name}
                         </span>
                     )}
+                </div>
+                <div className="today-card-meta">
                     {task.tags && task.tags.map(t => (
                         <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
                     ))}
