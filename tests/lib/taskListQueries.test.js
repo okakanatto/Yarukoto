@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTaskListQuery } from '@/lib/taskListQueries';
+import { buildTaskListQuery, buildArchiveMonthlySummaryQuery } from '@/lib/taskListQueries';
 
 describe('buildTaskListQuery', () => {
     it('アーカイブのみ表示 (showArchived = true) のクエリを生成する', () => {
@@ -81,5 +81,88 @@ describe('buildTaskListQuery', () => {
         });
 
         expect(result.sql).toContain('GROUP BY t.id ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC');
+    });
+
+    it('archiveMonth が指定された場合、年月の絞り込み条件が追加される', () => {
+        const result = buildTaskListQuery({
+            showArchived: true,
+            filterStatuses: [],
+            filterTags: [],
+            filterImportance: [],
+            filterUrgency: [],
+            filterProjects: [],
+            projectId: null,
+            archiveMonth: '2026-03'
+        });
+
+        expect(result.sql).toContain("strftime('%Y-%m', t.archived_at) = $1");
+        expect(result.params).toContain('2026-03');
+    });
+
+    it('searchTerm が指定された場合、タイトルでの LIKE 検索条件が追加される', () => {
+        const result = buildTaskListQuery({
+            showArchived: true,
+            filterStatuses: [],
+            filterTags: [],
+            filterImportance: [],
+            filterUrgency: [],
+            filterProjects: [],
+            projectId: null,
+            searchTerm: '会議'
+        });
+
+        expect(result.sql).toContain("t.title LIKE $1");
+        expect(result.params).toContain('%会議%');
+    });
+
+    it('showArchived = true の場合、ORDER BY は archived_at DESC になる', () => {
+        const result = buildTaskListQuery({
+            showArchived: true,
+            filterStatuses: [],
+            filterTags: [],
+            filterImportance: [],
+            filterUrgency: [],
+            filterProjects: [],
+            projectId: null,
+        });
+
+        expect(result.sql).toContain('GROUP BY t.id ORDER BY t.archived_at DESC');
+    });
+});
+
+describe('buildArchiveMonthlySummaryQuery', () => {
+    it('アーカイブ済みの月別集計クエリを生成する', () => {
+        const result = buildArchiveMonthlySummaryQuery({
+            filterStatuses: [],
+            filterTags: [],
+            filterImportance: [],
+            filterUrgency: [],
+            filterProjects: [],
+            projectId: null,
+        });
+
+        expect(result.sql).toContain('SELECT');
+        expect(result.sql).toContain("strftime('%Y-%m', t.archived_at) as month");
+        expect(result.sql).toContain('COUNT(*) as count');
+        expect(result.sql).toContain('t.archived_at IS NOT NULL');
+        expect(result.sql).toContain("GROUP BY strftime('%Y-%m', t.archived_at)");
+        expect(result.sql).toContain('ORDER BY month DESC');
+        expect(result.params).toEqual([]);
+    });
+
+    it('フィルタ条件が正しく適用される', () => {
+        const result = buildArchiveMonthlySummaryQuery({
+            filterStatuses: [3],
+            filterTags: [10],
+            filterImportance: [],
+            filterUrgency: [],
+            filterProjects: [],
+            projectId: 5,
+        });
+
+        expect(result.sql).toContain('t.status_code IN ($1)');
+        expect(result.sql).toContain('task_tags WHERE tag_id IN ($2)');
+        expect(result.sql).toContain('t.project_id = $3');
+        expect(result.params).toEqual([3, 10, 5]);
     });
 });

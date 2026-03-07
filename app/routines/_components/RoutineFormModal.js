@@ -112,7 +112,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
                         await db.execute('INSERT INTO routine_tags (routine_id, tag_id) VALUES ($1, $2)', [editingId, tagId]);
                     }
                 }
-                flash('ok', 'ルーティンを更新しました');
+                flash('ok', 'ルーティンを保存しました');
             } else {
                 const result = await db.execute(`
                     INSERT INTO routines (

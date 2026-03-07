@@ -338,7 +338,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
                                 className="btn-submit"
                                 disabled={!title.trim() || submitting}
                             >
-                                {submitting ? '登録中...' : '✓ 登録'}
+                                {submitting ? '追加中...' : '✓ 追加'}
                             </button>
                         </div>
                     </div>
