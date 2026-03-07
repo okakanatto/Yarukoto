@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { fetchDb, formatMin, parseTags } from '@/lib/utils';
-
-function pad(n) { return String(n).padStart(2, '0'); }
-function toDateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+import { formatMin, parseTags } from '@/lib/utils';
+import { toDateStr } from '@/lib/dateUtils';
+import { useDbOperation } from '@/hooks/useDbOperation';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 export default function DonePage() {
+    const dbOp = useDbOperation();
     const today = useMemo(() => toDateStr(new Date()), []);
 
     const [viewMode, setViewMode] = useState('monthly');
@@ -31,9 +31,8 @@ export default function DonePage() {
     // Date range for summary query
     const dateRange = useMemo(() => {
         if (viewMode === 'monthly') {
-            const start = `${viewYear}-${pad(viewMonth + 1)}-01`;
-            const lastDay = new Date(viewYear, viewMonth + 1, 0).getDate();
-            const end = `${viewYear}-${pad(viewMonth + 1)}-${pad(lastDay)}`;
+            const start = toDateStr(new Date(viewYear, viewMonth, 1));
+            const end = toDateStr(new Date(viewYear, viewMonth + 1, 0));
             return { start, end };
         }
         if (viewMode === 'weekly') {
@@ -49,91 +48,88 @@ export default function DonePage() {
     const loadSummary = useCallback(async () => {
         setSummaryLoading(true);
         try {
-            const db = await fetchDb();
-            const { start, end } = dateRange;
+            await dbOp(async (db) => {
+                const { start, end } = dateRange;
 
-            const taskRes = await db.select(`
-                SELECT date(completed_at) as date, COUNT(*) as count
-                FROM tasks WHERE status_code = 3 AND completed_at IS NOT NULL
-                AND date(completed_at) >= $1 AND date(completed_at) <= $2
-                GROUP BY date(completed_at)
-            `, [start, end]);
+                const taskRes = await db.select(`
+                    SELECT date(completed_at) as date, COUNT(*) as count
+                    FROM tasks WHERE status_code = 3 AND completed_at IS NOT NULL
+                    AND date(completed_at) >= $1 AND date(completed_at) <= $2
+                    GROUP BY date(completed_at)
+                `, [start, end]);
 
-            const routineRes = await db.select(`
-                SELECT completion_date as date, COUNT(*) as count
-                FROM routine_completions
-                WHERE completion_date >= $1 AND completion_date <= $2
-                GROUP BY completion_date
-            `, [start, end]);
+                const routineRes = await db.select(`
+                    SELECT completion_date as date, COUNT(*) as count
+                    FROM routine_completions
+                    WHERE completion_date >= $1 AND completion_date <= $2
+                    GROUP BY completion_date
+                `, [start, end]);
 
-            const counts = {};
-            let totalT = 0, totalR = 0;
-            for (const r of taskRes) {
-                if (!counts[r.date]) counts[r.date] = { tasks: 0, routines: 0 };
-                counts[r.date].tasks = r.count;
-                totalT += r.count;
-            }
-            for (const r of routineRes) {
-                if (!counts[r.date]) counts[r.date] = { tasks: 0, routines: 0 };
-                counts[r.date].routines = r.count;
-                totalR += r.count;
-            }
+                const counts = {};
+                let totalT = 0, totalR = 0;
+                for (const r of taskRes) {
+                    if (!counts[r.date]) counts[r.date] = { tasks: 0, routines: 0 };
+                    counts[r.date].tasks = r.count;
+                    totalT += r.count;
+                }
+                for (const r of routineRes) {
+                    if (!counts[r.date]) counts[r.date] = { tasks: 0, routines: 0 };
+                    counts[r.date].routines = r.count;
+                    totalR += r.count;
+                }
 
-            setDayCounts(counts);
-            setPeriodStats({ tasks: totalT, routines: totalR });
-        } catch (err) {
-            console.error('Done summary load error', err);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'データの読み込みに失敗しました', type: 'error' } }));
-        } finally {
+                setDayCounts(counts);
+                setPeriodStats({ tasks: totalT, routines: totalR });
+            }, { error: 'データの読み込みに失敗しました' });
+        } catch { /* handled by dbOp */ }
+        finally {
             setSummaryLoading(false);
         }
-    }, [dateRange]);
+    }, [dateRange, dbOp]);
 
     // Load day detail tasks
     const loadDayDetail = useCallback(async (date) => {
         setDetailLoading(true);
         try {
-            const db = await fetchDb();
+            await dbOp(async (db) => {
+                const tasks = await db.select(`
+                    SELECT t.id, t.title, t.completed_at, t.parent_id, t.estimated_hours,
+                           t.archived_at, p.title as parent_title,
+                           json_group_array(tg.id) as tag_ids,
+                           json_group_array(tg.name) as tag_names,
+                           json_group_array(tg.color) as tag_colors
+                    FROM tasks t
+                    LEFT JOIN tasks p ON t.parent_id = p.id
+                    LEFT JOIN task_tags tt ON t.id = tt.task_id
+                    LEFT JOIN tags tg ON tt.tag_id = tg.id
+                    WHERE t.status_code = 3 AND t.completed_at IS NOT NULL
+                    AND date(t.completed_at) = $1
+                    GROUP BY t.id
+                    ORDER BY t.completed_at DESC
+                `, [date]);
 
-            const tasks = await db.select(`
-                SELECT t.id, t.title, t.completed_at, t.parent_id, t.estimated_hours,
-                       t.archived_at, p.title as parent_title,
-                       json_group_array(tg.id) as tag_ids,
-                       json_group_array(tg.name) as tag_names,
-                       json_group_array(tg.color) as tag_colors
-                FROM tasks t
-                LEFT JOIN tasks p ON t.parent_id = p.id
-                LEFT JOIN task_tags tt ON t.id = tt.task_id
-                LEFT JOIN tags tg ON tt.tag_id = tg.id
-                WHERE t.status_code = 3 AND t.completed_at IS NOT NULL
-                AND date(t.completed_at) = $1
-                GROUP BY t.id
-                ORDER BY t.completed_at DESC
-            `, [date]);
+                const routines = await db.select(`
+                    SELECT r.id, r.title, rc.completion_date
+                    FROM routine_completions rc
+                    JOIN routines r ON rc.routine_id = r.id
+                    WHERE rc.completion_date = $1
+                `, [date]);
 
-            const routines = await db.select(`
-                SELECT r.id, r.title, rc.completion_date
-                FROM routine_completions rc
-                JOIN routines r ON rc.routine_id = r.id
-                WHERE rc.completion_date = $1
-            `, [date]);
+                const items = [
+                    ...tasks.map(t => ({ ...t, tags: parseTags(t), is_routine: false })),
+                    ...routines.map(r => ({
+                        id: `routine_${r.id}`, title: r.title,
+                        completed_at: r.completion_date, is_routine: true, tags: [],
+                    })),
+                ];
 
-            const items = [
-                ...tasks.map(t => ({ ...t, tags: parseTags(t), is_routine: false })),
-                ...routines.map(r => ({
-                    id: `routine_${r.id}`, title: r.title,
-                    completed_at: r.completion_date, is_routine: true, tags: [],
-                })),
-            ];
-
-            setDayTasks(items);
-        } catch (err) {
-            console.error('Done detail load error', err);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'データの読み込みに失敗しました', type: 'error' } }));
-        } finally {
+                setDayTasks(items);
+            }, { error: 'データの読み込みに失敗しました' });
+        } catch { /* handled by dbOp */ }
+        finally {
             setDetailLoading(false);
         }
-    }, []);
+    }, [dbOp]);
 
     useEffect(() => { loadSummary(); }, [loadSummary]);
     useEffect(() => { loadDayDetail(selectedDay); }, [selectedDay, loadDayDetail]);
@@ -160,7 +156,7 @@ export default function DonePage() {
             if (newMonth < 0) { newYear--; newMonth = 11; }
             setViewYear(newYear);
             setViewMonth(newMonth);
-            setSelectedDay(`${newYear}-${pad(newMonth + 1)}-01`);
+            setSelectedDay(toDateStr(new Date(newYear, newMonth, 1)));
         } else if (viewMode === 'weekly') {
             const prev = new Date(viewWeekStart);
             prev.setDate(prev.getDate() - 7);
@@ -181,7 +177,7 @@ export default function DonePage() {
             if (newMonth > 11) { newYear++; newMonth = 0; }
             setViewYear(newYear);
             setViewMonth(newMonth);
-            setSelectedDay(`${newYear}-${pad(newMonth + 1)}-01`);
+            setSelectedDay(toDateStr(new Date(newYear, newMonth, 1)));
         } else if (viewMode === 'weekly') {
             const next = new Date(viewWeekStart);
             next.setDate(next.getDate() + 7);
@@ -226,7 +222,7 @@ export default function DonePage() {
         const cells = [];
         for (let i = 0; i < fdow; i++) cells.push(null);
         for (let d = 1; d <= dim; d++) {
-            const ds = `${viewYear}-${pad(viewMonth + 1)}-${pad(d)}`;
+            const ds = toDateStr(new Date(viewYear, viewMonth, d));
             const c = dayCounts[ds];
             cells.push({ day: d, date: ds, total: c ? c.tasks + c.routines : 0 });
         }

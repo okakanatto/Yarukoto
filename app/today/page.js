@@ -8,20 +8,12 @@ import StatusCheckbox from '@/components/StatusCheckbox';
 import TaskEditModal from '@/components/TaskEditModal';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
 import { ReorderGap } from '@/components/DndGaps';
-import { fetchDb, formatMin } from '@/lib/utils';
+import { formatMin } from '@/lib/utils';
+import { addDays, toDateStr } from '@/lib/dateUtils';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
-
-function addDays(base, days) {
-    const d = new Date(base);
-    d.setDate(d.getDate() + days);
-    return d;
-}
-
-function toDateStr(d) {
-    return d.toLocaleDateString('sv-SE');
-}
+import { useDbOperation } from '@/hooks/useDbOperation';
 
 function buildDateTabs() {
     const now = new Date();
@@ -158,6 +150,7 @@ function TodayGroupHeader({ parentId, title, isManual }) {
 }
 
 export default function TodayPage() {
+    const dbOp = useDbOperation();
     const dateTabs = useMemo(() => buildDateTabs(), []);
     const [selectedDate, setSelectedDate] = useState(() => dateTabs[0].date);
     const [justCompletedId, setJustCompletedId] = useState(null);
@@ -243,33 +236,31 @@ export default function TodayPage() {
     // Persist today_sort_order to DB after reorder (group-aware)
     const persistTodaySortOrder = useCallback(async (newRootItems) => {
         try {
-            const db = await fetchDb();
-            const currentChildren = childrenByParentRef.current;
-            let orderIdx = 1;
+            await dbOp(async (db) => {
+                const currentChildren = childrenByParentRef.current;
+                let orderIdx = 1;
 
-            for (const item of newRootItems) {
-                const pid = item.is_ghost_parent ? item.real_id : item.id;
+                for (const item of newRootItems) {
+                    const pid = item.is_ghost_parent ? item.real_id : item.id;
 
-                if (!item.is_ghost_parent) {
-                    if (item.is_routine) {
-                        await db.execute('UPDATE routines SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.routine_id]);
-                    } else {
-                        await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.id]);
+                    if (!item.is_ghost_parent) {
+                        if (item.is_routine) {
+                            await db.execute('UPDATE routines SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.routine_id]);
+                        } else {
+                            await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.id]);
+                        }
+                    }
+
+                    const children = currentChildren[pid] || [];
+                    for (const child of children) {
+                        await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child.id]);
                     }
                 }
-
-                // Update children's sort order
-                const children = currentChildren[pid] || [];
-                for (const child of children) {
-                    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child.id]);
-                }
-            }
-        } catch (err) {
-            console.error(err);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
+            }, { error: '並び替えの保存に失敗しました' });
+        } catch {
             reloadTasks();
         }
-    }, [reloadTasks]);
+    }, [reloadTasks, dbOp]);
 
     // @dnd-kit drag handlers
     const handleDragStart = useCallback((event) => {
@@ -336,11 +327,10 @@ export default function TodayPage() {
     const handleRemove = async (taskId) => {
         setTasks(prev => prev.filter(t => t.id !== taskId));
         try {
-            const db = await fetchDb();
-            await db.execute('UPDATE tasks SET today_date = NULL WHERE id = $1', [taskId]);
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '今日やるタスクの変更に失敗しました', type: 'error' } }));
+            await dbOp(async (db) => {
+                await db.execute('UPDATE tasks SET today_date = NULL WHERE id = $1', [taskId]);
+            }, { error: '今日やるタスクの変更に失敗しました' });
+        } catch {
             reloadTasks();
         }
     };

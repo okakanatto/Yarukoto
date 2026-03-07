@@ -12,6 +12,7 @@ import { useTaskActions } from '../hooks/useTaskActions';
 import { useTaskDnD } from '../hooks/useTaskDnD';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
+import { useDbOperation } from '@/hooks/useDbOperation';
 
 export default function TaskList({ projectId = null }) {
     const [tasks, setTasks] = useState([]);
@@ -39,6 +40,8 @@ export default function TaskList({ projectId = null }) {
     const allUrgency = useMemo(() => masters.urgency || [], [masters.urgency]);
 
     const { statusOptions, tagOptions, importanceOptions, urgencyOptions, projectOptions } = useFilterOptions(allStatuses, allTags, allImportance, allUrgency, allProjects);
+
+    const dbOp = useDbOperation();
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -165,15 +168,14 @@ export default function TaskList({ projectId = null }) {
         const newMode = prevMode === 'auto' ? 'manual' : 'auto';
         setSortMode(newMode);
         try {
-            const db = await fetchDb();
-            await db.execute(
-                'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
-                ['sort_mode_tasks', newMode]
-            );
-        } catch (e) {
-            console.error(e);
+            await dbOp(async (db) => {
+                await db.execute(
+                    'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
+                    ['sort_mode_tasks', newMode]
+                );
+            }, { error: '設定の保存に失敗しました' });
+        } catch {
             setSortMode(prevMode);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '設定の保存に失敗しました', type: 'error' } }));
         }
     };
 

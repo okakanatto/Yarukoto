@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { fetchDb } from '@/lib/utils';
+import { useDbOperation } from '@/hooks/useDbOperation';
 
 /**
  * Custom hook that provides task CRUD operation handlers.
@@ -13,6 +13,8 @@ import { fetchDb } from '@/lib/utils';
  * @returns {object} Task action handlers
  */
 export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
+
+    const dbOp = useDbOperation();
 
     // Track task IDs currently being processed to prevent concurrent DB operations
     const [processingIds, setProcessingIds] = useState(new Set());
@@ -35,74 +37,69 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
             completed_at: code === 3 ? completedNow : null
         } : t));
         try {
-            const db = await fetchDb();
-            if (code === 3) {
-                await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [newStatusCode, taskId]);
-            } else {
-                await db.execute('UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2', [newStatusCode, taskId]);
-            }
+            await dbOp(async (db) => {
+                if (code === 3) {
+                    await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [newStatusCode, taskId]);
+                } else {
+                    await db.execute('UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2', [newStatusCode, taskId]);
+                }
 
-            // ENH-5: Auto-complete parent when all children are complete
-            if (code === 3) {
-                const settingRows = await db.select("SELECT value FROM app_settings WHERE key = 'auto_complete_parent'");
-                const enabled = settingRows[0]?.value === '1';
-                if (enabled) {
-                    const taskRows = await db.select('SELECT parent_id FROM tasks WHERE id = $1', [taskId]);
-                    const parentId = taskRows[0]?.parent_id;
-                    if (parentId) {
-                        const siblings = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [parentId]);
-                        const allComplete = siblings.every(s => s.id === taskId ? true : s.status_code === 3);
-                        if (allComplete) {
-                            const parentRows = await db.select('SELECT status_code FROM tasks WHERE id = $1', [parentId]);
-                            if (parentRows[0] && parentRows[0].status_code !== 3 && parentRows[0].status_code !== 5) {
-                                await db.execute("UPDATE tasks SET status_code = 3, completed_at = datetime('now', 'localtime') WHERE id = $1", [parentId]);
-                                setTasks(prev => prev.map(t => t.id === parentId ? {
-                                    ...t,
-                                    status_code: 3,
-                                    completed_at: completedNow
-                                } : t));
-                                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '子タスクがすべて完了したため、親タスクも完了にしました', type: 'success' } }));
+                // ENH-5: Auto-complete parent when all children are complete
+                if (code === 3) {
+                    const settingRows = await db.select("SELECT value FROM app_settings WHERE key = 'auto_complete_parent'");
+                    const enabled = settingRows[0]?.value === '1';
+                    if (enabled) {
+                        const taskRows = await db.select('SELECT parent_id FROM tasks WHERE id = $1', [taskId]);
+                        const parentId = taskRows[0]?.parent_id;
+                        if (parentId) {
+                            const siblings = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [parentId]);
+                            const allComplete = siblings.every(s => s.id === taskId ? true : s.status_code === 3);
+                            if (allComplete) {
+                                const parentRows = await db.select('SELECT status_code FROM tasks WHERE id = $1', [parentId]);
+                                if (parentRows[0] && parentRows[0].status_code !== 3 && parentRows[0].status_code !== 5) {
+                                    await db.execute("UPDATE tasks SET status_code = 3, completed_at = datetime('now', 'localtime') WHERE id = $1", [parentId]);
+                                    setTasks(prev => prev.map(t => t.id === parentId ? {
+                                        ...t,
+                                        status_code: 3,
+                                        completed_at: completedNow
+                                    } : t));
+                                    window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '子タスクがすべて完了したため、親タスクも完了にしました', type: 'success' } }));
+                                }
                             }
                         }
                     }
                 }
-            }
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
+            }, { error: 'ステータスの変更に失敗しました' });
+        } catch {
             fetchTasks();
         } finally {
             removeProcessing(taskId);
         }
-    }, [setTasks, fetchTasks, addProcessing, removeProcessing]);
+    }, [setTasks, fetchTasks, addProcessing, removeProcessing, dbOp]);
 
     const handleDelete = useCallback(async (taskId) => {
         if (!confirm('このタスクを削除しますか？')) return;
         try {
-            const db = await fetchDb();
-            await db.execute('UPDATE tasks SET parent_id = NULL WHERE parent_id = $1', [taskId]);
-            await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'タスクを削除しました', type: 'success' } }));
+            await dbOp(async (db) => {
+                await db.execute('UPDATE tasks SET parent_id = NULL WHERE parent_id = $1', [taskId]);
+                await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
+            }, { success: 'タスクを削除しました', error: '削除に失敗しました' });
             refresh();
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '削除に失敗しました', type: 'error' } }));
-        }
-    }, [refresh]);
+        } catch { /* handled by dbOp */ }
+    }, [refresh, dbOp]);
 
     const handleTodayToggle = useCallback(async (taskId, currentTodayDate) => {
         const today = new Date().toLocaleDateString('sv-SE');
         const newVal = currentTodayDate === today ? null : today;
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, today_date: newVal } : t));
         try {
-            const db = await fetchDb();
-            await db.execute('UPDATE tasks SET today_date = $1 WHERE id = $2', [newVal, taskId]);
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '今日やるタスクの変更に失敗しました', type: 'error' } }));
+            await dbOp(async (db) => {
+                await db.execute('UPDATE tasks SET today_date = $1 WHERE id = $2', [newVal, taskId]);
+            }, { error: '今日やるタスクの変更に失敗しました' });
+        } catch {
             fetchTasks();
         }
-    }, [setTasks, fetchTasks]);
+    }, [setTasks, fetchTasks, dbOp]);
 
     const handleArchive = useCallback(async (taskId) => {
         const tasks = getTasks();
@@ -125,35 +122,33 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         }));
 
         try {
-            const db = await fetchDb();
-
-            // Parent check: all children must be completed or cancelled
-            if (!task.parent_id) {
-                const children = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [taskId]);
-                const hasInProgress = children.some(c => c.status_code !== 3 && c.status_code !== 5);
-                if (hasInProgress) {
-                    window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '未完了の子タスクがあるためアーカイブできません', type: 'error' } }));
-                    fetchTasks();
-                    return;
+            await dbOp(async (db) => {
+                // Parent check: all children must be completed or cancelled
+                if (!task.parent_id) {
+                    const children = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [taskId]);
+                    const hasInProgress = children.some(c => c.status_code !== 3 && c.status_code !== 5);
+                    if (hasInProgress) {
+                        window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '未完了の子タスクがあるためアーカイブできません', type: 'error' } }));
+                        fetchTasks();
+                        return;
+                    }
                 }
-            }
 
-            // Archive parent + children in a single atomic statement (avoids manual transaction issues with connection pool)
-            if (!task.parent_id) {
-                await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE (id = $1 OR parent_id = $1) AND archived_at IS NULL", [taskId]);
-            } else {
-                await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
-            }
+                // Archive parent + children in a single atomic statement (avoids manual transaction issues with connection pool)
+                if (!task.parent_id) {
+                    await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE (id = $1 OR parent_id = $1) AND archived_at IS NULL", [taskId]);
+                } else {
+                    await db.execute("UPDATE tasks SET archived_at = datetime('now', 'localtime') WHERE id = $1", [taskId]);
+                }
 
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブに失敗しました', type: 'error' } }));
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブしました', type: 'success' } }));
+            }, { error: 'アーカイブに失敗しました' });
+        } catch {
             fetchTasks();
         } finally {
             removeProcessing(taskId);
         }
-    }, [getTasks, setTasks, fetchTasks, addProcessing, removeProcessing]);
+    }, [getTasks, setTasks, fetchTasks, addProcessing, removeProcessing, dbOp]);
 
     const handleRestore = useCallback(async (taskId) => {
         const tasks = getTasks();
@@ -173,35 +168,31 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         }));
 
         try {
-            const db = await fetchDb();
+            await dbOp(async (db) => {
+                // Restore parent + children or child + parent in single atomic statements
+                if (task && !task.parent_id) {
+                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR parent_id = $1', [taskId]);
+                } else if (task && task.parent_id) {
+                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR id = $2', [taskId, task.parent_id]);
+                } else {
+                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
+                }
 
-            // Restore parent + children or child + parent in single atomic statements
-            if (task && !task.parent_id) {
-                // Parent: restore self + all children
-                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR parent_id = $1', [taskId]);
-            } else if (task && task.parent_id) {
-                // Child: restore self + parent
-                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR id = $2', [taskId, task.parent_id]);
-            } else {
-                await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1', [taskId]);
-            }
-
-            // Descriptive toast for parent-child restore
-            let toastMsg = '復元しました';
-            if (task && !task.parent_id && tasks.some(t => t.parent_id === taskId)) {
-                toastMsg = '親タスクと子タスクをまとめて復元しました';
-            } else if (task && task.parent_id) {
-                toastMsg = '子タスクと親タスクを復元しました';
-            }
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: toastMsg, type: 'success' } }));
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '復元に失敗しました', type: 'error' } }));
+                // Descriptive toast for parent-child restore
+                let toastMsg = '復元しました';
+                if (task && !task.parent_id && tasks.some(t => t.parent_id === taskId)) {
+                    toastMsg = '親タスクと子タスクをまとめて復元しました';
+                } else if (task && task.parent_id) {
+                    toastMsg = '子タスクと親タスクを復元しました';
+                }
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: toastMsg, type: 'success' } }));
+            }, { error: '復元に失敗しました' });
+        } catch {
             fetchTasks();
         } finally {
             removeProcessing(taskId);
         }
-    }, [getTasks, setTasks, fetchTasks, addProcessing, removeProcessing]);
+    }, [getTasks, setTasks, fetchTasks, addProcessing, removeProcessing, dbOp]);
 
     /**
      * Handles routine completion toggling (for today page).
@@ -225,18 +216,17 @@ export function useTaskActions({ setTasks, fetchTasks, refresh, getTasks }) {
         // 着手中(2)はUI表示のみ、DB操作不要
         if (code === 2) return;
         try {
-            const db = await fetchDb();
-            if (code === 3) {
-                await db.execute('INSERT OR IGNORE INTO routine_completions (routine_id, completion_date) VALUES ($1, $2)', [routineId, completionDate]);
-            } else {
-                await db.execute('DELETE FROM routine_completions WHERE routine_id = $1 AND completion_date = $2', [routineId, completionDate]);
-            }
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ステータスの変更に失敗しました', type: 'error' } }));
+            await dbOp(async (db) => {
+                if (code === 3) {
+                    await db.execute('INSERT OR IGNORE INTO routine_completions (routine_id, completion_date) VALUES ($1, $2)', [routineId, completionDate]);
+                } else {
+                    await db.execute('DELETE FROM routine_completions WHERE routine_id = $1 AND completion_date = $2', [routineId, completionDate]);
+                }
+            }, { error: 'ステータスの変更に失敗しました' });
+        } catch {
             fetchTasks();
         }
-    }, [setTasks, fetchTasks]);
+    }, [setTasks, fetchTasks, dbOp]);
 
     return {
         handleStatusChange,
