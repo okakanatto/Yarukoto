@@ -76,7 +76,7 @@ export default function TagsPanel({ data, setData, flash }) {
         try {
             const db = await fetchDb();
             await db.execute('UPDATE tags SET name = $1, color = $2 WHERE id = $3', [tag.name, tag.color, id]);
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error(e); flash('err', '保存に失敗しました'); }
     };
 
     const delTag = async (id) => {
@@ -97,7 +97,7 @@ export default function TagsPanel({ data, setData, flash }) {
         try {
             const db = await fetchDb();
             await db.execute('UPDATE tags SET archived = $1 WHERE id = $2', [newArchived, id]);
-            flash('ok', newArchived ? 'タグをアーカイブしました' : 'タグのアーカイブを解除しました');
+            flash('ok', newArchived ? 'タグをアーカイブしました' : 'タグを復元しました');
         } catch (e) {
             console.error(e);
             pm.updateItem(id, 'archived', tag.archived);
@@ -163,7 +163,7 @@ export default function TagsPanel({ data, setData, flash }) {
                                     <div className="s-swatch" style={{ backgroundColor: t.color, opacity: 0.5 }} />
                                     <div className="s-bar" style={{ backgroundColor: t.color, opacity: 0.5 }} />
                                     <span className="s-label" style={{ opacity: 0.6 }}>{t.name}</span>
-                                    <button className="s-archive-btn s-unarchive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="アーカイブ解除">📤</button>
+                                    <button className="s-archive-btn s-unarchive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="復元">&#x21A9;</button>
                                     <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除">🗑</button>
                                 </div>
                             </div>
