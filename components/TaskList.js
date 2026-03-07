@@ -14,6 +14,7 @@ import { fetchDb, parseTags } from '@/lib/utils';
 import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { buildTaskListQuery } from '@/lib/taskListQueries';
+import ArchiveView from './ArchiveView';
 
 export default function TaskList({ projectId = null }) {
     const [tasks, setTasks] = useState([]);
@@ -52,6 +53,13 @@ export default function TaskList({ projectId = null }) {
     const { setNodeRef: setRootRef } = useDroppable({ id: 'root' });
 
     const fetchTasks = useCallback(async () => {
+        // Archive mode: ArchiveView manages its own data fetching
+        if (showArchived) {
+            setTasks([]);
+            setLoading(false);
+            return;
+        }
+
         const currentReq = ++activeRequestId.current;
         setLoading(true);
         try {
@@ -210,7 +218,7 @@ export default function TaskList({ projectId = null }) {
                                 {sortMode === 'manual' ? '✋ 手動' : '🔀 自動'}
                             </button>
                         )}
-                        {sortMode === 'auto' && (
+                        {!showArchived && sortMode === 'auto' && (
                             <div className="tl-filter">
                                 <label>並び順</label>
                                 <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
@@ -221,81 +229,83 @@ export default function TaskList({ projectId = null }) {
                     </div>
                 </div>
 
-                {/* Task list - Droppable 'root' area */}
-                <div className="tl-items" ref={setRootRef}>
-                    {loading && tasks.length === 0 && (
-                        <div className="tl-placeholder"><span className="spinner" /> 読み込み中...</div>
-                    )}
-                    {!loading && parentTasks.length === 0 && !showArchived && (
-                        <div className="tl-placeholder tl-empty">
-                            <span className="tl-empty-icon">🌱</span>
-                            <span className="tl-empty-title">最初のタスクを追加して、今日をスタートしましょう！</span>
-                            <span className="tl-empty-hint">上のフォームからタスクを追加できます</span>
-                        </div>
-                    )}
-                    {!loading && parentTasks.length === 0 && showArchived && (
-                        <div className="tl-placeholder tl-empty">
-                            <span className="tl-empty-icon">📦</span>
-                            <span className="tl-empty-title">アーカイブ済みのタスクはありません</span>
-                            <span className="tl-empty-hint">完了・キャンセル済みタスクの📦ボタンでアーカイブできます</span>
-                        </div>
-                    )}
-                    {sortedParentTasks.map((task, i) => (
-                        <React.Fragment key={task.id}>
-                            {/* Manual mode: ReorderGap between root tasks */}
-                            {!showArchived && sortMode === 'manual' && activeId && i === 0 && (
-                                <ReorderGap id="reorder-root-0" />
+                {/* Content: Archive view or regular task list */}
+                {showArchived ? (
+                    <ArchiveView
+                        filterStatuses={filterStatuses}
+                        filterTags={filterTags}
+                        filterImportance={filterImportance}
+                        filterUrgency={filterUrgency}
+                        filterProjects={filterProjects}
+                        projectId={projectId}
+                        statusMap={statusMap}
+                        allStatuses={allStatuses}
+                        onEdit={setEditingTask}
+                    />
+                ) : (
+                    <>
+                        {/* Task list - Droppable 'root' area */}
+                        <div className="tl-items" ref={setRootRef}>
+                            {loading && tasks.length === 0 && (
+                                <div className="tl-placeholder"><span className="spinner" /> 読み込み中...</div>
                             )}
-                            {/* Auto mode: UnnestGap for children being dragged */}
-                            {!showArchived && sortMode === 'auto' && isDraggingChild && i === 0 && (
-                                <UnnestGap id={`unnest-gap-top`} />
-                            )}
-                            <TaskItem task={task} childTasks={getChildTasks(task.id)}
-                                onStatusChange={handleStatusChange} onDelete={handleDelete}
-                                onTaskAdded={handleTaskAdded} onEdit={setEditingTask}
-                                onTodayToggle={handleTodayToggle}
-                                onArchive={handleArchive} onRestore={handleRestore}
-                                index={i} statusMap={statusMap} allStatuses={allStatuses}
-                                isDraggable={!showArchived && (sortMode === 'manual' || getChildTasks(task.id).length === 0)}
-                                isArchived={showArchived}
-                                sortMode={sortMode}
-                                activeId={activeId}
-                                activeDragParentId={activeTaskData?.parent_id}
-                                isProcessing={processingIds.has(task.id)}
-                                processingIds={processingIds}
-                                justCompletedId={justCompletedId}
-                            />
-                            {/* Manual mode: ReorderGap after each root task */}
-                            {!showArchived && sortMode === 'manual' && activeId && (
-                                <ReorderGap id={`reorder-root-${i + 1}`} />
-                            )}
-                            {/* Auto mode: UnnestGap after each root task */}
-                            {!showArchived && sortMode === 'auto' && isDraggingChild && (
-                                <UnnestGap id={`unnest-gap-${task.id}`} />
-                            )}
-                            {/* Manual mode: UnnestGap when dragging a child */}
-                            {!showArchived && sortMode === 'manual' && isDraggingChild && (
-                                <UnnestGap id={`unnest-gap-${task.id}`} />
-                            )}
-                        </React.Fragment>
-                    ))}
-
-                    {/* Add extra space at bottom to make dropping to root easier */}
-                    <div style={{ height: '50px' }} />
-                </div>
-
-                <DragOverlay>
-                    {activeTaskData ? (
-                        <div className="tc-card" style={{ opacity: 0.8, transform: 'scale(1.02)', cursor: 'grabbing' }}>
-                            <div className="tc-body">
-                                <span style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>📄</span>
-                                <div className="tc-info">
-                                    <div className="tc-title" style={{ fontWeight: 'bold' }}>{activeTaskData.title}</div>
+                            {!loading && parentTasks.length === 0 && (
+                                <div className="tl-placeholder tl-empty">
+                                    <span className="tl-empty-icon">🌱</span>
+                                    <span className="tl-empty-title">最初のタスクを追加して、今日をスタートしましょう！</span>
+                                    <span className="tl-empty-hint">上のフォームからタスクを追加できます</span>
                                 </div>
-                            </div>
+                            )}
+                            {sortedParentTasks.map((task, i) => (
+                                <React.Fragment key={task.id}>
+                                    {sortMode === 'manual' && activeId && i === 0 && (
+                                        <ReorderGap id="reorder-root-0" />
+                                    )}
+                                    {sortMode === 'auto' && isDraggingChild && i === 0 && (
+                                        <UnnestGap id={`unnest-gap-top`} />
+                                    )}
+                                    <TaskItem task={task} childTasks={getChildTasks(task.id)}
+                                        onStatusChange={handleStatusChange} onDelete={handleDelete}
+                                        onTaskAdded={handleTaskAdded} onEdit={setEditingTask}
+                                        onTodayToggle={handleTodayToggle}
+                                        onArchive={handleArchive} onRestore={handleRestore}
+                                        index={i} statusMap={statusMap} allStatuses={allStatuses}
+                                        isDraggable={sortMode === 'manual' || getChildTasks(task.id).length === 0}
+                                        sortMode={sortMode}
+                                        activeId={activeId}
+                                        activeDragParentId={activeTaskData?.parent_id}
+                                        isProcessing={processingIds.has(task.id)}
+                                        processingIds={processingIds}
+                                        justCompletedId={justCompletedId}
+                                    />
+                                    {sortMode === 'manual' && activeId && (
+                                        <ReorderGap id={`reorder-root-${i + 1}`} />
+                                    )}
+                                    {sortMode === 'auto' && isDraggingChild && (
+                                        <UnnestGap id={`unnest-gap-${task.id}`} />
+                                    )}
+                                    {sortMode === 'manual' && isDraggingChild && (
+                                        <UnnestGap id={`unnest-gap-${task.id}`} />
+                                    )}
+                                </React.Fragment>
+                            ))}
+                            <div style={{ height: '50px' }} />
                         </div>
-                    ) : null}
-                </DragOverlay>
+
+                        <DragOverlay>
+                            {activeTaskData ? (
+                                <div className="tc-card" style={{ opacity: 0.8, transform: 'scale(1.02)', cursor: 'grabbing' }}>
+                                    <div className="tc-body">
+                                        <span style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>📄</span>
+                                        <div className="tc-info">
+                                            <div className="tc-title" style={{ fontWeight: 'bold' }}>{activeTaskData.title}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+                        </DragOverlay>
+                    </>
+                )}
 
                 {editingTask && <TaskEditModal task={editingTask} onClose={() => setEditingTask(null)} onSaved={handleTaskEdited} />}
 
