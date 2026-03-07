@@ -4,37 +4,34 @@ import { useState, useCallback } from 'react';
 import ColorPalette from '@/components/ColorPalette';
 import { fetchDb } from '@/lib/utils';
 import { useDragReorder } from '@/hooks/useDragReorder';
+import { usePanelManager } from '@/hooks/usePanelManager';
 
 export default function StatusPanel({ data, setData, flash }) {
     const [newStatus, setNewStatus] = useState({ label: '', color: '#94a3b8' });
-    const [openPalette, setOpenPalette] = useState(null);
-    const [saving, setSaving] = useState(false);
 
-    const tp = (key) => setOpenPalette(openPalette === key ? null : key);
-
-    const setStatusList = useCallback((fn) => {
+    const setStatusItems = useCallback((fn) => {
         setData(p => ({ ...p, status: typeof fn === 'function' ? fn(p.status) : fn }));
     }, [setData]);
-    const dragStatus = useDragReorder(data.status, setStatusList);
 
-    const upd = (id, field, val) =>
-        setData(p => ({ ...p, status: p.status.map(x => x.code === id ? { ...x, [field]: val } : x) }));
+    const pm = usePanelManager({
+        items: data.status,
+        setItems: setStatusItems,
+        idField: 'code',
+        flash,
+    });
 
-    const saveMaster = async () => {
-        setSaving(true);
-        try {
-            const db = await fetchDb();
-            for (let i = 0; i < data.status.length; i++) {
-                const x = data.status[i];
-                await db.execute(
-                    'UPDATE status_master SET label = $1, color = $2, sort_order = $3 WHERE code = $4',
-                    [x.label, x.color, i, x.code]
-                );
-            }
-            flash('ok', '保存しました');
-        } catch (e) { console.error(e); flash('err', '保存に失敗しました'); }
-        finally { setSaving(false); }
-    };
+    const dragStatus = useDragReorder(data.status, setStatusItems);
+
+    const saveMaster = () => pm.saveAllOrder(async () => {
+        const db = await fetchDb();
+        for (let i = 0; i < data.status.length; i++) {
+            const x = data.status[i];
+            await db.execute(
+                'UPDATE status_master SET label = $1, color = $2, sort_order = $3 WHERE code = $4',
+                [x.label, x.color, i, x.code]
+            );
+        }
+    });
 
     const addStatus = async () => {
         if (!newStatus.label.trim()) return;
@@ -46,8 +43,7 @@ export default function StatusPanel({ data, setData, flash }) {
                 'INSERT INTO status_master (label, color, sort_order) VALUES ($1, $2, $3)',
                 [newStatus.label, newStatus.color, nextSort]
             );
-            const newCode = result.lastInsertId;
-            setData(p => ({ ...p, status: [...p.status, { code: newCode, label: newStatus.label, color: newStatus.color, sort_order: nextSort }] }));
+            pm.appendItem({ code: result.lastInsertId, label: newStatus.label, color: newStatus.color, sort_order: nextSort });
             setNewStatus({ label: '', color: '#94a3b8' });
             flash('ok', 'ステータスを追加しました');
         } catch (e) { console.error(e); flash('err', '追加に失敗しました'); }
@@ -63,24 +59,14 @@ export default function StatusPanel({ data, setData, flash }) {
                 return;
             }
             await db.execute('DELETE FROM status_master WHERE code = $1', [code]);
-            setData(p => ({ ...p, status: p.status.filter(s => s.code !== code) }));
+            pm.removeItem(code);
             flash('ok', '削除しました');
         } catch (e) { console.error(e); flash('err', '削除に失敗しました'); }
     };
 
-    const moveStatus = (index, direction) => {
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= data.status.length) return;
-        setData(p => {
-            const arr = [...p.status];
-            [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
-            return { ...p, status: arr };
-        });
-    };
-
     const row = (key, color, label, index, opts = {}) => {
         const { onColor, onLabel, onBlur, onDel, readOnly, onMoveUp, onMoveDown } = opts;
-        const isOpen = openPalette === key;
+        const isOpen = pm.openPalette === key;
         return (
             <div className="s-item" key={key}
                 draggable
@@ -97,7 +83,7 @@ export default function StatusPanel({ data, setData, flash }) {
                             <button className="s-move-btn" onClick={onMoveDown} disabled={!onMoveDown} type="button" title="下に移動">▼</button>
                         </div>
                     )}
-                    <button className="s-swatch" style={{ backgroundColor: color }} onClick={() => tp(key)} type="button" title="色を変更" />
+                    <button className="s-swatch" style={{ backgroundColor: color }} onClick={() => pm.togglePalette(key)} type="button" title="色を変更" />
                     <div className="s-bar" style={{ backgroundColor: color }} />
                     {readOnly
                         ? <span className="s-label">{label}</span>
@@ -114,26 +100,26 @@ export default function StatusPanel({ data, setData, flash }) {
         <>
             <div className="s-head-row">
                 <h3 className="s-heading">ステータスの設定</h3>
-                <button className="s-btn-primary" onClick={saveMaster} disabled={saving}>
-                    {saving ? '保存中...' : '並び順を保存'}
+                <button className="s-btn-primary" onClick={saveMaster} disabled={pm.saving}>
+                    {pm.saving ? '保存中...' : '並び順を保存'}
                 </button>
             </div>
             <div className="s-add-row">
-                <button type="button" className="s-swatch" style={{ backgroundColor: newStatus.color }} onClick={() => tp('new-st')} />
+                <button type="button" className="s-swatch" style={{ backgroundColor: newStatus.color }} onClick={() => pm.togglePalette('new-st')} />
                 <input type="text" className="s-input" placeholder="新しいステータス名..." value={newStatus.label} onChange={e => setNewStatus({ ...newStatus, label: e.target.value })} />
                 <button type="button" className="s-btn-primary" onClick={addStatus} disabled={!newStatus.label.trim()}>＋ 追加</button>
             </div>
-            {openPalette === 'new-st' && <div className="s-palette s-add-pal"><ColorPalette value={newStatus.color} onChange={c => setNewStatus({ ...newStatus, color: c })} /></div>}
+            {pm.openPalette === 'new-st' && <div className="s-palette s-add-pal"><ColorPalette value={newStatus.color} onChange={c => setNewStatus({ ...newStatus, color: c })} /></div>}
             <div className="s-list">
                 {data.status.map((s, i) => {
                     const isSystem = s.code <= 5;
                     return row(`st-${s.code}`, s.color, s.label, i, {
-                        onColor: c => upd(s.code, 'color', c),
-                        onLabel: isSystem ? undefined : v => upd(s.code, 'label', v),
+                        onColor: c => pm.updateItem(s.code, 'color', c),
+                        onLabel: isSystem ? undefined : v => pm.updateItem(s.code, 'label', v),
                         onDel: isSystem ? undefined : () => delStatus(s.code),
                         readOnly: isSystem,
-                        onMoveUp: i > 0 ? () => moveStatus(i, -1) : undefined,
-                        onMoveDown: i < data.status.length - 1 ? () => moveStatus(i, 1) : undefined,
+                        onMoveUp: i > 0 ? () => pm.moveItem(i, -1) : undefined,
+                        onMoveDown: i < data.status.length - 1 ? () => pm.moveItem(i, 1) : undefined,
                     });
                 })}
                 <p className="s-hint">※ {data.status.filter(s => s.code <= 5).map(s => s.label).join('・')} はシステム必須のため名前・削除の変更はできません（並び順は変更可能）</p>

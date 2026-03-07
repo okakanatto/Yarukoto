@@ -4,13 +4,23 @@ import { useState, useCallback, useMemo } from 'react';
 import ColorPalette from '@/components/ColorPalette';
 import { fetchDb } from '@/lib/utils';
 import { useDragReorder } from '@/hooks/useDragReorder';
+import { usePanelManager } from '@/hooks/usePanelManager';
 
 export default function TagsPanel({ data, setData, flash }) {
     const [newTag, setNewTag] = useState({ name: '', color: '#3b82f6' });
-    const [openPalette, setOpenPalette] = useState(null);
-    const [saving, setSaving] = useState(false);
 
-    const tp = (key) => setOpenPalette(openPalette === key ? null : key);
+    const setTagItems = useCallback((fn) => {
+        setData(p => ({ ...p, tags: typeof fn === 'function' ? fn(p.tags) : fn }));
+    }, [setData]);
+
+    const pm = usePanelManager({
+        items: data.tags,
+        setItems: setTagItems,
+        idField: 'id',
+        supportsArchive: true,
+        isArchived: (t) => !!t.archived,
+        flash,
+    });
 
     const activeTags = useMemo(() => data.tags.filter(t => !t.archived), [data.tags]);
     const setActiveTags = useCallback((fn) => {
@@ -23,30 +33,25 @@ export default function TagsPanel({ data, setData, flash }) {
     }, [setData]);
     const dragTags = useDragReorder(activeTags, setActiveTags);
 
-    const saveTags = async () => {
-        setSaving(true);
-        try {
-            const db = await fetchDb();
-            const active = data.tags.filter(t => !t.archived);
-            const archived = data.tags.filter(t => t.archived);
-            for (let i = 0; i < active.length; i++) {
-                const t = active[i];
-                await db.execute(
-                    'UPDATE tags SET name = $1, color = $2, sort_order = $3 WHERE id = $4',
-                    [t.name, t.color, i, t.id]
-                );
-            }
-            for (let i = 0; i < archived.length; i++) {
-                const t = archived[i];
-                await db.execute(
-                    'UPDATE tags SET sort_order = $1 WHERE id = $2',
-                    [active.length + i, t.id]
-                );
-            }
-            flash('ok', '保存しました');
-        } catch (e) { console.error(e); flash('err', '保存に失敗しました'); }
-        finally { setSaving(false); }
-    };
+    const saveTags = () => pm.saveAllOrder(async () => {
+        const db = await fetchDb();
+        const active = data.tags.filter(t => !t.archived);
+        const archived = data.tags.filter(t => t.archived);
+        for (let i = 0; i < active.length; i++) {
+            const t = active[i];
+            await db.execute(
+                'UPDATE tags SET name = $1, color = $2, sort_order = $3 WHERE id = $4',
+                [t.name, t.color, i, t.id]
+            );
+        }
+        for (let i = 0; i < archived.length; i++) {
+            const t = archived[i];
+            await db.execute(
+                'UPDATE tags SET sort_order = $1 WHERE id = $2',
+                [active.length + i, t.id]
+            );
+        }
+    });
 
     const addTag = async (e) => {
         e.preventDefault();
@@ -59,19 +64,10 @@ export default function TagsPanel({ data, setData, flash }) {
                 'INSERT INTO tags (name, color, sort_order) VALUES ($1, $2, $3)',
                 [newTag.name, newTag.color, nextSort]
             );
-            const newId = result.lastInsertId;
-            setData(p => {
-                const active = p.tags.filter(t => !t.archived);
-                const archived = p.tags.filter(t => t.archived);
-                return { ...p, tags: [...active, { id: newId, name: newTag.name, color: newTag.color, sort_order: nextSort, archived: 0 }, ...archived] };
-            });
+            pm.appendItem({ id: result.lastInsertId, name: newTag.name, color: newTag.color, sort_order: nextSort, archived: 0 });
             setNewTag({ name: '', color: '#3b82f6' });
             flash('ok', 'タグを追加しました');
         } catch (e) { console.error(e); flash('err', '追加に失敗しました'); }
-    };
-
-    const updTag = (id, field, val) => {
-        setData(p => ({ ...p, tags: p.tags.map(t => t.id === id ? { ...t, [field]: val } : t) }));
     };
 
     const commitTag = async (id) => {
@@ -88,7 +84,7 @@ export default function TagsPanel({ data, setData, flash }) {
         try {
             const db = await fetchDb();
             await db.execute('DELETE FROM tags WHERE id = $1', [id]);
-            setData(p => ({ ...p, tags: p.tags.filter(t => t.id !== id) }));
+            pm.removeItem(id);
             flash('ok', 'タグを削除しました');
         } catch (e) { console.error(e); flash('err', '削除に失敗しました'); }
     };
@@ -97,28 +93,16 @@ export default function TagsPanel({ data, setData, flash }) {
         const tag = data.tags.find(t => t.id === id);
         if (!tag) return;
         const newArchived = tag.archived ? 0 : 1;
-        setData(p => ({ ...p, tags: p.tags.map(t => t.id === id ? { ...t, archived: newArchived } : t) }));
+        pm.updateItem(id, 'archived', newArchived);
         try {
             const db = await fetchDb();
             await db.execute('UPDATE tags SET archived = $1 WHERE id = $2', [newArchived, id]);
             flash('ok', newArchived ? 'タグをアーカイブしました' : 'タグのアーカイブを解除しました');
         } catch (e) {
             console.error(e);
-            setData(p => ({ ...p, tags: p.tags.map(t => t.id === id ? { ...t, archived: tag.archived } : t) }));
+            pm.updateItem(id, 'archived', tag.archived);
             flash('err', 'アーカイブの変更に失敗しました');
         }
-    };
-
-    const moveTag = (index, direction) => {
-        const active = data.tags.filter(t => !t.archived);
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= active.length) return;
-        setData(p => {
-            const a = p.tags.filter(t => !t.archived);
-            const archived = p.tags.filter(t => t.archived);
-            [a[index], a[newIndex]] = [a[newIndex], a[index]];
-            return { ...p, tags: [...a, ...archived] };
-        });
     };
 
     const archivedTags = data.tags.filter(t => t.archived);
@@ -127,18 +111,18 @@ export default function TagsPanel({ data, setData, flash }) {
         <>
             <div className="s-head-row">
                 <h3 className="s-heading">タグ管理</h3>
-                <button className="s-btn-primary" onClick={saveTags} disabled={saving}>
-                    {saving ? '保存中...' : '並び順を保存'}
+                <button className="s-btn-primary" onClick={saveTags} disabled={pm.saving}>
+                    {pm.saving ? '保存中...' : '並び順を保存'}
                 </button>
             </div>
             <form onSubmit={addTag}>
                 <div className="s-add-row">
-                    <button type="button" className="s-swatch" style={{ backgroundColor: newTag.color }} onClick={() => tp('new-tag')} />
+                    <button type="button" className="s-swatch" style={{ backgroundColor: newTag.color }} onClick={() => pm.togglePalette('new-tag')} />
                     <input type="text" className="s-input" placeholder="新しいタグ名を入力..." value={newTag.name} onChange={e => setNewTag({ ...newTag, name: e.target.value })} />
                     <button type="submit" className="s-btn-primary" disabled={!newTag.name.trim()}>＋ 追加</button>
                 </div>
             </form>
-            {openPalette === 'new-tag' && <div className="s-palette s-add-pal"><ColorPalette value={newTag.color} onChange={c => setNewTag({ ...newTag, color: c })} /></div>}
+            {pm.openPalette === 'new-tag' && <div className="s-palette s-add-pal"><ColorPalette value={newTag.color} onChange={c => setNewTag({ ...newTag, color: c })} /></div>}
             <div className="s-list">
                 {activeTags.length === 0 && archivedTags.length === 0 && <p className="s-empty">タグがまだありません</p>}
                 {activeTags.length === 0 && archivedTags.length > 0 && <p className="s-empty">有効なタグがありません</p>}
@@ -153,16 +137,16 @@ export default function TagsPanel({ data, setData, flash }) {
                         <div className="s-row">
                             <span className="s-grip" title="ドラッグして並べ替え">⠿</span>
                             <div className="s-move-btns">
-                                <button className="s-move-btn" onClick={() => moveTag(i, -1)} disabled={i === 0} type="button" title="上に移動">▲</button>
-                                <button className="s-move-btn" onClick={() => moveTag(i, 1)} disabled={i === activeTags.length - 1} type="button" title="下に移動">▼</button>
+                                <button className="s-move-btn" onClick={() => pm.moveItem(i, -1)} disabled={i === 0} type="button" title="上に移動">▲</button>
+                                <button className="s-move-btn" onClick={() => pm.moveItem(i, 1)} disabled={i === activeTags.length - 1} type="button" title="下に移動">▼</button>
                             </div>
-                            <button className="s-swatch" style={{ backgroundColor: t.color }} onClick={() => tp(`tag-${t.id}`)} type="button" title="色を変更" />
+                            <button className="s-swatch" style={{ backgroundColor: t.color }} onClick={() => pm.togglePalette(`tag-${t.id}`)} type="button" title="色を変更" />
                             <div className="s-bar" style={{ backgroundColor: t.color }} />
-                            <input className="s-input" type="text" value={t.name} onChange={e => updTag(t.id, 'name', e.target.value)} onBlur={() => commitTag(t.id)} />
+                            <input className="s-input" type="text" value={t.name} onChange={e => pm.updateItem(t.id, 'name', e.target.value)} onBlur={() => commitTag(t.id)} />
                             <button className="s-archive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="アーカイブ">📦</button>
                             <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除">🗑</button>
                         </div>
-                        {openPalette === `tag-${t.id}` && <div className="s-palette"><ColorPalette value={t.color} onChange={c => { updTag(t.id, 'color', c); commitTag(t.id); }} /></div>}
+                        {pm.openPalette === `tag-${t.id}` && <div className="s-palette"><ColorPalette value={t.color} onChange={c => { pm.updateItem(t.id, 'color', c); commitTag(t.id); }} /></div>}
                     </div>
                 ))}
             </div>
