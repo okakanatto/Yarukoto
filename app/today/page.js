@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
-import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
-import StatusCheckbox from '@/components/StatusCheckbox';
 import TaskEditModal from '@/components/TaskEditModal';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
 import { ReorderGap } from '@/components/DndGaps';
-import { formatMin } from '@/lib/utils';
 import { addDays, toDateStr } from '@/lib/dateUtils';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
+import { useTodayGrouping } from '@/hooks/useTodayGrouping';
+import TodayCardItem from './_components/TodayCardItem';
+import TodayGroupHeader from './_components/TodayGroupHeader';
+import TodayStats from './_components/TodayStats';
 
 function buildDateTabs() {
     const now = new Date();
@@ -33,120 +33,6 @@ function buildDateTabs() {
         });
     }
     return tabs;
-}
-
-/**
- * Individual today-card with @dnd-kit draggable support.
- */
-function TodayCardItem({ task, isManual, isChild = false, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index, isProcessing }) {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: task.id,
-        disabled: !isManual || !!task.is_archived || isChild,
-    });
-
-    const style = transform ? {
-        transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.3 : 1,
-        zIndex: isDragging ? 100 : 'auto',
-    } : undefined;
-
-    const st = statusMap[task.status_code] || { label: task.status_label || '不明', color: task.status_color || '#94a3b8' };
-    const isDone = task.status_code === 3;
-    const isRoutine = !!task.is_routine;
-    const isArchived = !!task.is_archived;
-    const isPickedForToday = task.today_date === selectedDate;
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={{ ...style, animationDelay: `${index * 40}ms` }}
-            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${isArchived ? 'archived' : ''}`}
-        >
-            {isManual && !isArchived && !isChild && (
-                <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
-            )}
-            <StatusCheckbox
-                statusCode={task.status_code}
-                onChange={(newCode) => onStatusChange(task.id, newCode, isRoutine)}
-                sparkle={justCompletedId === task.id}
-                disabled={isProcessing || isArchived}
-            />
-            <div className="today-card-info">
-                {!isChild && task.parent_title && (
-                    <span className="today-parent-label">📌 {task.parent_title} ›</span>
-                )}
-                <div className="today-card-title-row">
-                    {isRoutine && <span className="today-routine-badge">🔄</span>}
-                    {isArchived && <span className="today-archived-badge" title="アーカイブ済み">📦</span>}
-                    <span
-                        className={`today-card-title ${isDone ? 'strike' : ''} ${!isRoutine && !isArchived ? 'clickable' : ''}`}
-                        onClick={() => {
-                            if (!isRoutine && !isArchived) onEdit(task);
-                        }}
-                        title={isArchived ? "アーカイブ済み" : (!isRoutine ? "クリックして編集" : "")}
-                    >
-                        {task.title}
-                    </span>
-                    {task.project_name && (
-                        <span className="today-project-badge" style={{ backgroundColor: `${task.project_color}18`, color: task.project_color, borderColor: `${task.project_color}30` }}>
-                            <span className="today-project-dot" style={{ backgroundColor: task.project_color }} />
-                            {task.project_name}
-                        </span>
-                    )}
-                </div>
-                <div className="today-card-meta">
-                    {task.tags && task.tags.map(t => (
-                        <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
-                    ))}
-                    {isDone && task.completed_at && <span className="today-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
-                    {task.due_date && !isDone && <span className="today-meta-item">📅 {task.due_date}</span>}
-                    {task.estimated_hours > 0 && (
-                        <span className="today-meta-item">⏱ {formatMin(task.estimated_hours)}</span>
-                    )}
-                </div>
-            </div>
-            <div className="today-card-actions">
-                {!isRoutine && !isArchived && (
-                    <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value, false)}
-                        className="today-status" style={{ borderColor: st.color, color: st.color }}
-                        disabled={isProcessing}>
-                        {statuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
-                    </select>
-                )}
-                {!isRoutine && isPickedForToday && !isArchived && (
-                    <button className="today-remove" onClick={() => onRemove(task.id)} title="今日やるから外す" disabled={isProcessing}>✕</button>
-                )}
-            </div>
-        </div>
-    );
-}
-
-/**
- * Ghost parent header for children whose parent is not in today's list.
- * Draggable in manual mode so the group can be reordered.
- */
-function TodayGroupHeader({ parentId, title, isManual }) {
-    const ghostId = `ghost_${parentId}`;
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: ghostId,
-        disabled: !isManual,
-    });
-
-    const style = transform ? {
-        transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.3 : 1,
-        zIndex: isDragging ? 100 : 'auto',
-    } : undefined;
-
-    return (
-        <div ref={setNodeRef} style={style} className="today-ghost-header">
-            {isManual && (
-                <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
-            )}
-            <span className="today-ghost-icon">📌</span>
-            <span className="today-ghost-title">{title}</span>
-        </div>
-    );
 }
 
 export default function TodayPage() {
@@ -183,50 +69,7 @@ export default function TodayPage() {
     });
 
     // Compute parent-child groups for today's tasks (IMP-15)
-    const { rootItems, childrenByParent } = useMemo(() => {
-        const todayTaskIds = new Set(tasks.filter(t => !t.is_routine).map(t => t.id));
-        const cMap = {};
-        const asChild = new Set();
-
-        // Pass 1: identify children
-        // Skip orphaned children whose parent was deleted (parent_title is null from LEFT JOIN)
-        for (const task of tasks) {
-            if (task.is_routine || !task.parent_id || !task.parent_title) continue;
-            if (!cMap[task.parent_id]) cMap[task.parent_id] = [];
-            cMap[task.parent_id].push(task);
-            asChild.add(task.id);
-        }
-
-        // Pass 2: build root items (preserving sort order)
-        const roots = [];
-        const ghostInserted = new Set();
-
-        for (const task of tasks) {
-            if (asChild.has(task.id)) {
-                // Insert ghost parent header at first child's position
-                if (!todayTaskIds.has(task.parent_id) && !ghostInserted.has(task.parent_id)) {
-                    roots.push({
-                        id: `ghost_${task.parent_id}`,
-                        real_id: task.parent_id,
-                        title: task.parent_title || '親タスク',
-                        is_ghost_parent: true,
-                    });
-                    ghostInserted.add(task.parent_id);
-                }
-                continue;
-            }
-            roots.push(task);
-        }
-
-        return { rootItems: roots, childrenByParent: cMap };
-    }, [tasks]);
-
-    const rootItemsRef = useRef([]);
-    const childrenByParentRef = useRef({});
-    useEffect(() => {
-        rootItemsRef.current = rootItems;
-        childrenByParentRef.current = childrenByParent;
-    }, [rootItems, childrenByParent]);
+    const { rootItems, childrenByParent, rootItemsRef, childrenByParentRef } = useTodayGrouping(tasks);
 
     // @dnd-kit sensors
     const sensors = useSensors(
@@ -260,7 +103,7 @@ export default function TodayPage() {
         } catch {
             reloadTasks();
         }
-    }, [reloadTasks, dbOp]);
+    }, [reloadTasks, dbOp, childrenByParentRef]);
 
     // @dnd-kit drag handlers
     const handleDragStart = useCallback((event) => {
@@ -305,7 +148,7 @@ export default function TodayPage() {
         setTasks(newFlat);
 
         await persistTodaySortOrder(reorderedRoots);
-    }, [setTasks, persistTodaySortOrder]);
+    }, [setTasks, persistTodaySortOrder, rootItemsRef, childrenByParentRef]);
 
     // Status change wrapper: adds justCompleted animation + routes to routine/task handler
     const handleStatusChange = (taskId, newCode, isRoutine = false) => {
@@ -417,43 +260,7 @@ export default function TodayPage() {
                 </div>
 
                 {/* Mini Dashboard */}
-                <div className="today-stats">
-                    <div className="stat-ring-area">
-                        <svg viewBox="0 0 120 120" className="stat-ring">
-                            <circle cx="60" cy="60" r="50" className="ring-bg" />
-                            <circle cx="60" cy="60" r="50" className="ring-fill"
-                                style={{
-                                    strokeDasharray: `${stats.pct * 3.14} 314`,
-                                    stroke: stats.pct === 100 ? 'var(--color-success)' : 'var(--color-primary)'
-                                }}
-                            />
-                        </svg>
-                        <div className="ring-label">
-                            <span className="ring-pct">{stats.pct}%</span>
-                            <span className="ring-sub">完了</span>
-                        </div>
-                    </div>
-                    <div className="stat-details">
-                        <div className="stat-row">
-                            <span className="stat-icon">📋</span>
-                            <span className="stat-text">全 <strong>{stats.total}</strong> 件</span>
-                        </div>
-                        <div className="stat-row">
-                            <span className="stat-icon">✅</span>
-                            <span className="stat-text">完了 <strong>{stats.completed}</strong> 件</span>
-                        </div>
-                        <div className="stat-row">
-                            <span className="stat-icon">⏳</span>
-                            <span className="stat-text">残り <strong>{stats.remaining}</strong> 件</span>
-                        </div>
-                        {stats.remainingMin > 0 && (
-                            <div className="stat-row">
-                                <span className="stat-icon">⏱</span>
-                                <span className="stat-text">残り想定 <strong>{formatMin(stats.remainingMin)}</strong></span>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <TodayStats stats={stats} />
 
                 {/* Task List */}
                 <div className="today-list">
@@ -615,28 +422,6 @@ export default function TodayPage() {
         .today-filter { display: flex; align-items: center; gap: 0.4rem; }
         .today-filter label { font-size: 0.78rem; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; }
 
-        /* Stats */
-        .today-stats {
-          display: flex; align-items: center; gap: 2rem;
-          background: var(--color-surface); border: 1px solid var(--border-color);
-          border-radius: var(--radius-lg); padding: 1.5rem 2rem;
-          box-shadow: var(--shadow-md); margin-bottom: 1.5rem;
-        }
-        .stat-ring-area { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
-        .stat-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .ring-bg { fill: none; stroke: var(--color-surface-hover); stroke-width: 8; }
-        .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
-        .ring-label {
-          position: absolute; inset: 0; display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-        }
-        .ring-pct { font-size: 1.5rem; font-weight: 800; color: var(--color-text); line-height: 1; }
-        .ring-sub { font-size: 0.7rem; color: var(--color-text-muted); font-weight: 500; }
-
-        .stat-details { display: flex; flex-direction: column; gap: 0.5rem; }
-        .stat-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--color-text-secondary); }
-        .stat-icon { font-size: 0.85rem; }
-
         /* Parent-child grouping (IMP-15) */
         .today-parent-group { }
         .today-children {
@@ -647,28 +432,8 @@ export default function TodayPage() {
           flex-direction: column;
           gap: 0.4rem;
         }
-        .today-ghost-header {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
-          background: var(--color-surface-hover);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          font-size: 0.85rem;
-          touch-action: none;
-          animation: tcIn 0.3s cubic-bezier(.16,1,.3,1) both;
-        }
-        .today-ghost-icon {
-          font-size: 0.8rem;
-          flex-shrink: 0;
-        }
-        .today-ghost-title {
-          font-weight: 600;
-          color: var(--color-text-secondary);
-        }
 
-        /* Task Cards */
+        /* Task List */
         .today-list { display: flex; flex-direction: column; gap: 0.6rem; }
         .today-placeholder { display: flex; align-items: center; gap: 0.5rem; padding: 2rem; color: var(--color-text-muted); justify-content: center; }
         .today-empty {
@@ -678,68 +443,6 @@ export default function TodayPage() {
         .today-empty-icon { font-size: 2.5rem; opacity: 0.5; }
         .today-empty-title { font-size: 1rem; font-weight: 500; color: var(--color-text-secondary); }
         .today-empty-hint { font-size: 0.82rem; color: var(--color-text-disabled); }
-
-        .today-card {
-          display: flex; align-items: center; gap: 0.75rem;
-          background: var(--color-surface); border: 1px solid var(--border-color);
-          border-radius: var(--radius-md); padding: 0.75rem 1rem;
-          box-shadow: var(--shadow-sm); transition: all 0.2s;
-          animation: tcIn 0.3s cubic-bezier(.16,1,.3,1) both;
-          touch-action: none;
-        }
-        @keyframes tcIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-        .today-card:hover { border-color: var(--border-color-hover); box-shadow: var(--shadow-card-hover); }
-        .today-card.done { opacity: 0.55; }
-        .today-card.done:hover { opacity: 0.75; }
-        .today-card.archived { opacity: 0.4; background: var(--color-surface-hover); }
-        .today-card.archived:hover { opacity: 0.55; }
-        .today-card.routine { border-left: 3px solid var(--color-primary); }
-        .today-card.picked { border-left: 3px solid var(--color-warning); }
-
-        .today-card-info { flex: 1; min-width: 0; }
-        .today-parent-label {
-          display: block; font-size: 0.7rem; font-weight: 500;
-          color: var(--color-text-muted); margin-bottom: 0.15rem;
-          letter-spacing: 0.01em;
-        }
-        .today-card-title-row { display: flex; align-items: center; gap: 0.35rem; }
-        .today-routine-badge {
-          font-size: 0.8rem; flex-shrink: 0;
-        }
-        .today-archived-badge {
-          font-size: 0.75rem; flex-shrink: 0; opacity: 0.7;
-        }
-        .today-picked-badge {
-          font-size: 0.8rem; flex-shrink: 0; filter: grayscale(0.2);
-        }
-        .today-card-title { font-weight: 600; font-size: 0.92rem; color: var(--color-text); display: block; }
-        .today-card-title.strike { text-decoration: line-through; color: var(--color-text-disabled); }
-        .today-card-title.clickable { cursor: pointer; transition: color 0.15s; }
-        .today-card-title.clickable:hover { color: var(--color-primary); text-decoration: underline; }
-        .today-card-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
-        .today-project-badge {
-          display:inline-flex; align-items:center; gap:.25rem;
-          font-size:.63rem; font-weight:600; padding:.1rem .5rem;
-          border-radius:10px; border:1px solid;
-          white-space:nowrap;
-        }
-        .today-project-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-        .today-tag { font-size: 0.63rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 10px; color: #fff; }
-        .today-meta-item { font-size: 0.75rem; color: var(--color-text-muted); }
-
-        .today-card-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
-        .today-status {
-          font-weight: 600; font-size: 0.78rem; padding: 0.3rem 0.5rem;
-          border-radius: var(--radius-sm); cursor: pointer; border: 1px solid;
-          background: transparent; font-family: inherit;
-        }
-        .today-remove {
-          background: transparent; border: 1px solid transparent; color: var(--color-text-disabled);
-          cursor: pointer; font-size: 0.75rem; width: 24px; height: 24px;
-          display: flex; align-items: center; justify-content: center;
-          border-radius: var(--radius-sm); transition: all 0.15s;
-        }
-        .today-remove:hover { background: var(--color-danger-bg); color: var(--color-danger); border-color: rgba(220,38,38,.2); }
 
         /* Sort mode toggle */
         .today-sort-toggle {
@@ -755,17 +458,6 @@ export default function TodayPage() {
           box-shadow:0 2px 8px rgba(79,110,247,.2);
         }
         .today-sort-toggle.active:hover { filter:brightness(1.1); }
-
-        /* Drag handle */
-        .today-drag-handle {
-          cursor:grab; color:var(--color-text-disabled);
-          display:flex; align-items:center; justify-content:center;
-          width:20px; height:100%; align-self:stretch; flex-shrink:0;
-          opacity:0.5; transition:opacity .2s; user-select:none;
-          font-size:.85rem;
-        }
-        .today-drag-handle:hover, .today-card:hover .today-drag-handle, .today-ghost-header:hover .today-drag-handle { opacity:1; }
-        .today-drag-handle:active { cursor:grabbing; }
 
         .today-milestone-banner {
           margin-top: 1rem; padding: 0.85rem 1.25rem;
