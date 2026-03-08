@@ -324,14 +324,14 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 .te-input-title:focus { outline: none; border-color: var(--color-accent); }
                 .te-input, .te-select, .te-textarea {
                     width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--border-color);
-                    border-radius: var(--radius-sm); background: var(--color-surface);
+                    border-radius: var(--radius-sm); background-color: var(--color-surface);
                     color: var(--color-text); font-size: 0.875rem; transition: border-color 0.2s, box-shadow 0.2s;
                     font-family: inherit;
                 }
                 .te-input:focus, .te-select:focus, .te-textarea:focus {
                     outline: none; border-color: var(--color-accent);
                     box-shadow: 0 0 0 3px var(--color-accent-subtle);
-                    background: var(--color-surface);
+                    background-color: var(--color-surface);
                 }
                 .te-textarea { resize: vertical; min-height: 80px; }
                 .te-footer {
@@ -347,7 +347,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 .te-btn-cancel:hover { background: var(--color-surface-hover); border-color: var(--border-color-hover); }
                 .te-btn-save {
                     background: var(--color-accent); color: #fff; border: none;
-                    padding: 0.5rem 1.5rem; border-radius: var(--radius-sm); font-size: 0.85rem;
+                    padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); font-size: 0.85rem;
                     font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
                 }
                 .te-btn-save:hover:not(:disabled) { background: var(--color-accent-hover); transform: translateY(-1px); }

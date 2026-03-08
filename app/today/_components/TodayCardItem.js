@@ -141,7 +141,7 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-status {
           font-weight: 600; font-size: 0.78rem; padding: 0.3rem 0.5rem;
           border-radius: var(--radius-sm); cursor: pointer; border: 1px solid;
-          background: transparent; font-family: inherit;
+          background-color: transparent; font-family: inherit;
         }
         .today-remove {
           background: transparent; border: 1px solid transparent; color: var(--color-text-disabled);

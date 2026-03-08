@@ -127,7 +127,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                         <>
                             <select value={task.status_code} onChange={e => onStatusChange(task.id, e.target.value)} className="tc-status-select"
                                 disabled={isProcessing}
-                                style={{ borderColor: st.color, color: st.color, background: `${st.color}10` }}>
+                                style={{ borderColor: st.color, color: st.color, backgroundColor: `${st.color}10` }}>
                                 {allStatuses.length > 0 ? allStatuses.map(s => <option key={s.code} value={s.code}>{s.label}</option>) : <option value={task.status_code}>{st.label}</option>}
                             </select>
                             {onTodayToggle && (

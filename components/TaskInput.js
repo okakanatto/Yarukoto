@@ -429,7 +429,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
           text-transform: uppercase; letter-spacing: 0.05em;
         }
         input[type="number"], select, textarea {
-          background: var(--color-surface); border: 1px solid var(--border-color);
+          background-color: var(--color-surface); border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 0.55rem 0.65rem;
           color: var(--color-text); font-family: inherit; font-size: 0.875rem;
           transition: border-color 0.2s, box-shadow 0.2s; outline: none; width: 100%;
@@ -442,7 +442,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         textarea { resize: vertical; min-height: 60px; }
         .panel-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; }
         .btn-collapse {
-          background: transparent; border: 1px solid var(--border-color); color: var(--color-text-muted);
+          background: transparent; border: 1px solid var(--border-color); color: var(--color-text-secondary);
           cursor: pointer; font-size: 0.8rem; padding: 0.4rem 0.85rem;
           border-radius: var(--radius-sm); transition: color 0.2s, background 0.2s;
         }
