@@ -161,7 +161,7 @@ export default function ProjectsPanel({ data, setData, flash }) {
                 <div className="s-add-row">
                     <button type="button" className="s-swatch" style={{ backgroundColor: newProject.color }} onClick={() => pm.togglePalette('new-proj')} />
                     <input type="text" className="s-input" placeholder="新しいプロジェクト名を入力..." value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} />
-                    <button type="submit" className="s-btn-primary" disabled={!newProject.name.trim()}>+ 追加</button>
+                    <button type="submit" className="s-btn-primary" disabled={!newProject.name.trim()}>＋ 追加</button>
                 </div>
             </form>
             {pm.openPalette === 'new-proj' && <div className="s-palette s-add-pal"><ColorPalette value={newProject.color} onChange={c => setNewProject({ ...newProject, color: c })} /></div>}
@@ -224,7 +224,7 @@ export default function ProjectsPanel({ data, setData, flash }) {
                     )}
                 </div>
             )}
-            <p className="s-hint">※ デフォルトプロジェクト（General）は名前の変更・削除ができません</p>
+            <p className="s-hint">※ デフォルトプロジェクト（Inbox）は名前の変更・削除ができません</p>
         </>
     );
 }

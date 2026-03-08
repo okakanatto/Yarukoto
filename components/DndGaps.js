@@ -43,7 +43,7 @@ export function ReorderGap({ id }) {
                 .tl-reorder-gap.drag-over { padding:8px 0; }
                 .tl-reorder-gap.drag-over .tl-reorder-gap-line {
                     height:3px; background:var(--color-accent);
-                    box-shadow:0 0 8px rgba(139,92,246,.35);
+                    box-shadow:0 0 8px var(--color-accent-glow);
                 }
                 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
             `}</style>

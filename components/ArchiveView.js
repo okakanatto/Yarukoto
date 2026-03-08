@@ -52,6 +52,7 @@ export default function ArchiveView({
             }
         } catch (e) {
             console.error('Failed to fetch archive summary:', e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブデータの読み込みに失敗しました', type: 'error' } }));
         } finally {
             setSummaryLoading(false);
         }
@@ -77,6 +78,7 @@ export default function ArchiveView({
             setMonthTasks(prev => ({ ...prev, [month]: rows.map(t => ({ ...t, tags: parseTags(t) })) }));
         } catch (e) {
             console.error(`Failed to fetch archive for ${month}:`, e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブデータの読み込みに失敗しました', type: 'error' } }));
         } finally {
             setMonthLoading(prev => { const next = new Set(prev); next.delete(month); return next; });
         }
@@ -116,6 +118,7 @@ export default function ArchiveView({
             setSearchResults(rows.map(t => ({ ...t, tags: parseTags(t) })));
         } catch (e) {
             console.error('Archive search failed:', e);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブの検索に失敗しました', type: 'error' } }));
         } finally {
             setSearchLoading(false);
         }

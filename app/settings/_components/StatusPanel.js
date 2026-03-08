@@ -58,9 +58,10 @@ export default function StatusPanel({ data, setData, flash }) {
                 flash('err', `このステータスは ${usage[0].cnt} 件のタスクで使用中のため削除できません`);
                 return;
             }
+            const label = pm.items.find(s => s.code === code)?.label;
             await db.execute('DELETE FROM status_master WHERE code = $1', [code]);
             pm.removeItem(code);
-            flash('ok', '削除しました');
+            flash('ok', `ステータス「${label}」を削除しました`);
         } catch (e) { console.error(e); flash('err', '削除に失敗しました'); }
     };
 

@@ -28,7 +28,10 @@ function ProjectPageInner() {
                 const db = await fetchDb();
                 const rows = await db.select('SELECT * FROM projects WHERE id = $1', [projectId]);
                 setProject(rows[0] || null);
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'プロジェクト情報の読み込みに失敗しました', type: 'error' } }));
+            }
             finally { setLoading(false); }
         })();
     }, [projectId]);

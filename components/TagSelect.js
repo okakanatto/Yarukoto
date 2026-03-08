@@ -149,7 +149,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           z-index: 100; background: var(--color-surface);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-md);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+          box-shadow: var(--shadow-lg);
           animation: dropIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;
         }
         @keyframes dropIn {
@@ -161,7 +161,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
         .ts-search {
           width: 100%; background: var(--color-surface-hover);
           border: 1px solid var(--border-color);
-          border-radius: 6px; padding: 0.45rem 0.6rem;
+          border-radius: var(--radius-sm); padding: 0.45rem 0.6rem;
           color: var(--color-text); font-size: 0.85rem; outline: none;
           transition: border-color 0.2s; font-family: inherit;
         }
@@ -176,7 +176,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           display: flex; align-items: center; gap: 0.6rem;
           width: 100%; background: transparent; border: none;
           padding: 0.5rem 0.6rem; color: var(--color-text); cursor: pointer;
-          border-radius: 6px; font-size: 0.85rem; text-align: left;
+          border-radius: var(--radius-sm); font-size: 0.85rem; text-align: left;
           transition: background 0.12s; font-family: inherit;
         }
         .ts-option:hover { background: var(--color-surface-hover); }

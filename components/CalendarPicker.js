@@ -230,7 +230,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
           background: var(--color-surface);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-md);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+          box-shadow: var(--shadow-lg);
           padding: 0.75rem;
           animation: calDrop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           outline: none;
@@ -249,7 +249,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
           background: none; border: none; color: var(--color-text-muted);
           font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px;
           display: flex; align-items: center; justify-content: center;
-          border-radius: 6px; transition: all 0.15s;
+          border-radius: var(--radius-sm); transition: all 0.15s;
         }
         .cal-nav:hover { background: var(--color-surface-hover); color: var(--color-text); }
         .cal-title { font-size: 0.9rem; font-weight: 600; color: var(--color-text); }
@@ -267,7 +267,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
         .cal-cell {
           aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-          font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer;
+          font-size: 0.8rem; border-radius: var(--radius-sm); border: none; cursor: pointer;
           background: transparent; color: var(--color-text); transition: all 0.12s;
         }
         .cal-cell.empty { cursor: default; }
@@ -297,7 +297,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         .cal-today-btn {
           background: transparent; border: 1px solid var(--border-color);
           color: var(--color-accent); font-size: 0.78rem; font-weight: 500;
-          padding: 0.3rem 1rem; border-radius: 6px; cursor: pointer;
+          padding: 0.3rem 1rem; border-radius: var(--radius-sm); cursor: pointer;
           transition: all 0.15s;
         }
         .cal-today-btn:hover { background: var(--color-accent-subtle); }
