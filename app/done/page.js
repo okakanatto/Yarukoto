@@ -27,12 +27,12 @@ export default function DonePage() {
 
     const total = periodStats.tasks + periodStats.routines;
 
-    // Heat map background for calendar cells
+    // Heat map background for calendar cells (CSS variable-based for dark mode support)
     const heatBg = (count) => {
         if (count === 0) return 'transparent';
-        if (count <= 2) return 'rgba(22, 163, 74, 0.07)';
-        if (count <= 5) return 'rgba(22, 163, 74, 0.14)';
-        return 'rgba(22, 163, 74, 0.22)';
+        if (count <= 2) return 'var(--heat-low)';
+        if (count <= 5) return 'var(--heat-mid)';
+        return 'var(--heat-high)';
     };
 
     return (
@@ -260,7 +260,7 @@ export default function DonePage() {
                     display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
                     padding: 2rem; color: var(--color-text-muted); font-size: 0.88rem;
                 }
-                .done-empty-icon { font-size: 2rem; opacity: 0.4; }
+                .done-empty-icon { color: var(--color-text-disabled); opacity: 0.5; }
 
                 /* Task list */
                 .done-task-list { display: flex; flex-direction: column; gap: 0.35rem; }

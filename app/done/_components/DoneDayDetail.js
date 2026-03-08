@@ -1,4 +1,5 @@
 import { formatMin } from '@/lib/utils';
+import { Inbox } from 'lucide-react';
 
 export default function DoneDayDetail({ selectedDayLabel, dayTasks, detailLoading }) {
     return (
@@ -12,7 +13,7 @@ export default function DoneDayDetail({ selectedDayLabel, dayTasks, detailLoadin
 
             {!detailLoading && dayTasks.length === 0 && (
                 <div className="done-empty">
-                    <span className="done-empty-icon">📭</span>
+                    <span className="done-empty-icon"><Inbox size={48} strokeWidth={1.2} /></span>
                     <span>完了したタスクはありません</span>
                 </div>
             )}

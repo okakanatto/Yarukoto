@@ -261,8 +261,8 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
           text-align: center; font-size: 0.7rem; font-weight: 600;
           color: var(--color-text-muted); padding: 0.25rem 0;
         }
-        .cal-wd.sun { color: #ef4444; }
-        .cal-wd.sat { color: #3b82f6; }
+        .cal-wd.sun { color: var(--color-danger); }
+        .cal-wd.sat { color: var(--color-saturday); }
 
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
         .cal-cell {

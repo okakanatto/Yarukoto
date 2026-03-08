@@ -5,6 +5,7 @@ import { fetchDb, parseTags, formatMin } from '@/lib/utils';
 import { useMasterData } from '@/hooks/useMasterData';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
 import RoutineFormModal from './_components/RoutineFormModal';
+import { CalendarClock, CalendarOff } from 'lucide-react';
 
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -156,7 +157,11 @@ export default function RoutinesPage() {
 
                 {!loading && filteredRoutines.length === 0 && (
                     <div className="rt-empty">
-                        <span className="rt-empty-icon">{activeTab === 'active' ? '📭' : '🗑️'}</span>
+                        <span className="rt-empty-icon">
+                            {activeTab === 'active'
+                                ? <CalendarClock size={48} strokeWidth={1.2} />
+                                : <CalendarOff size={48} strokeWidth={1.2} />}
+                        </span>
                         <span className="rt-empty-title">
                             {activeTab === 'active' ? '有効なルーティンはありません' : '停止中のルーティンはありません'}
                         </span>
@@ -273,7 +278,9 @@ export default function RoutinesPage() {
         .rt-project-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
         .rt-empty { text-align: center; padding: 3rem; color: var(--color-text-muted); display: flex; flex-direction: column; align-items: center; }
-        .rt-empty-icon { font-size: 3rem; margin-bottom: 0.5rem; opacity: 0.5; }
+        .rt-empty-icon { color: var(--color-text-disabled); margin-bottom: 0.5rem; opacity: 0.5; }
+        .rt-empty-title { font-size: 1rem; font-weight: 500; color: var(--color-text-secondary); }
+        .rt-empty-hint { font-size: 0.82rem; color: var(--color-text-disabled); margin-top: 0.25rem; }
 
         /* iOS-style Switch (card) */
         .rt-switch {

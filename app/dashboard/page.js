@@ -322,7 +322,7 @@ export default function DashboardPage() {
         .status-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 
         /* Today Done (ENH-1) */
-        .db-today-done { border-color: rgba(22, 163, 74, 0.2); background: rgba(22, 163, 74, 0.02); margin-bottom: 1rem; }
+        .db-today-done { border-color: color-mix(in srgb, var(--color-success) 20%, transparent); background-color: var(--color-success-bg); margin-bottom: 1rem; }
         .done-badge {
           background: var(--color-success); color: white; font-size: 0.7rem;
           padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; font-weight: 700;
@@ -332,7 +332,7 @@ export default function DashboardPage() {
           display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem;
           border-radius: var(--radius-sm); transition: background 0.15s;
         }
-        .done-item:hover { background: rgba(22, 163, 74, 0.04); }
+        .done-item:hover { background-color: var(--color-surface-hover); }
         .done-check {
           color: var(--color-success); font-weight: 700; font-size: 0.78rem;
           width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
@@ -344,7 +344,7 @@ export default function DashboardPage() {
         .done-more { font-size: 0.8rem; color: var(--color-text-muted); text-align: center; padding-top: 0.3rem; }
 
         /* Overdue */
-        .db-overdue { border-color: rgba(220, 38, 38, 0.2); background: rgba(220, 38, 38, 0.02); }
+        .db-overdue { border-color: color-mix(in srgb, var(--color-danger) 20%, transparent); background-color: var(--color-danger-bg); }
         .overdue-badge {
           background: var(--color-danger); color: white; font-size: 0.7rem;
           padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; font-weight: 700;

@@ -11,7 +11,7 @@ import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { useTodayGrouping } from '@/hooks/useTodayGrouping';
-import { Sun, CalendarDays } from 'lucide-react';
+import { Sun, CalendarDays, PartyPopper } from 'lucide-react';
 import TodayCardItem from './_components/TodayCardItem';
 import TodayGroupHeader from './_components/TodayGroupHeader';
 import TodayStats from './_components/TodayStats';
@@ -346,7 +346,8 @@ export default function TodayPage() {
                 )}
                 {currentTab.isToday && stats.pct === 100 && stats.total > 0 && (
                     <div className="today-complete-banner">
-                        おめでとうございます！ 今日のタスクをすべて完了しました！
+                        <span className="today-complete-icon"><PartyPopper size={28} strokeWidth={1.5} /></span>
+                        <span className="today-complete-text">すべて完了しました！ お疲れさまでした</span>
                     </div>
                 )}
 
@@ -477,14 +478,22 @@ export default function TodayPage() {
           color: var(--color-warning);
         }
         .today-complete-banner {
-          margin-top: 1rem; padding: 1.25rem;
-          background: linear-gradient(135deg, rgba(22,163,74,0.08), var(--color-accent-subtle));
-          border: 1px solid rgba(22,163,74,0.2); border-radius: var(--radius-lg);
-          text-align: center; font-size: 1rem; font-weight: 600;
+          margin-top: 1.5rem; padding: 1.5rem;
+          background: linear-gradient(135deg, var(--color-success-bg), var(--color-accent-subtle));
+          border: 1px solid color-mix(in srgb, var(--color-success) 20%, transparent); border-radius: var(--radius-lg);
+          display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+          font-size: 1.05rem; font-weight: 600;
           color: var(--color-success);
-          animation: celebIn 0.5s cubic-bezier(.16,1,.3,1);
+          animation: celebIn 0.6s cubic-bezier(.16,1,.3,1);
         }
-        @keyframes celebIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+        .today-complete-icon {
+          display: flex; align-items: center;
+          animation: celebBounce 0.6s 0.3s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        .today-complete-text { animation: celebFadeIn 0.5s 0.2s ease both; }
+        @keyframes celebIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+        @keyframes celebBounce { from{opacity:0;transform:scale(0) rotate(-15deg)} to{opacity:1;transform:scale(1) rotate(0deg)} }
+        @keyframes celebFadeIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
       `}</style>
 
                 {editingTask && (

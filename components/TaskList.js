@@ -15,6 +15,7 @@ import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { buildTaskListQuery } from '@/lib/taskListQueries';
 import ArchiveView from './ArchiveView';
+import { ClipboardList } from 'lucide-react';
 
 export default function TaskList({ projectId = null }) {
     const [tasks, setTasks] = useState([]);
@@ -251,8 +252,8 @@ export default function TaskList({ projectId = null }) {
                             )}
                             {!loading && parentTasks.length === 0 && (
                                 <div className="tl-placeholder tl-empty">
-                                    <span className="tl-empty-icon">🌱</span>
-                                    <span className="tl-empty-title">最初のタスクを追加して、今日をスタートしましょう！</span>
+                                    <span className="tl-empty-icon"><ClipboardList size={48} strokeWidth={1.2} /></span>
+                                    <span className="tl-empty-title">タスクはまだありません</span>
                                     <span className="tl-empty-hint">上のフォームからタスクを追加できます</span>
                                 </div>
                             )}
@@ -322,7 +323,7 @@ export default function TaskList({ projectId = null }) {
             .tl-spin { display:inline-block; animation:spin .8s linear infinite; }
             .tl-items { display:flex; flex-direction:column; gap:.6rem; }
             .tl-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; padding:3rem; color:var(--color-text-muted); }
-            .tl-empty-icon { font-size:2.5rem; opacity:.5; }
+            .tl-empty-icon { color:var(--color-text-disabled); opacity:.5; }
             .tl-empty-title { font-size:1rem; font-weight:500; color:var(--color-text-secondary); }
             .tl-empty-hint { font-size:.82rem; color:var(--color-text-disabled); }
 

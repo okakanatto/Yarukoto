@@ -174,9 +174,9 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     to { opacity: 1; transform: scale(1); }
                 }
 
-                /* Sparkle animations */
+                /* Sparkle animations (enhanced v2.0.0) */
                 .status-cb-main.sparkle {
-                    animation: statusCbPop 0.4s cubic-bezier(.34,1.56,.64,1);
+                    animation: statusCbPop 0.5s cubic-bezier(.34,1.56,.64,1);
                 }
                 .status-cb-main.sparkle::before,
                 .status-cb-main.sparkle::after {
@@ -186,34 +186,38 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     pointer-events: none;
                 }
                 .status-cb-main.sparkle::before {
-                    width: 36px; height: 36px; top: -7px; left: -7px;
-                    border: 2px solid var(--color-accent);
-                    animation: statusCbRing 0.6s ease-out forwards;
+                    width: 40px; height: 40px; top: -9px; left: -9px;
+                    border: 2.5px solid var(--color-accent);
+                    animation: statusCbRing 0.7s ease-out forwards;
                 }
                 .status-cb-main.sparkle::after {
-                    width: 5px; height: 5px; background: var(--color-accent);
-                    top: -4px; left: 50%;
+                    width: 4px; height: 4px; background: var(--color-accent);
+                    top: -6px; left: 50%; border-radius: 50%;
                     box-shadow:
-                        10px 7px 0 #f59e0b,
-                        -10px 7px 0 #3b82f6,
-                        5px -10px 0 #ef4444,
-                        -7px -9px 0 #10b981,
-                        12px -3px 0 #8b5cf6,
-                        -12px -2px 0 #f97316;
-                    animation: statusCbParticles 0.6s ease-out forwards;
+                        12px 8px 0 2px #f59e0b,
+                        -12px 8px 0 1.5px #3b82f6,
+                        6px -12px 0 2px #ef4444,
+                        -8px -11px 0 1.5px #10b981,
+                        14px -4px 0 2px #8b5cf6,
+                        -14px -3px 0 1.5px #f97316,
+                        0px 14px 0 1.5px #06b6d4,
+                        -4px 12px 0 1px #ec4899;
+                    animation: statusCbParticles 0.7s ease-out forwards;
                 }
                 @keyframes statusCbPop {
                     0% { transform: scale(1); }
-                    40% { transform: scale(1.3); }
+                    30% { transform: scale(1.35); }
+                    60% { transform: scale(0.95); }
                     100% { transform: scale(1); }
                 }
                 @keyframes statusCbRing {
-                    0% { transform: scale(0.5); opacity: 1; }
-                    100% { transform: scale(1.8); opacity: 0; }
+                    0% { transform: scale(0.4); opacity: 1; }
+                    100% { transform: scale(2.2); opacity: 0; }
                 }
                 @keyframes statusCbParticles {
-                    0% { transform: scale(1); opacity: 1; }
-                    100% { transform: scale(2.5); opacity: 0; }
+                    0% { transform: scale(0.8); opacity: 1; }
+                    50% { opacity: 1; }
+                    100% { transform: scale(3); opacity: 0; }
                 }
             `}</style>
         </div>

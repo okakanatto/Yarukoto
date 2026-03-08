@@ -170,7 +170,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
 
         .ts-options { max-height: 200px; overflow-y: auto; padding: 0.25rem; }
         .ts-options::-webkit-scrollbar { width: 4px; }
-        .ts-options::-webkit-scrollbar-thumb { background: #d0d5e0; border-radius: 2px; }
+        .ts-options::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
 
         .ts-option {
           display: flex; align-items: center; gap: 0.6rem;
