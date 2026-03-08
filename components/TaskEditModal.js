@@ -158,16 +158,6 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         />
                     </div>
 
-                    {/* ステータス（編集画面のみ） */}
-                    <div className="te-field">
-                        <label className="te-label">ステータス</label>
-                        <select value={statusCode} onChange={(e) => setStatusCode(e.target.value)} className="te-select">
-                            {masters.status && masters.status.map(s => (
-                                <option key={s.code} value={s.code}>{s.label}</option>
-                            ))}
-                        </select>
-                    </div>
-
                     {/* 2. 終了期限 */}
                     <div className="te-field">
                         <label className="te-label">終了期限</label>
@@ -186,17 +176,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         ></textarea>
                     </div>
 
-                    {/* 4. タグ */}
-                    <div className="te-field">
-                        <label className="te-label">タグ</label>
-                        <TagSelect
-                            allTags={allTags}
-                            selectedTagIds={selectedTags}
-                            onChange={setSelectedTags}
-                        />
-                    </div>
-
-                    {/* 5. プロジェクト */}
+                    {/* 4. プロジェクト / タグ */}
                     {projects.length > 1 && (
                         <div className="te-field">
                             <label className="te-label">プロジェクト</label>
@@ -209,7 +189,16 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         </div>
                     )}
 
-                    {/* 6. 親タスク */}
+                    <div className="te-field">
+                        <label className="te-label">タグ</label>
+                        <TagSelect
+                            allTags={allTags}
+                            selectedTagIds={selectedTags}
+                            onChange={setSelectedTags}
+                        />
+                    </div>
+
+                    {/* 5. 親タスク */}
                     <div className="te-field">
                         <label className="te-label">親タスク</label>
                         <select
@@ -226,7 +215,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         </select>
                     </div>
 
-                    {/* 6. 開始日 + 想定工数 */}
+                    {/* 6. 開始日 / 想定工数 */}
                     <div className="te-row">
                         <div className="te-field" style={{ flex: 1 }}>
                             <label className="te-label">開始日</label>
@@ -244,7 +233,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         </div>
                     </div>
 
-                    {/* 7. 重要度 + 緊急度 */}
+                    {/* 7. 重要度 / 緊急度 */}
                     <div className="te-row">
                         <div className="te-field" style={{ flex: 1 }}>
                             <label className="te-label">重要度</label>
@@ -264,6 +253,16 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                                 ))}
                             </select>
                         </div>
+                    </div>
+
+                    {/* ステータス（編集画面のみ） */}
+                    <div className="te-field">
+                        <label className="te-label">ステータス</label>
+                        <select value={statusCode} onChange={(e) => setStatusCode(e.target.value)} className="te-select">
+                            {masters.status && masters.status.map(s => (
+                                <option key={s.code} value={s.code}>{s.label}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* 8. 完了日（手動編集不可、編集画面のみ表示） */}

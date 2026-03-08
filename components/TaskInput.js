@@ -257,19 +257,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
                             ></textarea>
                         </div>
 
-                        {/* 3. タグ */}
-                        {allTags.length > 0 && (
-                            <div className="form-field">
-                                <label>タグ</label>
-                                <TagSelect
-                                    allTags={allTags}
-                                    selectedTagIds={selectedTags}
-                                    onChange={setSelectedTags}
-                                />
-                            </div>
-                        )}
-
-                        {/* 4. プロジェクト - only when not in inline child creation mode and not on project page */}
+                        {/* 3. プロジェクト / タグ */}
                         {!predefinedParentId && !defaultProjectId && projects.length > 1 && (
                             <div className="form-field">
                                 <label>プロジェクト</label>
@@ -282,7 +270,18 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
                             </div>
                         )}
 
-                        {/* 5. 親タスク - only when not in inline child creation mode */}
+                        {allTags.length > 0 && (
+                            <div className="form-field">
+                                <label>タグ</label>
+                                <TagSelect
+                                    allTags={allTags}
+                                    selectedTagIds={selectedTags}
+                                    onChange={setSelectedTags}
+                                />
+                            </div>
+                        )}
+
+                        {/* 4. 親タスク - only when not in inline child creation mode */}
                         {!predefinedParentId && (
                             <div className="form-field">
                                 <label>親タスク</label>
