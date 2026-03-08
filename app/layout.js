@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import TaskInput from '@/components/TaskInput';
 import { fetchDb } from '@/lib/utils';
+import { BarChart3, Sun, CircleCheckBig, ListTodo, Repeat, Settings, Plus, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
@@ -34,6 +35,8 @@ function LayoutInner({ children }) {
     const [dbError, setDbError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [projectsExpanded, setProjectsExpanded] = useState(true);
+    const [themeMode, setThemeMode] = useState('light');
+    const [themeAccent, setThemeAccent] = useState('coral');
     const modalRef = useRef(null);
 
     useEffect(() => {
@@ -45,6 +48,39 @@ function LayoutInner({ children }) {
             }
         }, 0);
     }, []);
+
+    // Load theme settings from DB on mount
+    useEffect(() => {
+        if (!mounted) return;
+        (async () => {
+            try {
+                const db = await fetchDb();
+                const rows = await db.select("SELECT key, value FROM app_settings WHERE key IN ('theme_mode', 'theme_accent')");
+                for (const row of rows) {
+                    if (row.key === 'theme_mode') setThemeMode(row.value || 'light');
+                    if (row.key === 'theme_accent') setThemeAccent(row.value || 'coral');
+                }
+            } catch (e) { console.error('Failed to load theme settings:', e); }
+        })();
+    }, [mounted]);
+
+    // Apply theme attributes to <html>
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        document.documentElement.setAttribute('data-theme', themeMode);
+        document.documentElement.setAttribute('data-accent', themeAccent);
+    }, [themeMode, themeAccent]);
+
+    // Listen for theme changes from settings page
+    useEffect(() => {
+        if (!mounted) return;
+        const handler = (e) => {
+            if (e.detail?.theme_mode !== undefined) setThemeMode(e.detail.theme_mode);
+            if (e.detail?.theme_accent !== undefined) setThemeAccent(e.detail.theme_accent);
+        };
+        window.addEventListener('yarukoto:themeChanged', handler);
+        return () => window.removeEventListener('yarukoto:themeChanged', handler);
+    }, [mounted]);
 
     // Global DB Error Listener (Triggers error.js)
     useEffect(() => {
@@ -164,15 +200,18 @@ function LayoutInner({ children }) {
         return () => clearInterval(interval);
     }, [mounted, fetchTodayProgress, pathname]);
 
+    const ICON_SIZE = 20;
+    const ICON_STROKE = 1.75;
+
     const navItemsTop = [
-        { href: '/dashboard', label: 'ダッシュボード', icon: '📊' },
-        { href: '/today', label: '今日やるタスク', icon: '☀️' },
-        { href: '/done', label: 'やったタスク', icon: '✅' },
-        { href: '/tasks', label: 'タスク一覧', icon: '📋' },
+        { href: '/dashboard', label: 'ダッシュボード', icon: <BarChart3 size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+        { href: '/today', label: '今日やるタスク', icon: <Sun size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+        { href: '/done', label: 'やったタスク', icon: <CircleCheckBig size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+        { href: '/tasks', label: 'タスク一覧', icon: <ListTodo size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
     ];
     const navItemsBottom = [
-        { href: '/routines', label: 'ルーティン', icon: '🔄' },
-        { href: '/settings', label: '設定', icon: '⚙️' },
+        { href: '/routines', label: 'ルーティン', icon: <Repeat size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+        { href: '/settings', label: '設定', icon: <Settings size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
     ];
 
     return (
@@ -182,9 +221,7 @@ function LayoutInner({ children }) {
                     <div className="sidebar-header" suppressHydrationWarning>
                         <div className="logo" suppressHydrationWarning>
                             <h1 suppressHydrationWarning>
-                                <span className="title-gradient" suppressHydrationWarning>
-                                    {isCollapsed ? 'Y' : 'Yarukoto'}
-                                </span>
+                                {isCollapsed ? 'Y' : 'Yarukoto'}
                             </h1>
                         </div>
                         <button
@@ -193,7 +230,10 @@ function LayoutInner({ children }) {
                             title={isCollapsed ? "サイドバーを開く" : "サイドバーをたたむ"}
                             suppressHydrationWarning
                         >
-                            {isCollapsed ? '»' : '«'}
+                            {isCollapsed
+                                ? <PanelLeftOpen size={18} strokeWidth={ICON_STROKE} />
+                                : <PanelLeftClose size={18} strokeWidth={ICON_STROKE} />
+                            }
                         </button>
                     </div>
                     <ul className="nav-links" suppressHydrationWarning>
@@ -257,7 +297,7 @@ function LayoutInner({ children }) {
                                     className="sidebar-progress-fill"
                                     style={{
                                         width: `${todayProgress.total > 0 ? (todayProgress.completed / todayProgress.total) * 100 : 0}%`,
-                                        background: todayProgress.completed === todayProgress.total ? 'var(--color-success)' : 'var(--color-primary)'
+                                        background: todayProgress.completed === todayProgress.total ? 'var(--color-success)' : 'var(--color-accent)'
                                     }}
                                     suppressHydrationWarning
                                 />
@@ -279,7 +319,12 @@ function LayoutInner({ children }) {
                         title="新しいタスクを追加"
                         aria-label="新しいタスクを追加"
                     >
-                        <span className="fab-icon">{fabOpen ? '✕' : '+'}</span>
+                        <span className="fab-icon">
+                            {fabOpen
+                                ? <X size={22} strokeWidth={2} />
+                                : <Plus size={26} strokeWidth={2.5} />
+                            }
+                        </span>
                     </button>
 
                     {fabOpen && (
@@ -288,7 +333,9 @@ function LayoutInner({ children }) {
                             <div className="fab-modal" ref={modalRef}>
                                 <div className="fab-modal-header">
                                     <span className="fab-modal-title">新しいタスク</span>
-                                    <button className="fab-modal-close" onClick={() => setFabOpen(false)}>✕</button>
+                                    <button className="fab-modal-close" onClick={() => setFabOpen(false)}>
+                                        <X size={14} strokeWidth={2} />
+                                    </button>
                                 </div>
                                 <TaskInput
                                     autoFocus
@@ -320,20 +367,20 @@ function LayoutInner({ children }) {
                         height: 52px;
                         border-radius: 50%;
                         border: none;
-                        background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+                        background: var(--color-accent);
                         color: #fff;
                         font-size: 1.6rem;
                         cursor: pointer;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        box-shadow: 0 4px 20px rgba(79, 110, 247, 0.4);
+                        box-shadow: 0 4px 20px color-mix(in srgb, var(--color-accent) 40%, transparent);
                         transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
                         z-index: 1000;
                     }
                     .fab:hover {
                         transform: scale(1.1);
-                        box-shadow: 0 6px 28px rgba(79, 110, 247, 0.5);
+                        box-shadow: 0 6px 28px color-mix(in srgb, var(--color-accent) 50%, transparent);
                     }
                     .fab:active { transform: scale(0.95); }
                     .fab.fab-open {
@@ -375,7 +422,7 @@ function LayoutInner({ children }) {
                         background: var(--color-surface);
                         border: 1px solid var(--border-color);
                         border-radius: var(--radius-xl);
-                        box-shadow: var(--shadow-lg), 0 0 0 1px rgba(79,110,247,0.08);
+                        box-shadow: var(--shadow-lg);
                         z-index: 1001;
                         animation: fabModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
                         transform-origin: bottom right;
@@ -446,11 +493,11 @@ function LayoutInner({ children }) {
                         animation: gtIn 0.3s cubic-bezier(0.16,1,0.3,1);
                         white-space: nowrap;
                     }
-                    .toast-ok  { background: #ecfdf5; border: 1px solid #bbf7d0; color: #15803d; }
-                    .toast-err { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-                    @keyframes gtIn { 
-                        from { opacity: 0; transform: translateY(16px); } 
-                        to   { opacity: 1; transform: translateY(0); } 
+                    .toast-ok  { background: var(--toast-success-bg); border: 1px solid var(--toast-success-border); color: var(--toast-success-text); }
+                    .toast-err { background: var(--toast-error-bg); border: 1px solid var(--toast-error-border); color: var(--toast-error-text); }
+                    @keyframes gtIn {
+                        from { opacity: 0; transform: translateY(16px); }
+                        to   { opacity: 1; transform: translateY(0); }
                     }
                 `}</style>
         </>
