@@ -364,10 +364,10 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
           border-radius: var(--radius-lg);
           padding: 1.25rem 1.5rem;
           transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: var(--shadow-md);
+          box-shadow: var(--shadow-card);
         }
         .task-input-wrapper.expanded {
-          box-shadow: var(--shadow-lg);
+          box-shadow: var(--shadow-md);
           border-color: var(--border-color-hover);
         }
         .task-input-wrapper.success-flash {
@@ -387,21 +387,21 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         }
         .task-title-input {
           flex: 1; background: transparent; border: none;
-          border-bottom: 2px solid var(--border-color); padding: 0.6rem 0.25rem;
+          border-bottom: 1.5px solid var(--border-color); padding: 0.6rem 0.25rem;
           font-size: 1.05rem; color: var(--color-text); outline: none;
           transition: border-color 0.25s; font-family: inherit;
         }
         .task-title-input::placeholder { color: var(--color-text-disabled); }
-        .task-title-input:focus { border-bottom-color: var(--color-primary); }
+        .task-title-input:focus { border-bottom-color: var(--color-accent); }
         .btn-add {
-          width: 38px; height: 38px; border-radius: 50%; border: none;
-          background: var(--color-primary); color: white; font-size: 1.4rem;
+          width: 36px; height: 36px; border-radius: 50%; border: none;
+          background: var(--color-accent); color: white; font-size: 1.3rem;
           cursor: pointer; display: flex; align-items: center; justify-content: center;
           transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); flex-shrink: 0;
         }
         .btn-add:hover:not(:disabled) {
-          transform: scale(1.1);
-          box-shadow: 0 4px 16px var(--color-primary-glow);
+          background: var(--color-accent-hover);
+          transform: scale(1.08);
         }
         .btn-add:active:not(:disabled) { transform: scale(0.95); }
         .btn-add:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -412,7 +412,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         @keyframes spin { to { transform: rotate(360deg); } }
         .details-panel {
           margin-top: 1.25rem; padding-top: 1.25rem;
-          border-top: 1px solid var(--border-color);
+          border-top: 1px dashed var(--border-color);
           animation: detailsSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           display: flex; flex-direction: column; gap: 1rem;
         }
@@ -425,35 +425,35 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         .form-field { display: flex; flex-direction: column; gap: 0.4rem; }
         .form-field--narrow { max-width: 140px; flex: 0 0 auto !important; }
         label {
-          font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
-          text-transform: uppercase; letter-spacing: 0.04em;
+          font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+          text-transform: uppercase; letter-spacing: 0.05em;
         }
         input[type="number"], select, textarea {
-          background: var(--color-surface-hover); border: 1px solid var(--border-color);
+          background: var(--color-surface); border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 0.55rem 0.65rem;
           color: var(--color-text); font-family: inherit; font-size: 0.875rem;
           transition: border-color 0.2s, box-shadow 0.2s; outline: none; width: 100%;
         }
         input:focus, select:focus, textarea:focus {
-          border-color: var(--color-primary);
-          box-shadow: 0 0 0 3px var(--color-primary-glow);
+          border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px var(--color-accent-subtle);
           background: var(--color-surface);
         }
         textarea { resize: vertical; min-height: 60px; }
-        .panel-actions { display: flex; justify-content: space-between; align-items: center; }
+        .panel-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; }
         .btn-collapse {
-          background: transparent; border: none; color: var(--color-text-muted);
-          cursor: pointer; font-size: 0.8rem; padding: 0.35rem 0.75rem;
+          background: transparent; border: 1px solid var(--border-color); color: var(--color-text-muted);
+          cursor: pointer; font-size: 0.8rem; padding: 0.4rem 0.85rem;
           border-radius: var(--radius-sm); transition: color 0.2s, background 0.2s;
         }
-        .btn-collapse:hover { color: var(--color-text); background: var(--color-surface-hover); }
+        .btn-collapse:hover { color: var(--color-text); background: var(--color-surface-hover); border-color: var(--border-color-hover); }
         .btn-submit {
-          background: var(--color-primary); border: none; color: #fff;
-          padding: 0.45rem 1.2rem; border-radius: var(--radius-sm);
+          background: var(--color-accent); border: none; color: #fff;
+          padding: 0.5rem 1.25rem; border-radius: var(--radius-sm);
           font-size: 0.85rem; font-weight: 600; cursor: pointer;
           transition: all 0.18s; font-family: inherit;
         }
-        .btn-submit:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-submit:hover:not(:disabled) { background: var(--color-accent-hover); transform: translateY(-1px); }
         .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
       `}</style>
         </div>

@@ -284,14 +284,15 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
 
             <style jsx>{`
                 .te-backdrop {
-                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
-                    z-index: 2000; backdrop-filter: blur(2px); animation: fadeIn 0.2s;
+                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
+                    z-index: 2000; backdrop-filter: blur(4px); animation: fadeIn 0.2s;
                 }
                 .te-modal {
                     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
                     width: 100%; max-width: 500px; max-height: 90vh;
-                    background: var(--color-surface); border-radius: var(--radius-lg);
-                    box-shadow: var(--shadow-xl); z-index: 2001;
+                    background: var(--color-surface); border-radius: var(--radius-xl);
+                    border: 1px solid var(--border-color);
+                    box-shadow: var(--shadow-lg); z-index: 2001;
                     display: flex; flex-direction: column;
                     animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
                 }
@@ -301,48 +302,55 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 }
                 .te-header {
                     display: flex; justify-content: space-between; align-items: center;
-                    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color);
+                    padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);
                 }
                 .te-header h3 { font-size: 1rem; font-weight: 700; color: var(--color-text); margin: 0; }
-                .te-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--color-text-secondary); }
+                .te-close {
+                    background: none; border: none; font-size: 1.1rem; cursor: pointer;
+                    color: var(--color-text-muted); width: 32px; height: 32px;
+                    display: flex; align-items: center; justify-content: center;
+                    border-radius: var(--radius-sm); transition: all 0.15s;
+                }
+                .te-close:hover { background: var(--color-surface-hover); color: var(--color-text); }
                 .te-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; overflow-y: auto; }
                 .te-field { display: flex; flex-direction: column; gap: 0.4rem; }
                 .te-row { display: flex; gap: 1rem; }
-                .te-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.1rem; text-transform: uppercase; letter-spacing: 0.04em; }
+                .te-label { font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.1rem; text-transform: uppercase; letter-spacing: 0.05em; }
                 .te-input-title {
-                    width: 100%; border: none; border-bottom: 2px solid var(--border-color);
+                    width: 100%; border: none; border-bottom: 1.5px solid var(--border-color);
                     font-size: 1.05rem; padding: 0.6rem 0.25rem; background: transparent;
-                    color: var(--color-text); transition: border-color 0.2s;
+                    color: var(--color-text); transition: border-color 0.2s; font-family: inherit;
                 }
-                .te-input-title:focus { outline: none; border-color: var(--color-primary); }
+                .te-input-title:focus { outline: none; border-color: var(--color-accent); }
                 .te-input, .te-select, .te-textarea {
                     width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--border-color);
-                    border-radius: var(--radius-sm); background: var(--color-surface-hover);
+                    border-radius: var(--radius-sm); background: var(--color-surface);
                     color: var(--color-text); font-size: 0.875rem; transition: border-color 0.2s, box-shadow 0.2s;
                     font-family: inherit;
                 }
                 .te-input:focus, .te-select:focus, .te-textarea:focus {
-                    outline: none; border-color: var(--color-primary);
-                    box-shadow: 0 0 0 3px var(--color-primary-glow);
+                    outline: none; border-color: var(--color-accent);
+                    box-shadow: 0 0 0 3px var(--color-accent-subtle);
                     background: var(--color-surface);
                 }
                 .te-textarea { resize: vertical; min-height: 80px; }
                 .te-footer {
                     display: flex; justify-content: flex-end; gap: 0.75rem;
-                    padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);
+                    padding: 1.25rem 1.5rem; border-top: 1px solid var(--border-color);
                 }
                 .te-btn-cancel {
                     background: transparent; border: 1px solid var(--border-color);
-                    padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-size: 0.85rem;
+                    padding: 0.5rem 1.1rem; border-radius: var(--radius-sm); font-size: 0.85rem;
                     cursor: pointer; color: var(--color-text-secondary); transition: all 0.2s;
+                    font-family: inherit;
                 }
-                .te-btn-cancel:hover { background: var(--color-surface-hover); }
+                .te-btn-cancel:hover { background: var(--color-surface-hover); border-color: var(--border-color-hover); }
                 .te-btn-save {
-                    background: var(--color-primary); color: #fff; border: none;
+                    background: var(--color-accent); color: #fff; border: none;
                     padding: 0.5rem 1.5rem; border-radius: var(--radius-sm); font-size: 0.85rem;
-                    font-weight: 600; cursor: pointer; transition: all 0.2s;
+                    font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
                 }
-                .te-btn-save:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+                .te-btn-save:hover:not(:disabled) { background: var(--color-accent-hover); transform: translateY(-1px); }
                 .te-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
             `}</style>
         </>

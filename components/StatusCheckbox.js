@@ -68,25 +68,26 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                 .status-cb-wrap {
                     display: flex;
                     align-items: center;
-                    gap: 6px;
+                    gap: 5px;
                     flex-shrink: 0;
                 }
                 .status-cb-main {
-                    width: 28px;
-                    height: 28px;
+                    width: 22px;
+                    height: 22px;
                     border-radius: 50%;
-                    border: 2px solid var(--border-color);
+                    border: 1.5px solid var(--color-text-disabled);
                     background: transparent;
                     cursor: pointer;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
-                    font-size: 0.85rem;
+                    font-size: 0.7rem;
                     color: transparent;
                     transition: all 0.2s;
                     position: relative;
                     overflow: visible;
+                    padding: 0;
                 }
                 .status-cb-main.disabled {
                     cursor: not-allowed;
@@ -95,59 +96,60 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                 }
                 .status-cb-main.cancelled {
                     cursor: not-allowed;
-                    opacity: 0.5;
+                    opacity: 0.4;
                     border-color: var(--color-text-disabled);
                     background: var(--color-surface-hover);
                 }
                 .status-cb-main:not(.cancelled):hover {
-                    border-color: var(--color-primary);
-                    background: var(--color-primary-subtle);
+                    border-color: var(--color-accent);
+                    background: var(--color-accent-subtle);
                 }
                 .status-cb-main.checked {
-                    background: var(--color-success);
-                    border-color: var(--color-success);
+                    background: var(--color-accent);
+                    border-color: var(--color-accent);
                     color: white;
                     font-weight: 700;
+                    font-size: 0.65rem;
                 }
                 .status-cb-main.checked:not(.cancelled):hover {
-                    background: var(--color-success);
-                    border-color: var(--color-success);
-                    opacity: 0.85;
+                    background: var(--color-accent-hover);
+                    border-color: var(--color-accent-hover);
                 }
                 .status-cb-main.in-progress {
                     background: transparent;
-                    border-color: var(--color-primary);
-                    color: var(--color-primary);
-                    font-size: 0.7rem;
+                    border-color: var(--color-accent);
+                    color: var(--color-accent);
+                    font-size: 0.55rem;
                     font-weight: 700;
                 }
                 .status-cb-main.in-progress:hover {
-                    background: var(--color-primary-subtle);
+                    background: var(--color-accent-subtle);
                 }
                 .status-cb-play {
-                    width: 22px;
-                    height: 22px;
+                    width: 20px;
+                    height: 20px;
                     border-radius: 50%;
-                    border: 1.5px solid var(--color-primary);
-                    background: var(--color-primary-subtle);
-                    color: var(--color-primary);
+                    border: 1.5px solid var(--color-accent);
+                    background: var(--color-accent-subtle);
+                    color: var(--color-accent);
                     cursor: pointer;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 0.55rem;
+                    font-size: 0.5rem;
                     transition: all 0.15s;
                     animation: statusCbFadeIn 0.15s ease;
                     flex-shrink: 0;
+                    padding: 0;
                 }
                 .status-cb-play:hover {
-                    background: var(--color-primary);
+                    background: var(--color-accent);
                     color: white;
                     transform: scale(1.1);
                 }
                 .status-cb-revert {
-                    width: 22px;
-                    height: 22px;
+                    width: 20px;
+                    height: 20px;
                     border-radius: 50%;
                     border: 1.5px solid var(--color-text-muted);
                     background: var(--color-surface-hover);
@@ -156,10 +158,11 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 0.65rem;
+                    font-size: 0.55rem;
                     transition: all 0.15s;
                     animation: statusCbFadeIn 0.15s ease;
                     flex-shrink: 0;
+                    padding: 0;
                 }
                 .status-cb-revert:hover {
                     background: var(--color-text-muted);
@@ -183,20 +186,20 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     pointer-events: none;
                 }
                 .status-cb-main.sparkle::before {
-                    width: 40px; height: 40px; top: -6px; left: -6px;
-                    border: 2px solid var(--color-success);
+                    width: 36px; height: 36px; top: -7px; left: -7px;
+                    border: 2px solid var(--color-accent);
                     animation: statusCbRing 0.6s ease-out forwards;
                 }
                 .status-cb-main.sparkle::after {
-                    width: 6px; height: 6px; background: var(--color-success);
+                    width: 5px; height: 5px; background: var(--color-accent);
                     top: -4px; left: 50%;
                     box-shadow:
-                        12px 8px 0 #f59e0b,
-                        -12px 8px 0 #3b82f6,
-                        6px -12px 0 #ef4444,
-                        -8px -10px 0 #10b981,
-                        14px -4px 0 #8b5cf6,
-                        -14px -2px 0 #f97316;
+                        10px 7px 0 #f59e0b,
+                        -10px 7px 0 #3b82f6,
+                        5px -10px 0 #ef4444,
+                        -7px -9px 0 #10b981,
+                        12px -3px 0 #8b5cf6,
+                        -12px -2px 0 #f97316;
                     animation: statusCbParticles 0.6s ease-out forwards;
                 }
                 @keyframes statusCbPop {

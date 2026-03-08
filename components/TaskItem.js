@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import { CheckSquare, Archive, PlayCircle, Calendar, Clock, FileText, Flag, AlertTriangle, GripVertical, ChevronRight, Trash2, Sun, Plus, Upload } from 'lucide-react';
 import TaskInput from './TaskInput';
 import StatusCheckbox from './StatusCheckbox';
 import { ReorderGap } from './DndGaps';
@@ -65,7 +66,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                 {/* Drag Handle */}
                 {isDraggable && (
                     <div className="tc-handle" {...attributes} {...listeners} title={sortMode === 'manual' ? 'ドラッグして並び替え' : isChild ? 'ドラッグして親から外す' : 'ドラッグして他のタスクの子にする'}>
-                        ⋮⋮
+                        <GripVertical size={14} strokeWidth={2} />
                     </div>
                 )}
 
@@ -78,13 +79,13 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
 
                 {childTasks.length > 0 && (
                     <button className="tc-toggle" onClick={() => setExpanded(!expanded)}>
-                        <span className={`tc-chev ${expanded ? 'open' : ''}`}>›</span>
+                        <ChevronRight size={14} strokeWidth={2} className={`tc-chev-icon ${expanded ? 'open' : ''}`} />
                     </button>
                 )}
 
                 <div className="tc-info" onClick={() => onEdit(task)} title="クリックして編集">
                     {!isChild && task.parent_id && task.parent_title && (
-                        <span className="tc-parent-label" style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, color: 'var(--color-text-muted)', marginBottom: '0.15rem', letterSpacing: '0.01em' }}>📌 {task.parent_title} ›</span>
+                        <span className="tc-parent-label">{task.parent_title} ›</span>
                     )}
                     <div className="tc-title-row">
                         <span className={`tc-title ${isDone || isCancelled ? 'strike' : ''}`}>{task.title}</span>
@@ -97,22 +98,22 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                         {task.tags && task.tags.map(t => <span key={t.id} className="tc-tag" style={{ backgroundColor: t.color }}>{t.name}</span>)}
                     </div>
                     <div className="tc-meta">
-                        {isDone && task.completed_at && <span className="tc-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
-                        {task.archived_at && <span className="tc-meta-item">📦 アーカイブ: {task.archived_at.split(' ')[0]}</span>}
-                        {task.start_date && !isDone && <span className="tc-meta-item">🟢 開始: {task.start_date}</span>}
+                        {isDone && task.completed_at && <span className="tc-meta-item"><CheckSquare size={12} strokeWidth={1.75} /> {task.completed_at.split(' ')[0]}</span>}
+                        {task.archived_at && <span className="tc-meta-item"><Archive size={12} strokeWidth={1.75} /> {task.archived_at.split(' ')[0]}</span>}
+                        {task.start_date && !isDone && <span className="tc-meta-item"><PlayCircle size={12} strokeWidth={1.75} /> {task.start_date}</span>}
                         {task.due_date && !isDone && (
                             <span className="tc-meta-item" style={{ color: dueMeta.color || 'inherit' }}>
-                                📅 期限: {task.due_date}{dueMeta.badge && <span className={`tc-badge ${dueMeta.cls}`}>{dueMeta.badge}</span>}
+                                <Calendar size={12} strokeWidth={1.75} /> {task.due_date}{dueMeta.badge && <span className={`tc-badge ${dueMeta.cls}`}>{dueMeta.badge}</span>}
                             </span>
                         )}
                         {task.importance_label && (
-                            <span className="tc-meta-item"><span className="tc-dot" style={{ backgroundColor: task.importance_color }} /> 重要度: {task.importance_label}</span>
+                            <span className="tc-meta-item"><Flag size={12} strokeWidth={1.75} style={{ color: task.importance_color }} /> {task.importance_label}</span>
                         )}
                         {task.urgency_label && (
-                            <span className="tc-meta-item"><span className="tc-dot" style={{ backgroundColor: task.urgency_color }} /> 緊急度: {task.urgency_label}</span>
+                            <span className="tc-meta-item"><AlertTriangle size={12} strokeWidth={1.75} style={{ color: task.urgency_color }} /> {task.urgency_label}</span>
                         )}
-                        {task.estimated_hours > 0 && <span className="tc-meta-item">⏱ {formatMin(task.estimated_hours)}</span>}
-                        {task.notes?.trim() && <span className="tc-meta-item" title={task.notes}>📝 メモ</span>}
+                        {task.estimated_hours > 0 && <span className="tc-meta-item"><Clock size={12} strokeWidth={1.75} /> {formatMin(task.estimated_hours)}</span>}
+                        {task.notes?.trim() && <span className="tc-meta-item" title={task.notes}><FileText size={12} strokeWidth={1.75} /> メモ</span>}
                     </div>
                 </div>
 
@@ -120,7 +121,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                     {isArchived ? (
                         <>
                             <span className="tc-status-label" style={{ color: st.color }}>{st.label}</span>
-                            <button className="tc-act-btn tc-restore-btn" onClick={() => onRestore(task.id)} title="復元" disabled={isProcessing}>📤</button>
+                            <button className="tc-act-btn tc-restore-btn" onClick={() => onRestore(task.id)} title="復元" disabled={isProcessing}><Upload size={14} strokeWidth={1.75} /></button>
                         </>
                     ) : (
                         <>
@@ -135,13 +136,13 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                                     onClick={() => onTodayToggle(task.id, task.today_date)}
                                     title={task.today_date === new Date().toLocaleDateString('sv-SE') ? '今日やるから外す' : '今日やるタスクに追加'}
                                     disabled={isProcessing}
-                                >☀️</button>
+                                ><Sun size={14} strokeWidth={1.75} /></button>
                             )}
                             {(task.status_code === 3 || task.status_code === 5) && onArchive && (
-                                <button className="tc-act-btn tc-archive-btn" onClick={() => onArchive(task.id)} title="アーカイブ" disabled={isProcessing}>📦</button>
+                                <button className="tc-act-btn tc-archive-btn" onClick={() => onArchive(task.id)} title="アーカイブ" disabled={isProcessing}><Archive size={14} strokeWidth={1.75} /></button>
                             )}
-                            {!isChild && <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加">＋</button>}
-                            <button className="tc-act-btn danger" onClick={() => onDelete(task.id)} title="削除">🗑</button>
+                            {!isChild && <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加"><Plus size={14} strokeWidth={1.75} /></button>}
+                            <button className="tc-act-btn danger" onClick={() => onDelete(task.id)} title="削除"><Trash2 size={14} strokeWidth={1.75} /></button>
                         </>
                     )}
                 </div>

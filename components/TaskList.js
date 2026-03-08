@@ -363,70 +363,72 @@ export default function TaskList({ projectId = null }) {
                 animation: fadeIn 0.15s ease;
             }
 
-            /* ---- Task Card ---- */
+            /* ---- Task Card (v2.0.0 Quiet Confidence) ---- */
             .tc-card {
               background:var(--color-surface); border:1px solid var(--border-color);
-              border-radius:var(--radius-md); overflow:hidden;
-              transition:all .2s; box-shadow:var(--shadow-sm);
+              border-radius:var(--radius-lg); overflow:hidden;
+              transition:all .2s; box-shadow:var(--shadow-card);
               animation:tcIn .3s cubic-bezier(.16,1,.3,1) both;
-              position: relative; touch-action: none; /* For DnD */
+              position: relative; touch-action: none;
             }
             .tc-card.drag-over {
-                box-shadow: 0 0 0 2px var(--color-primary), 0 4px 12px rgba(0,0,0,0.1);
+                box-shadow: 0 0 0 2px var(--color-accent), 0 4px 12px rgba(0,0,0,0.08);
                 background: var(--color-surface-active);
                 transform: scale(1.01);
                 z-index: 10;
             }
             @keyframes tcIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
             .tc-card:hover { border-color:var(--border-color-hover); box-shadow:var(--shadow-card-hover); }
-            .tc-card.done { opacity:.55; }
-            .tc-card.done:hover { opacity:.75; }
-            .tc-card.cancelled { opacity:.4; filter: grayscale(1); }
-            .tc-card.cancelled:hover { opacity:.6; filter: grayscale(0.8); }
+            .tc-card.done { opacity:.5; }
+            .tc-card.done:hover { opacity:.7; }
+            .tc-card.cancelled { opacity:.35; filter: grayscale(1); }
+            .tc-card.cancelled:hover { opacity:.55; filter: grayscale(0.8); }
 
-            .tc-body { display:flex; align-items:flex-start; gap:.65rem; padding:.85rem 1rem; }
+            .tc-body { display:flex; align-items:flex-start; gap:.75rem; padding:1rem 1.25rem; }
             .tc-handle {
                 cursor: grab; color: var(--color-text-disabled);
                 display: flex; align-items: center; justify-content: center;
-                width: 20px; height: 100%; align-self: stretch;
-                opacity: 0.5; transition: opacity 0.2s;
-                font-size: .85rem; user-select: none;
+                width: 18px; height: 100%; align-self: stretch;
+                opacity: 0; transition: opacity 0.2s;
+                user-select: none; flex-shrink: 0;
             }
-            .tc-handle:hover, .tc-card:hover .tc-handle { opacity: 1; }
+            .tc-card:hover .tc-handle { opacity: 0.5; }
+            .tc-handle:hover { opacity: 1 !important; }
             .tc-handle:active { cursor: grabbing; }
 
             .tc-toggle {
               background:none; border:none; color:var(--color-text-muted); cursor:pointer;
               width:22px; height:22px; flex-shrink:0; display:flex; align-items:center;
-              justify-content:center; font-size:1.1rem; border-radius:4px; margin-top:2px;
+              justify-content:center; border-radius:4px; margin-top:2px;
             }
             .tc-toggle:hover { background:var(--color-surface-hover); }
-            .tc-chev { display:inline-block; transition:transform .2s; }
-            .tc-chev.open { transform:rotate(90deg); }
+            .tc-chev-icon { transition:transform .2s; }
+            .tc-chev-icon.open { transform:rotate(90deg); }
 
-            .tc-info { flex:1; min-width:0; cursor:pointer; padding:.1rem .3rem; border-radius:var(--radius-sm); transition:background .15s; }
+            .tc-info { flex:1; min-width:0; cursor:pointer; padding:.15rem .35rem; border-radius:var(--radius-sm); transition:background .15s; }
             .tc-info:hover { background:var(--color-surface-hover); }
-            .tc-title-row { display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; margin-bottom:.3rem; }
-            .tc-title { font-weight:600; font-size:.92rem; color:var(--color-text); line-height:1.4; }
+            .tc-parent-label { display:block; font-size:.7rem; font-weight:500; color:var(--color-text-muted); margin-bottom:.15rem; letter-spacing:.01em; }
+            .tc-title-row { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.35rem; }
+            .tc-title { font-weight:600; font-size:.95rem; color:var(--color-text); line-height:1.45; }
             .tc-title.strike { text-decoration:line-through; color:var(--color-text-disabled); }
             .tc-project-badge {
               display:inline-flex; align-items:center; gap:.25rem;
-              font-size:.63rem; font-weight:600; padding:.1rem .5rem;
+              font-size:.65rem; font-weight:600; padding:.12rem .5rem;
               border-radius:10px; border:1px solid;
               white-space:nowrap;
             }
             .tc-project-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-            .tc-tag { font-size:.63rem; font-weight:600; padding:.1rem .5rem; border-radius:10px; color:#fff; }
+            .tc-tag { font-size:.65rem; font-weight:600; padding:.12rem .5rem; border-radius:10px; color:#fff; }
 
-            .tc-meta { display:flex; gap:.7rem; flex-wrap:wrap; }
-            .tc-meta-item { font-size:.75rem; color:var(--color-text-muted); display:flex; align-items:center; gap:.2rem; white-space:nowrap; }
-            .tc-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-            .tc-badge { font-size:.6rem; font-weight:700; padding:.05rem .35rem; border-radius:6px; margin-left:.15rem; }
+            .tc-meta { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.1rem; }
+            .tc-meta-item { font-size:.78rem; color:var(--color-text-muted); display:flex; align-items:center; gap:.3rem; white-space:nowrap; }
+            .tc-meta-item svg { flex-shrink:0; }
+            .tc-badge { font-size:.6rem; font-weight:700; padding:.08rem .4rem; border-radius:6px; margin-left:.2rem; }
             .tc-badge-danger  { background:var(--color-danger-bg); color:var(--color-danger); }
             .tc-badge-warning { background:var(--color-warning-bg); color:var(--color-warning); }
-            .tc-badge-info    { background:rgba(79,110,247,.08); color:var(--color-primary); }
+            .tc-badge-info    { background:var(--color-accent-subtle); color:var(--color-accent); }
 
-            .tc-actions { display:flex; gap:.3rem; flex-shrink:0; align-items:center; margin-top:2px; }
+            .tc-actions { display:flex; gap:.25rem; flex-shrink:0; align-items:center; margin-top:2px; }
             .tc-status-select {
               font-weight:600; font-size:.78rem;
               padding:.3rem .5rem .3rem .5rem;
@@ -434,17 +436,17 @@ export default function TaskList({ projectId = null }) {
             }
             .tc-act-btn {
               background:transparent; border:1px solid transparent;
-              color:var(--color-text-muted); cursor:pointer; font-size:.82rem;
-              width:28px; height:28px; display:flex; align-items:center;
+              color:var(--color-text-muted); cursor:pointer;
+              width:30px; height:30px; display:flex; align-items:center;
               justify-content:center; border-radius:var(--radius-sm); transition:all .15s;
             }
             .tc-act-btn:hover { background:var(--color-surface-hover); color:var(--color-text); border-color:var(--border-color); }
             .tc-act-btn.danger:hover { background:var(--color-danger-bg); color:var(--color-danger); border-color:rgba(220,38,38,.2); }
-            .tc-today-btn.active { background:rgba(251,191,36,.15); border-color:rgba(251,191,36,.4); }
-            .tc-today-btn.active:hover { background:rgba(251,191,36,.25); }
+            .tc-today-btn.active { background:var(--color-accent-subtle); border-color:var(--color-accent); color:var(--color-accent); }
+            .tc-today-btn.active:hover { background:var(--color-accent-subtle); filter:brightness(0.95); }
             .tc-archive-btn:hover { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.2); color:#b45309; }
             .tc-restore-btn { opacity:1 !important; }
-            .tc-restore-btn:hover { background:rgba(79,110,247,.1); border-color:rgba(79,110,247,.2); color:var(--color-primary); }
+            .tc-restore-btn:hover { background:var(--color-accent-subtle); border-color:var(--color-accent); color:var(--color-accent); }
             .tc-status-label { font-size:.78rem; font-weight:600; white-space:nowrap; }
 
             .tc-act-btn:disabled { opacity:0.5; cursor:not-allowed; }
@@ -464,8 +466,8 @@ export default function TaskList({ projectId = null }) {
             }
             .tl-archive-tab:hover { background:var(--color-surface-hover); color:var(--color-text); }
             .tl-archive-tab.active {
-              background:var(--color-primary); color:#fff; font-weight:600;
-              box-shadow:0 2px 10px rgba(79,110,247,.18);
+              background:var(--color-accent); color:#fff; font-weight:600;
+              box-shadow:0 2px 10px var(--color-accent-subtle);
             }
 
             /* Sort mode toggle */
@@ -478,13 +480,13 @@ export default function TaskList({ projectId = null }) {
             }
             .tl-sort-toggle:hover { border-color:var(--border-color-hover); color:var(--color-text); }
             .tl-sort-toggle.active {
-              background:var(--color-primary); color:#fff; border-color:var(--color-primary);
-              box-shadow:0 2px 8px rgba(79,110,247,.2);
+              background:var(--color-accent); color:#fff; border-color:var(--color-accent);
+              box-shadow:0 2px 8px var(--color-accent-subtle);
             }
             .tl-sort-toggle.active:hover { filter:brightness(1.1); }
 
-            .tc-sub-input { padding:0 1rem .85rem 2.75rem; animation:fadeSlideIn .3s ease; }
-            .tc-children { margin-left:2.25rem; padding:.2rem .75rem .6rem 0; border-left:2px solid var(--border-color); }
+            .tc-sub-input { padding:0 1.25rem 1rem 2.75rem; animation:fadeSlideIn .3s ease; }
+            .tc-children { margin-left:2.25rem; padding:.3rem .75rem .6rem 0; border-left:2px solid var(--border-color); }
           `}</style>
             </div>
         </DndContext>
