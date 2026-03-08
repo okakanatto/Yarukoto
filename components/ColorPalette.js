@@ -66,7 +66,7 @@ export default function ColorPalette({ value, onChange }) {
         .swatch:hover { transform: scale(1.2); z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
         .swatch.active {
           border-color: var(--color-text);
-          box-shadow: 0 0 0 2px var(--color-primary-glow);
+          box-shadow: 0 0 0 2px var(--color-accent-glow);
           transform: scale(1.15);
         }
         .custom-row { display: flex; align-items: center; gap: 0.5rem; }

@@ -119,7 +119,7 @@ export default function RoutinesPage() {
         <div className="rt-page">
             <div className="rt-header">
                 <div>
-                    <h2 className="page-title">🔄 ルーティン設定</h2>
+                    <h2 className="page-title">ルーティン設定</h2>
                     <p className="rt-sub">定期的に発生するタスクを管理します（今日のタスクに自動表示）</p>
                 </div>
                 <button className="rt-btn-add" onClick={() => handleOpenModal(null)}>
@@ -218,12 +218,12 @@ export default function RoutinesPage() {
         .rt-sub { color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
 
         .rt-btn-add {
-            background: var(--color-primary); color: #fff; border: none;
+            background: var(--color-accent); color: #fff; border: none;
             padding: 0.6rem 1.2rem; border-radius: 50px;
             font-size: 0.9rem; font-weight: 600; cursor: pointer;
-            box-shadow: 0 2px 8px rgba(79,110,247,0.3); transition: all 0.2s;
+            box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 35%, transparent); transition: all 0.2s;
         }
-        .rt-btn-add:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,110,247,0.4); }
+        .rt-btn-add:hover { transform: translateY(-1px); box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent) 45%, transparent); }
 
         /* Tabs */
         .rt-tabs { display: flex; gap: 1rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
@@ -233,7 +233,7 @@ export default function RoutinesPage() {
             border-bottom: 2px solid transparent; transition: all 0.2s;
         }
         .rt-tab:hover { color: var(--color-text); }
-        .rt-tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 600; }
+        .rt-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); font-weight: 600; }
 
         /* List */
         .rt-list { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -244,7 +244,7 @@ export default function RoutinesPage() {
             cursor: pointer; transition: all 0.15s;
             box-shadow: var(--shadow-sm);
         }
-        .rt-card:hover { border-color: var(--color-primary); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        .rt-card:hover { border-color: var(--color-accent); transform: translateY(-1px); box-shadow: var(--shadow-md); }
         .rt-card.disabled { opacity: 0.5; }
         .rt-card.disabled:hover { opacity: 0.7; }
         .rt-card-content { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
@@ -282,8 +282,8 @@ export default function RoutinesPage() {
             transition: background 0.3s; flex-shrink: 0;
             padding: 0;
         }
-        .rt-switch.on { background: var(--color-primary); }
-        .rt-switch.off { background: #e5e5ea; }
+        .rt-switch.on { background: var(--color-accent); }
+        .rt-switch.off { background: var(--color-text-disabled); }
         .rt-switch .rt-switch-knob {
             position: absolute; top: 2px; width: 24px; height: 24px;
             border-radius: 50%; background: #fff;

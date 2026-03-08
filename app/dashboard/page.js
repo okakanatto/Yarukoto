@@ -154,7 +154,7 @@ export default function DashboardPage() {
 
     if (loading) return (
         <div className="page-container" style={{ maxWidth: 960 }}>
-            <h2 className="page-title">📊 ダッシュボード</h2>
+            <h2 className="page-title">ダッシュボード</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '3rem', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
                 <span className="spinner" /> 読み込み中...
             </div>
@@ -172,13 +172,13 @@ export default function DashboardPage() {
 
     return (
         <div className="db-root">
-            <h2 className="page-title">📊 ダッシュボード</h2>
+            <h2 className="page-title">ダッシュボード</h2>
             <p className="db-subtitle">タスクの進捗状況をひと目で確認</p>
 
             {/* Top Row: 3 ring cards */}
             <div className="db-top-row">
                 <RingCard title="全体の完了率" pct={overallPct} total={overall.total} done={overall.completed}
-                    color="var(--color-primary)" subtitle={`${overall.completed} / ${overall.total} タスク完了`} />
+                    color="var(--color-accent)" subtitle={`${overall.completed} / ${overall.total} タスク完了`} />
                 <RingCard title="今日の進捗" pct={todayPct} total={today.total} done={today.completed}
                     color={todayPct === 100 && today.total > 0 ? 'var(--color-success)' : '#f59e0b'}
                     subtitle={today.total > 0 ? `残り${today.total - today.completed}件 / 想定${formatMin(today.remainingMinutes)}` : '今日のタスクなし'} />
@@ -191,7 +191,7 @@ export default function DashboardPage() {
             <div className="db-bottom-row">
                 {/* Daily Completions Chart */}
                 <div className="db-card db-card-wide">
-                    <h3 className="db-card-title">📈 直近7日間の完了数</h3>
+                    <h3 className="db-card-title">直近7日間の完了数</h3>
                     <div className="db-bar-chart">
                         {dailyCompletions.map((d, i) => {
                             const dayLabel = new Date(d.date + 'T00:00:00').toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
@@ -204,8 +204,8 @@ export default function DashboardPage() {
                                         <div className="bar-fill" style={{
                                             height: `${(d.count / maxDailyCount) * 100}%`,
                                             background: d.date === new Date().toLocaleDateString('sv-SE')
-                                                ? 'var(--color-primary)' : 'var(--color-primary-subtle)',
-                                            borderColor: d.date === new Date().toLocaleDateString('sv-SE') ? 'var(--color-primary)' : 'transparent'
+                                                ? 'var(--color-accent)' : 'var(--color-accent-subtle)',
+                                            borderColor: d.date === new Date().toLocaleDateString('sv-SE') ? 'var(--color-accent)' : 'transparent'
                                         }} />
                                     </div>
                                     <span className={`bar-label ${isWeekend ? 'weekend' : ''}`}>{dayLabel}</span>
@@ -217,7 +217,7 @@ export default function DashboardPage() {
 
                 {/* Status Distribution */}
                 <div className="db-card">
-                    <h3 className="db-card-title">📊 ステータス分布</h3>
+                    <h3 className="db-card-title">ステータス分布</h3>
                     <div className="db-status-list">
                         {statusDistribution.map((s, i) => (
                             <div key={i} className="status-bar-row">
@@ -241,7 +241,7 @@ export default function DashboardPage() {
             {/* Today's Completed Tasks (ENH-1) */}
             {todayDone.length > 0 && (
                 <div className="db-card db-today-done">
-                    <h3 className="db-card-title">🎉 今日完了したタスク <span className="done-badge">{todayDone.length}件</span></h3>
+                    <h3 className="db-card-title">今日完了したタスク <span className="done-badge">{todayDone.length}件</span></h3>
                     <div className="done-list">
                         {todayDone.slice(0, 10).map(t => (
                             <div key={t.id} className="done-item">
@@ -263,7 +263,7 @@ export default function DashboardPage() {
             {/* Overdue Warning */}
             {overdue.count > 0 && (
                 <div className="db-card db-overdue">
-                    <h3 className="db-card-title">⚠️ 期限切れタスク <span className="overdue-badge">{overdue.count}件</span></h3>
+                    <h3 className="db-card-title">期限切れタスク <span className="overdue-badge">{overdue.count}件</span></h3>
                     <div className="overdue-list">
                         {overdue.tasks.map(t => (
                             <div key={t.id} className="overdue-item">
@@ -303,7 +303,7 @@ export default function DashboardPage() {
         /* Bar Chart */
         .db-bar-chart { display: flex; gap: 0.5rem; align-items: flex-end; height: 140px; }
         .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; height: 100%; }
-        .bar-value { font-size: 0.7rem; font-weight: 700; color: var(--color-primary); min-height: 16px; }
+        .bar-value { font-size: 0.7rem; font-weight: 700; color: var(--color-accent); min-height: 16px; }
         .bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
         .bar-fill {
           width: 100%; min-height: 4px; border-radius: 4px 4px 0 0;

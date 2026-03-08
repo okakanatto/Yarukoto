@@ -212,8 +212,8 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         }
         .cal-trigger:hover { border-color: var(--border-color-hover); }
         .cal-trigger:focus {
-          outline: none; border-color: var(--color-primary);
-          box-shadow: 0 0 0 3px var(--color-primary-glow);
+          outline: none; border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px var(--color-accent-glow);
         }
         .cal-icon { font-size: 0.9rem; }
         .cal-value { flex: 1; }
@@ -273,15 +273,15 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         .cal-cell.empty { cursor: default; }
         .cal-cell:not(.empty):hover { background: var(--color-surface-hover); }
         .cal-cell.today {
-          border: 1px solid var(--color-primary);
-          color: var(--color-primary); font-weight: 600;
+          border: 1px solid var(--color-accent);
+          color: var(--color-accent); font-weight: 600;
         }
         .cal-cell.selected {
-          background: var(--color-primary) !important;
+          background: var(--color-accent) !important;
           color: white; font-weight: 600;
         }
         .cal-cell.focused:not(.selected) {
-          outline: 2px solid var(--color-primary);
+          outline: 2px solid var(--color-accent);
           outline-offset: -2px;
           background: var(--color-surface-hover);
         }
@@ -296,11 +296,11 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         }
         .cal-today-btn {
           background: transparent; border: 1px solid var(--border-color);
-          color: var(--color-primary); font-size: 0.78rem; font-weight: 500;
+          color: var(--color-accent); font-size: 0.78rem; font-weight: 500;
           padding: 0.3rem 1rem; border-radius: 6px; cursor: pointer;
           transition: all 0.15s;
         }
-        .cal-today-btn:hover { background: var(--color-primary-subtle); }
+        .cal-today-btn:hover { background: var(--color-accent-subtle); }
       `}</style>
     </div>
   );

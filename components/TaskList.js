@@ -335,7 +335,7 @@ export default function TaskList({ projectId = null }) {
             .tl-unnest-gap-line {
                 height: 2px;
                 border-radius: 1px;
-                background: var(--color-primary);
+                background: var(--color-accent);
                 opacity: 0.3;
                 transition: all 0.15s ease;
             }
@@ -345,7 +345,7 @@ export default function TaskList({ projectId = null }) {
             .tl-unnest-gap.drag-over .tl-unnest-gap-line {
                 height: 3px;
                 opacity: 1;
-                box-shadow: 0 0 8px rgba(79,110,247,0.3);
+                box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 35%, transparent);
             }
             .tl-unnest-gap-label {
                 position: absolute;
@@ -354,11 +354,11 @@ export default function TaskList({ projectId = null }) {
                 transform: translate(-50%, -50%);
                 font-size: 0.72rem;
                 font-weight: 600;
-                color: var(--color-primary);
+                color: var(--color-accent);
                 background: var(--color-surface);
                 padding: 0.15rem 0.6rem;
                 border-radius: 8px;
-                border: 1px solid var(--color-primary);
+                border: 1px solid var(--color-accent);
                 white-space: nowrap;
                 animation: fadeIn 0.15s ease;
             }

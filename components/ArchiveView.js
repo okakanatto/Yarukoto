@@ -323,7 +323,7 @@ export default function ArchiveView({
                     box-shadow: var(--shadow-sm);
                     transition: border-color .2s;
                 }
-                .av-search:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(79,110,247,.1); }
+                .av-search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
                 .av-search-icon { font-size: .85rem; opacity: .5; flex-shrink: 0; }
                 .av-search-input {
                     flex: 1; border: none; outline: none; background: transparent;

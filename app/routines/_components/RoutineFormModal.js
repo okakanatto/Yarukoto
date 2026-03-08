@@ -382,7 +382,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             font-size: 1.5rem; padding: 0.5rem 0; background: transparent;
             color: var(--color-text); transition: border-color 0.2s;
         }
-        .rt-input-title:focus { outline: none; border-color: var(--color-primary); }
+        .rt-input-title:focus { outline: none; border-color: var(--color-accent); }
 
         .rt-section { display: flex; flex-direction: column; gap: 1rem; }
         .rt-section-row { display: flex; gap: 1rem; align-items: flex-start; }
@@ -401,7 +401,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.9rem;
             color: var(--color-text); width: 100%;
         }
-        .rt-input-date:focus { outline: none; border-color: var(--color-primary); }
+        .rt-input-date:focus { outline: none; border-color: var(--color-accent); }
         .rt-clear-date {
             background: none; border: none; color: var(--color-text-muted);
             font-size: 0.78rem; cursor: pointer; text-align: left; padding: 0;
@@ -418,7 +418,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             cursor: pointer; font-size: 0.8rem; color: var(--color-text-secondary);
             transition: all 0.2s;
         }
-        .rt-dow-btn.on { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+        .rt-dow-btn.on { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
 
         .rt-divider { height: 1px; background: var(--border-color); margin: 0.5rem 0; }
         .rt-section-title { font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary); }
@@ -430,11 +430,11 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             border-radius: var(--radius-sm); background-color: var(--color-surface);
             color: var(--color-text); font-size: 0.9rem; transition: border-color 0.2s;
         }
-        .rt-select:focus, .rt-input:focus, .rt-textarea:focus { outline: none; border-color: var(--color-primary); }
+        .rt-select:focus, .rt-input:focus, .rt-textarea:focus { outline: none; border-color: var(--color-accent); }
 
         .rt-modal-footer { display: flex; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border-color); }
         .rt-btn-save {
-            background: var(--color-primary); color: #fff; border: none;
+            background: var(--color-accent); color: #fff; border: none;
             padding: 0.6rem 1.5rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
             transition: all 0.15s;
         }
@@ -456,8 +456,8 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             transition: background 0.3s; flex-shrink: 0;
             padding: 0;
         }
-        .rt-switch-lg.on { background: var(--color-primary); }
-        .rt-switch-lg.off { background: #e5e5ea; }
+        .rt-switch-lg.on { background: var(--color-accent); }
+        .rt-switch-lg.off { background: var(--color-text-disabled); }
         .rt-switch-lg .rt-switch-knob {
             position: absolute; top: 2px; width: 28px; height: 28px;
             border-radius: 50%; background: #fff;

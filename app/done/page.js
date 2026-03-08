@@ -38,7 +38,7 @@ export default function DonePage() {
     return (
         <div className="done-root">
             <div className="done-header">
-                <h2 className="page-title">✅ やったタスク</h2>
+                <h2 className="page-title">やったタスク</h2>
                 <p className="done-subtitle">完了したタスクを振り返る</p>
             </div>
 
@@ -130,8 +130,8 @@ export default function DonePage() {
                 }
                 .done-view-btn:hover { color: var(--color-text); }
                 .done-view-btn.active {
-                    background: var(--color-primary); color: #fff;
-                    box-shadow: 0 1px 4px rgba(79,110,247,0.2);
+                    background: var(--color-accent); color: #fff;
+                    box-shadow: 0 1px 4px color-mix(in srgb, var(--color-accent) 25%, transparent);
                 }
                 .done-nav { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
                 .done-nav-btn {
@@ -146,10 +146,10 @@ export default function DonePage() {
                 .done-today-btn {
                     padding: 0.3rem 0.7rem; border: 1px solid var(--border-color);
                     border-radius: 6px; font-size: 0.78rem; font-weight: 500;
-                    color: var(--color-primary); background: transparent;
+                    color: var(--color-accent); background: transparent;
                     cursor: pointer; transition: all 0.15s; font-family: inherit;
                 }
-                .done-today-btn:hover { background: var(--color-primary-subtle); }
+                .done-today-btn:hover { background: var(--color-accent-subtle); }
 
                 /* Summary */
                 .done-summary {
@@ -192,10 +192,10 @@ export default function DonePage() {
                 }
                 .done-cal-cell.empty { cursor: default; }
                 .done-cal-cell:not(.empty):hover { box-shadow: 0 0 0 2px var(--border-color-hover); }
-                .done-cal-cell.today { box-shadow: inset 0 0 0 2px var(--color-primary); }
+                .done-cal-cell.today { box-shadow: inset 0 0 0 2px var(--color-accent); }
                 .done-cal-cell.selected {
-                    background: var(--color-primary) !important; color: #fff;
-                    box-shadow: 0 2px 8px rgba(79,110,247,0.25);
+                    background: var(--color-accent) !important; color: #fff;
+                    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 30%, transparent);
                 }
                 .done-cal-cell.weekend .done-cal-day { color: var(--color-text-muted); }
                 .done-cal-day { font-size: 0.82rem; font-weight: 500; color: var(--color-text); line-height: 1; }
@@ -220,10 +220,10 @@ export default function DonePage() {
                 }
                 .done-week-item:hover { border-color: var(--border-color-hover); box-shadow: var(--shadow-sm); }
                 .done-week-item.selected {
-                    background: var(--color-primary); border-color: var(--color-primary);
-                    color: #fff; box-shadow: 0 2px 8px rgba(79,110,247,0.2);
+                    background: var(--color-accent); border-color: var(--color-accent);
+                    color: #fff; box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 25%, transparent);
                 }
-                .done-week-item.is-today:not(.selected) { box-shadow: inset 0 0 0 2px var(--color-primary); }
+                .done-week-item.is-today:not(.selected) { box-shadow: inset 0 0 0 2px var(--color-accent); }
                 .done-week-wd { font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted); }
                 .done-week-item.selected .done-week-wd { color: rgba(255,255,255,0.8); }
                 .done-week-wd.weekend { color: var(--color-danger); }
@@ -276,7 +276,7 @@ export default function DonePage() {
                 }
                 .done-task:hover { background: var(--color-surface-hover); }
                 .done-task.archived { opacity: 0.5; }
-                .done-task.routine { border-left: 2px solid var(--color-primary); }
+                .done-task.routine { border-left: 2px solid var(--color-accent); }
                 .done-check {
                     color: var(--color-success); font-weight: 700; font-size: 0.75rem;
                     width: 22px; height: 22px; display: flex; align-items: center;

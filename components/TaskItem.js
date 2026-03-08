@@ -48,7 +48,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
         const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
         if (due < today) return { color: 'var(--color-danger)', badge: '期限切れ', cls: 'tc-badge-danger' };
         if (due.getTime() === today.getTime()) return { color: 'var(--color-warning)', badge: '本日', cls: 'tc-badge-warning' };
-        if (due.getTime() === tomorrow.getTime()) return { color: 'var(--color-primary)', badge: '明日', cls: 'tc-badge-info' };
+        if (due.getTime() === tomorrow.getTime()) return { color: 'var(--color-accent)', badge: '明日', cls: 'tc-badge-info' };
         return {};
     })();
 

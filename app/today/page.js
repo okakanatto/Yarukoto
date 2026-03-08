@@ -11,6 +11,7 @@ import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { useTodayGrouping } from '@/hooks/useTodayGrouping';
+import { Sun, CalendarDays } from 'lucide-react';
 import TodayCardItem from './_components/TodayCardItem';
 import TodayGroupHeader from './_components/TodayGroupHeader';
 import TodayStats from './_components/TodayStats';
@@ -208,10 +209,10 @@ export default function TodayPage() {
             <div className="today-root">
                 <div className="today-header">
                     <div className="today-title-row">
-                        <h2 className="page-title">☀️ {currentTab.isToday ? '今日やるタスク' : 'やるタスク'}</h2>
+                        <h2 className="page-title">{currentTab.isToday ? '今日やるタスク' : 'やるタスク'}</h2>
                         <span className="today-date">{dateStr}</span>
                     </div>
-                    <p className="today-subtitle">ルーティン + ☀️ ピック + 📅 期限日のタスク</p>
+                    <p className="today-subtitle">ルーティン + ピック + 期限日のタスク</p>
                 </div>
 
                 {/* Date Navigation Tabs */}
@@ -268,9 +269,9 @@ export default function TodayPage() {
 
                     {!loading && tasks.length === 0 && (
                         <div className="today-empty">
-                            <span className="today-empty-icon">{currentTab.isToday ? '☀️' : '📅'}</span>
+                            <span className="today-empty-icon">{currentTab.isToday ? <Sun size={48} strokeWidth={1.2} /> : <CalendarDays size={48} strokeWidth={1.2} />}</span>
                             <span className="today-empty-title">{currentTab.isToday ? '今日やるタスクがありません' : `${currentTab.label}のタスクがありません`}</span>
-                            <span className="today-empty-hint">タスク一覧の ☀️ ボタンでタスクをピックしましょう</span>
+                            <span className="today-empty-hint">タスク一覧の ☀ ボタンでタスクをピックしましょう</span>
                         </div>
                     )}
 
@@ -395,8 +396,8 @@ export default function TodayPage() {
         }
         .date-tab:hover { background: var(--color-surface-hover); }
         .date-tab.active {
-          background: var(--color-primary); color: #fff;
-          box-shadow: 0 2px 10px rgba(79,110,247,0.18);
+          background: var(--color-accent); color: #fff;
+          box-shadow: 0 2px 10px color-mix(in srgb, var(--color-accent) 25%, transparent);
         }
         .date-tab.weekend:not(.active) { }
         .date-tab-label {
@@ -440,7 +441,7 @@ export default function TodayPage() {
           display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
           padding: 3rem; color: var(--color-text-muted);
         }
-        .today-empty-icon { font-size: 2.5rem; opacity: 0.5; }
+        .today-empty-icon { color: var(--color-text-disabled); opacity: 0.5; }
         .today-empty-title { font-size: 1rem; font-weight: 500; color: var(--color-text-secondary); }
         .today-empty-hint { font-size: 0.82rem; color: var(--color-text-disabled); }
 
@@ -454,8 +455,8 @@ export default function TodayPage() {
         }
         .today-sort-toggle:hover { border-color:var(--border-color-hover); color:var(--color-text); }
         .today-sort-toggle.active {
-          background:var(--color-primary); color:#fff; border-color:var(--color-primary);
-          box-shadow:0 2px 8px rgba(79,110,247,.2);
+          background:var(--color-accent); color:#fff; border-color:var(--color-accent);
+          box-shadow:0 2px 8px color-mix(in srgb, var(--color-accent) 25%, transparent);
         }
         .today-sort-toggle.active:hover { filter:brightness(1.1); }
 
@@ -466,9 +467,9 @@ export default function TodayPage() {
           animation: celebIn 0.4s cubic-bezier(.16,1,.3,1);
         }
         .milestone-start {
-          background: rgba(79,110,247,0.06);
-          border: 1px solid rgba(79,110,247,0.15);
-          color: var(--color-primary);
+          background: var(--color-accent-subtle);
+          border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+          color: var(--color-accent);
         }
         .milestone-half {
           background: rgba(245,158,11,0.06);
@@ -477,7 +478,7 @@ export default function TodayPage() {
         }
         .today-complete-banner {
           margin-top: 1rem; padding: 1.25rem;
-          background: linear-gradient(135deg, rgba(22,163,74,0.08), rgba(79,110,247,0.08));
+          background: linear-gradient(135deg, rgba(22,163,74,0.08), var(--color-accent-subtle));
           border: 1px solid rgba(22,163,74,0.2); border-radius: var(--radius-lg);
           text-align: center; font-size: 1rem; font-weight: 600;
           color: var(--color-success);

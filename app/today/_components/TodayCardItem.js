@@ -103,7 +103,7 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-card.done:hover { opacity: 0.75; }
         .today-card.archived { opacity: 0.4; background: var(--color-surface-hover); }
         .today-card.archived:hover { opacity: 0.55; }
-        .today-card.routine { border-left: 3px solid var(--color-primary); }
+        .today-card.routine { border-left: 3px solid var(--color-accent); }
         .today-card.picked { border-left: 3px solid var(--color-warning); }
 
         .today-card-info { flex: 1; min-width: 0; }
@@ -125,7 +125,7 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-card-title { font-weight: 600; font-size: 0.92rem; color: var(--color-text); display: block; }
         .today-card-title.strike { text-decoration: line-through; color: var(--color-text-disabled); }
         .today-card-title.clickable { cursor: pointer; transition: color 0.15s; }
-        .today-card-title.clickable:hover { color: var(--color-primary); text-decoration: underline; }
+        .today-card-title.clickable:hover { color: var(--color-accent); text-decoration: underline; }
         .today-card-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
         .today-project-badge {
           display:inline-flex; align-items:center; gap:.25rem;

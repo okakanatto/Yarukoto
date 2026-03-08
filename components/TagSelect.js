@@ -126,8 +126,8 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
         }
         .ts-trigger:hover { border-color: var(--border-color-hover); }
         .ts-trigger:focus {
-          outline: none; border-color: var(--color-primary);
-          box-shadow: 0 0 0 3px var(--color-primary-glow);
+          outline: none; border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px var(--color-accent-glow);
         }
         .ts-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; flex: 1; }
         .ts-placeholder { color: var(--color-text-disabled); font-size: 0.85rem; }
@@ -165,7 +165,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           color: var(--color-text); font-size: 0.85rem; outline: none;
           transition: border-color 0.2s; font-family: inherit;
         }
-        .ts-search:focus { border-color: var(--color-primary); }
+        .ts-search:focus { border-color: var(--color-accent); }
         .ts-search::placeholder { color: var(--color-text-disabled); }
 
         .ts-options { max-height: 200px; overflow-y: auto; padding: 0.25rem; }
@@ -180,10 +180,10 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           transition: background 0.12s; font-family: inherit;
         }
         .ts-option:hover { background: var(--color-surface-hover); }
-        .ts-option.selected { background: var(--color-primary-subtle); }
+        .ts-option.selected { background: var(--color-accent-subtle); }
         .ts-opt-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
         .ts-opt-name { flex: 1; }
-        .ts-check { color: var(--color-primary); font-weight: 600; font-size: 0.85rem; }
+        .ts-check { color: var(--color-accent); font-weight: 600; font-size: 0.85rem; }
 
         .ts-no-results {
           padding: 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.85rem;

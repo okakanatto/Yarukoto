@@ -16,7 +16,7 @@ export default function TasksPage() {
 
   return (
     <div className="page-container">
-      <h2 className="page-title">📋 タスク一覧</h2>
+      <h2 className="page-title">タスク一覧</h2>
       <TaskInput onTaskAdded={() => setRefreshKey(k => k + 1)} />
       <div style={{ marginTop: '1.5rem' }}>
         <TaskList key={refreshKey} />

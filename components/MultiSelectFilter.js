@@ -112,15 +112,15 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                     background: var(--color-surface-hover);
                 }
                 .msf-btn.filtered {
-                    border-color: var(--color-primary);
-                    color: var(--color-primary);
-                    background: rgba(79, 110, 247, 0.06);
+                    border-color: var(--color-accent);
+                    color: var(--color-accent);
+                    background: var(--color-accent-subtle);
                 }
                 .msf-label { font-size: 0.78rem; }
                 .msf-count {
                     display: inline-flex; align-items: center; justify-content: center;
                     min-width: 16px; height: 16px; padding: 0 4px;
-                    border-radius: 8px; background: var(--color-primary);
+                    border-radius: 8px; background: var(--color-accent);
                     color: #fff; font-size: 0.65rem; font-weight: 700; line-height: 1;
                 }
                 .msf-arrow {
@@ -155,7 +155,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                     transition: all 0.15s; background: var(--color-surface);
                 }
                 .msf-item input:checked + .msf-check {
-                    background: var(--color-primary); border-color: var(--color-primary);
+                    background: var(--color-accent); border-color: var(--color-accent);
                 }
                 .msf-item input:checked + .msf-check::after {
                     content: '✓'; color: #fff; font-size: 0.65rem;

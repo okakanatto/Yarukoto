@@ -14,7 +14,7 @@ export default function TodayStats({ stats }) {
                     <circle cx="60" cy="60" r="50" className="ring-fill"
                         style={{
                             strokeDasharray: `${stats.pct * 3.14} 314`,
-                            stroke: stats.pct === 100 ? 'var(--color-success)' : 'var(--color-primary)'
+                            stroke: stats.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)'
                         }}
                     />
                 </svg>

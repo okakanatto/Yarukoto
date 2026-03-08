@@ -2,18 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { fetchDb } from '@/lib/utils';
+import { Tag, BarChart3, FolderOpen, Wrench, Database, Palette } from 'lucide-react';
 import TagsPanel from './_components/TagsPanel';
 import StatusPanel from './_components/StatusPanel';
 import ProjectsPanel from './_components/ProjectsPanel';
 import OptionsPanel from './_components/OptionsPanel';
 import DataPanel from './_components/DataPanel';
+import ThemePanel from './_components/ThemePanel';
+
+const TAB_ICON_SIZE = 15;
+const TAB_ICON_STROKE = 1.75;
 
 const TABS = [
-    { key: 'tags', label: 'タグ', icon: '🏷️' },
-    { key: 'status', label: 'ステータス', icon: '📊' },
-    { key: 'projects', label: 'プロジェクト', icon: '📁' },
-    { key: 'options', label: 'オプション', icon: '🔧' },
-    { key: 'data', label: 'データ管理', icon: '💾' },
+    { key: 'tags', label: 'タグ', icon: <Tag size={TAB_ICON_SIZE} strokeWidth={TAB_ICON_STROKE} /> },
+    { key: 'status', label: 'ステータス', icon: <BarChart3 size={TAB_ICON_SIZE} strokeWidth={TAB_ICON_STROKE} /> },
+    { key: 'projects', label: 'プロジェクト', icon: <FolderOpen size={TAB_ICON_SIZE} strokeWidth={TAB_ICON_STROKE} /> },
+    { key: 'theme', label: 'テーマ', icon: <Palette size={TAB_ICON_SIZE} strokeWidth={TAB_ICON_STROKE} /> },
+    { key: 'options', label: 'オプション', icon: <Wrench size={TAB_ICON_SIZE} strokeWidth={TAB_ICON_STROKE} /> },
+    { key: 'data', label: 'データ管理', icon: <Database size={TAB_ICON_SIZE} strokeWidth={TAB_ICON_STROKE} /> },
 ];
 
 export default function Settings() {
@@ -48,7 +54,7 @@ export default function Settings() {
 
     return (
         <div className="s-page">
-            <h2 className="page-title">⚙️ 設定</h2>
+            <h2 className="page-title">設定</h2>
             <p className="s-sub">タグやマスターデータをカスタマイズ</p>
 
             <div className="s-tabs">
@@ -68,6 +74,7 @@ export default function Settings() {
                         {tab === 'tags' && <TagsPanel data={data} setData={setData} flash={flash} />}
                         {tab === 'status' && <StatusPanel data={data} setData={setData} flash={flash} />}
                         {tab === 'projects' && <ProjectsPanel data={data} setData={setData} flash={flash} />}
+                        {tab === 'theme' && <ThemePanel appSettings={appSettings} setAppSettings={setAppSettings} flash={flash} />}
                         {tab === 'options' && <OptionsPanel appSettings={appSettings} setAppSettings={setAppSettings} flash={flash} />}
                         {tab === 'data' && <DataPanel flash={flash} />}
                     </>
@@ -84,7 +91,7 @@ export default function Settings() {
         .s-tabs { display:flex; gap:3px; margin-bottom:1.25rem; padding:4px; background:var(--color-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-sm) }
         .s-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:.35rem; padding:.6rem .5rem; border:none; background:transparent; color:var(--color-text-muted); font-size:.85rem; font-weight:500; border-radius:9px; cursor:pointer; transition:all .2s; font-family:inherit }
         .s-tab:hover { background:var(--color-surface-hover); color:var(--color-text) }
-        .s-tab.on { background:var(--color-primary); color:#fff; font-weight:600; box-shadow:0 2px 10px rgba(79,110,247,.18) }
+        .s-tab.on { background:var(--color-accent); color:#fff; font-weight:600; box-shadow:0 2px 10px color-mix(in srgb, var(--color-accent) 25%, transparent) }
 
         .s-panel { background:var(--color-surface); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.5rem; min-height:200px; box-shadow:var(--shadow-sm) }
         .s-center { display:flex; align-items:center; justify-content:center; gap:.6rem; padding:3rem; color:var(--color-text-muted) }
@@ -127,7 +134,7 @@ export default function Settings() {
         }
         .s-move-btn:hover:not(:disabled) {
           background:var(--color-surface-hover); border-color:var(--border-color);
-          color:var(--color-primary);
+          color:var(--color-accent);
         }
         .s-move-btn:active:not(:disabled) { transform:scale(.9) }
         .s-move-btn:disabled { opacity:.2; cursor:default }
@@ -155,12 +162,12 @@ export default function Settings() {
           padding:.35rem .55rem; color:var(--color-text); border-radius:6px;
           font-size:.88rem; font-weight:500; outline:none; transition:all .18s; font-family:inherit;
         }
-        .s-input:focus { background:var(--color-surface-hover); border-color:var(--color-primary); box-shadow:0 0 0 2px var(--color-primary-glow) }
+        .s-input:focus { background:var(--color-surface-hover); border-color:var(--color-accent); box-shadow:0 0 0 2px var(--color-accent-glow) }
         .s-input::placeholder { color:var(--color-text-disabled); font-weight:400 }
         .s-label { flex:1; font-size:.88rem; font-weight:500; color:var(--color-text); padding:.35rem .55rem }
 
         .s-btn-primary {
-          background:var(--color-primary); border:none; color:#fff;
+          background:var(--color-accent); border:none; color:#fff;
           padding:.42rem .9rem; border-radius:var(--radius-sm); font-size:.82rem;
           font-weight:600; cursor:pointer; white-space:nowrap; transition:all .18s; font-family:inherit;
         }
@@ -191,7 +198,7 @@ export default function Settings() {
         .s-row:hover .s-archive-btn { opacity:1 }
         .s-archive-btn:hover { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.2); }
         .s-unarchive-btn { opacity:1 !important; }
-        .s-unarchive-btn:hover { background:rgba(79,110,247,.1); border-color:rgba(79,110,247,.2); }
+        .s-unarchive-btn:hover { background:var(--color-accent-subtle); border-color:color-mix(in srgb, var(--color-accent) 25%, transparent); }
 
         .s-archived-header {
           display:flex; align-items:center; gap:.5rem;
@@ -247,7 +254,7 @@ export default function Settings() {
           background:var(--color-text-disabled); border:none; cursor:pointer;
           transition:background .25s; flex-shrink:0; padding:0;
         }
-        .opt-toggle.on { background:var(--color-primary) }
+        .opt-toggle.on { background:var(--color-accent) }
         .opt-toggle-knob {
           position:absolute; top:3px; left:3px; width:20px; height:20px;
           border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2);
@@ -265,8 +272,8 @@ export default function Settings() {
           text-align:center; transition:border-color .2s, box-shadow .2s;
         }
         .opt-number-input:focus {
-          outline:none; border-color:var(--color-primary);
-          box-shadow:0 0 0 3px var(--color-primary-glow);
+          outline:none; border-color:var(--color-accent);
+          box-shadow:0 0 0 3px var(--color-accent-glow);
           background:var(--color-surface);
         }
         .opt-number-unit { font-size:.82rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
