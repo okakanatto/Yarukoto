@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 
 export default function TagSelect({ allTags, selectedTagIds, onChange }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const ref = useRef(null);
     const inputRef = useRef(null);
+    const triggerRef = useRef(null);
+    const dropdownId = useId();
 
     useEffect(() => {
         const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -34,11 +36,38 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
         onChange(selectedTagIds.filter(id => id !== tagId));
     };
 
+    // IMP-21: Keyboard support for trigger (Enter/Space to open/close)
+    const handleTriggerKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen(!open);
+        }
+    };
+
+    // IMP-21: Escape in search input closes dropdown and returns focus to trigger
+    const handleSearchKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+            triggerRef.current?.focus();
+        }
+    };
+
     const selectedTags = allTags.filter(t => selectedTagIds.includes(t.id));
 
     return (
         <div className="ts-root" ref={ref}>
-            <div className="ts-trigger" onClick={() => setOpen(!open)}>
+            <div
+                className="ts-trigger"
+                ref={triggerRef}
+                tabIndex={0}
+                role="combobox"
+                aria-expanded={open}
+                aria-controls={dropdownId}
+                onClick={() => setOpen(!open)}
+                onKeyDown={handleTriggerKeyDown}
+            >
                 <div className="ts-pills">
                     {selectedTags.length === 0 && <span className="ts-placeholder">タグを選択...</span>}
                     {selectedTags.map(tag => (
@@ -52,7 +81,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
             </div>
 
             {open && (
-                <div className="ts-dropdown">
+                <div className="ts-dropdown" id={dropdownId}>
                     <div className="ts-search-wrap">
                         <input
                             ref={inputRef}
@@ -62,6 +91,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onClick={(e) => e.stopPropagation()}
+                            onKeyDown={handleSearchKeyDown}
                         />
                     </div>
                     <div className="ts-options">
@@ -96,6 +126,10 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           cursor: pointer; min-height: 38px; transition: border-color 0.2s;
         }
         .ts-trigger:hover { border-color: var(--border-color-hover); }
+        .ts-trigger:focus {
+          outline: none; border-color: var(--color-primary);
+          box-shadow: 0 0 0 3px var(--color-primary-glow);
+        }
         .ts-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; flex: 1; }
         .ts-placeholder { color: var(--color-text-disabled); font-size: 0.85rem; }
         .ts-pill {

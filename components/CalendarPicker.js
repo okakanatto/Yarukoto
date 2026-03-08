@@ -10,19 +10,55 @@ function toDateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pa
 
 export default function CalendarPicker({ value, onChange, label, alignRight = false }) {
   const [open, setOpen] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date());
   const ref = useRef(null);
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const selected = value ? new Date(value + 'T00:00:00') : null;
   const [viewYear, setViewYear] = useState(selected ? selected.getFullYear() : new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(selected ? selected.getMonth() : new Date().getMonth());
+  const [focusedDay, setFocusedDay] = useState(null);
 
   // Close on outside click
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setFocusedDay(null);
+      }
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Focus the dropdown DOM element when it opens
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => dropdownRef.current?.focus(), 0);
+    }
+  }, [open]);
+
+  // Compute initial focused day based on current view
+  const computeInitialFocusedDay = () => {
+    if (selected && selected.getFullYear() === viewYear && selected.getMonth() === viewMonth) {
+      return selected.getDate();
+    }
+    const now = new Date();
+    if (now.getFullYear() === viewYear && now.getMonth() === viewMonth) {
+      return now.getDate();
+    }
+    return 1;
+  };
+
+  const openCalendar = () => {
+    setOpen(true);
+    setFocusedDay(computeInitialFocusedDay());
+  };
+
+  const closeCalendar = () => {
+    setOpen(false);
+    setFocusedDay(null);
+  };
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
@@ -39,13 +75,57 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
   const handleSelect = (day) => {
     const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`;
     onChange(dateStr);
-    setOpen(false);
+    closeCalendar();
+    triggerRef.current?.focus();
   };
 
   const handleClear = (e) => {
     e.stopPropagation();
     onChange('');
-    setOpen(false);
+    closeCalendar();
+    triggerRef.current?.focus();
+  };
+
+  // IMP-21: Keyboard support for trigger (Enter/Space to open/close)
+  const handleTriggerKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (open) { closeCalendar(); } else { openCalendar(); }
+    }
+  };
+
+  // IMP-21: Keyboard navigation within the calendar dropdown
+  const handleDropdownKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      closeCalendar();
+      triggerRef.current?.focus();
+      return;
+    }
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (focusedDay) {
+        handleSelect(focusedDay);
+      }
+      return;
+    }
+
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      const current = new Date(viewYear, viewMonth, focusedDay || 1);
+
+      if (e.key === 'ArrowLeft') current.setDate(current.getDate() - 1);
+      if (e.key === 'ArrowRight') current.setDate(current.getDate() + 1);
+      if (e.key === 'ArrowUp') current.setDate(current.getDate() - 7);
+      if (e.key === 'ArrowDown') current.setDate(current.getDate() + 7);
+
+      setViewYear(current.getFullYear());
+      setViewMonth(current.getMonth());
+      setFocusedDay(current.getDate());
+      return;
+    }
   };
 
   const today = new Date();
@@ -57,7 +137,16 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
 
   return (
     <div className="cal-root" ref={ref}>
-      <div className="cal-trigger" onClick={() => setOpen(!open)}>
+      <div
+        className="cal-trigger"
+        ref={triggerRef}
+        tabIndex={0}
+        role="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => { if (open) { closeCalendar(); } else { openCalendar(); } }}
+        onKeyDown={handleTriggerKeyDown}
+      >
         <span className="cal-icon">📅</span>
         <span className={`cal-value ${!value ? 'placeholder' : ''}`}>
           {value || '日付を選択'}
@@ -66,28 +155,37 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
       </div>
 
       {open && (
-        <div className={`cal-dropdown ${alignRight ? 'align-right' : ''}`}>
+        <div
+          className={`cal-dropdown ${alignRight ? 'align-right' : ''}`}
+          ref={dropdownRef}
+          tabIndex={-1}
+          role="dialog"
+          aria-label="カレンダー"
+          onKeyDown={handleDropdownKeyDown}
+        >
           <div className="cal-header">
-            <button type="button" className="cal-nav" onClick={prevMonth}>‹</button>
+            <button type="button" className="cal-nav" tabIndex={-1} onClick={prevMonth}>‹</button>
             <span className="cal-title">{viewYear}年 {MONTHS[viewMonth]}</span>
-            <button type="button" className="cal-nav" onClick={nextMonth}>›</button>
+            <button type="button" className="cal-nav" tabIndex={-1} onClick={nextMonth}>›</button>
           </div>
           <div className="cal-weekdays">
             {WEEKDAYS.map((w, i) => (
               <span key={i} className={`cal-wd ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}`}>{w}</span>
             ))}
           </div>
-          <div className="cal-grid">
+          <div className="cal-grid" role="grid">
             {cells.map((day, i) => {
               if (day === null) return <span key={`e${i}`} className="cal-cell empty"></span>;
               const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`;
               const isSelected = value === dateStr;
               const isToday = dateStr === todayStr;
+              const isFocused = focusedDay === day;
               return (
                 <button
                   key={day}
                   type="button"
-                  className={`cal-cell ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
+                  tabIndex={-1}
+                  className={`cal-cell ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${isFocused ? 'focused' : ''}`}
                   onClick={() => handleSelect(day)}
                 >
                   {day}
@@ -96,7 +194,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
             })}
           </div>
           <div className="cal-footer">
-            <button type="button" className="cal-today-btn" onClick={() => { onChange(todayStr); setOpen(false); }}>
+            <button type="button" className="cal-today-btn" tabIndex={-1} onClick={() => { onChange(todayStr); closeCalendar(); triggerRef.current?.focus(); }}>
               今日
             </button>
           </div>
@@ -109,10 +207,14 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
           display: flex; align-items: center; gap: 0.5rem;
           background: var(--color-surface-hover); border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 0.5rem 0.65rem;
-          cursor: pointer; transition: border-color 0.2s;
+          cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
           font-size: 0.875rem; color: var(--color-text);
         }
         .cal-trigger:hover { border-color: var(--border-color-hover); }
+        .cal-trigger:focus {
+          outline: none; border-color: var(--color-primary);
+          box-shadow: 0 0 0 3px var(--color-primary-glow);
+        }
         .cal-icon { font-size: 0.9rem; }
         .cal-value { flex: 1; }
         .cal-value.placeholder { color: var(--color-text-disabled); }
@@ -131,6 +233,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
           box-shadow: 0 12px 40px rgba(0,0,0,0.1);
           padding: 0.75rem;
           animation: calDrop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          outline: none;
         }
         @keyframes calDrop {
           from { opacity: 0; transform: translateY(-6px) scale(0.97); }
@@ -176,6 +279,15 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         .cal-cell.selected {
           background: var(--color-primary) !important;
           color: white; font-weight: 600;
+        }
+        .cal-cell.focused:not(.selected) {
+          outline: 2px solid var(--color-primary);
+          outline-offset: -2px;
+          background: var(--color-surface-hover);
+        }
+        .cal-cell.focused.selected {
+          outline: 2px solid var(--color-text);
+          outline-offset: 2px;
         }
 
         .cal-footer {
