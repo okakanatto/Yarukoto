@@ -15,10 +15,10 @@ describe('projectsテーブルのスキーマ', () => {
     expect(tables).toHaveLength(1);
   });
 
-  it('デフォルト「General」プロジェクトがシードされている', async () => {
+  it('デフォルト「Inbox」プロジェクトがシードされている', async () => {
     const rows = await db.select('SELECT * FROM projects WHERE is_default = 1');
     expect(rows).toHaveLength(1);
-    expect(rows[0].name).toBe('General');
+    expect(rows[0].name).toBe('Inbox');
     expect(rows[0].is_default).toBe(1);
   });
 
