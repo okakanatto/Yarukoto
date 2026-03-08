@@ -75,5 +75,8 @@ Readme.txt
 # Release binaries (managed via GitHub Releases)
 releases/
 
+# Design references
+design-ref/
+
 # Archives
 archives/
