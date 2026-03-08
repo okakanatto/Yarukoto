@@ -291,9 +291,10 @@ function LayoutInner({ children }) {
                                     <button className="fab-modal-close" onClick={() => setFabOpen(false)}>✕</button>
                                 </div>
                                 <TaskInput
+                                    autoFocus
                                     onTaskAdded={() => {
-                                        setFabOpen(false);
-                                        // Dispatch custom event so pages can refresh their list
+                                        // IMP-24: Don't close modal — allow continuous input
+                                        // TaskInput internally resets the form and re-focuses the title input
                                         window.dispatchEvent(new CustomEvent('yarukoto:taskAdded'));
                                     }}
                                 />

@@ -6,7 +6,7 @@ import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
 import { fetchDb } from '@/lib/utils';
 
-export default function TaskInput({ onTaskAdded, predefinedParentId = null, defaultProjectId = null }) {
+export default function TaskInput({ onTaskAdded, predefinedParentId = null, defaultProjectId = null, autoFocus = false }) {
     const [title, setTitle] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -26,6 +26,14 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
 
     const { masters, tags: allTags, projects } = useMasterData();
     const [projectId, setProjectId] = useState(defaultProjectId ? String(defaultProjectId) : '');
+
+    // IMP-23: Auto-focus title input when autoFocus prop is true (FAB modal)
+    useEffect(() => {
+        if (autoFocus && titleInputRef.current) {
+            const timer = setTimeout(() => titleInputRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [autoFocus]);
 
     // Fetch eligible parent tasks when the form expands (only for root task creation)
     useEffect(() => {
