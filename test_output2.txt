@@ -1,0 +1,39 @@
+
+> yarukoto@1.7.1 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/okdtk/OneDrive/繝峨く繝･繝｡繝ｳ繝・10_Projects/Yarukoto[39m
+
+ [32m笨・[39m tests/lib/taskSorter.test.js [2m([22m[2m13 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32m笨・[39m tests/lib/dateUtils.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m笨・[39m tests/lib/utils.test.js [2m([22m[2m12 tests[22m[2m)[22m[33m 372[2mms[22m[39m
+     [33m[2m笨・[22m[39m 豁｣蟶ｸ譎ゅ・COMMIT縺輔ｌ繧・[33m 319[2mms[22m[39m
+ [32m笨・[39m tests/db/schema.test.js [2m([22m[2m6 tests[22m[2m)[22m[33m 418[2mms[22m[39m
+     [33m[2m笨・[22m[39m 蜈ｨ繝・・繝悶Ν縺御ｽ懈・縺輔ｌ縺ｦ縺・ｋ [33m 335[2mms[22m[39m
+ [32m笨・[39m tests/db/statusTransition.test.js [2m([22m[2m5 tests[22m[2m)[22m[33m 423[2mms[22m[39m
+     [33m[2m笨・[22m[39m 譛ｪ逹謇・1) 竊・逹謇倶ｸｭ(2) 竊・螳御ｺ・3) 縺ｮ鬆・↓驕ｷ遘ｻ縺ｧ縺阪ｋ [33m 360[2mms[22m[39m
+ [32m笨・[39m tests/db/taskCrud.test.js [2m([22m[2m5 tests[22m[2m)[22m[33m 437[2mms[22m[39m
+     [33m[2m笨・[22m[39m 繧ｿ繧ｹ繧ｯ繧定ｿｽ蜉縺吶ｋ縺ｨDB縺ｫ菫晏ｭ倥＆繧後ｋ [33m 372[2mms[22m[39m
+ [32m笨・[39m tests/db/settings.test.js [2m([22m[2m7 tests[22m[2m)[22m[33m 451[2mms[22m[39m
+     [33m[2m笨・[22m[39m 險ｭ螳壼､繧定ｪｭ縺ｿ譖ｸ縺阪〒縺阪ｋ [33m 371[2mms[22m[39m
+ [32m笨・[39m tests/db/doneQueries.test.js [2m([22m[2m8 tests[22m[2m)[22m[33m 462[2mms[22m[39m
+     [33m[2m笨・[22m[39m 螳御ｺ・ち繧ｹ繧ｯ繧呈律莉倥＃縺ｨ縺ｫ繧ｫ繧ｦ繝ｳ繝医〒縺阪ｋ [33m 339[2mms[22m[39m
+ [32m笨・[39m tests/db/routines.test.js [2m([22m[2m6 tests[22m[2m)[22m[33m 468[2mms[22m[39m
+     [33m[2m笨・[22m[39m 繝ｫ繝ｼ繝・ぅ繝ｳ繧定ｿｽ蜉縺ｧ縺阪ｋ [33m 383[2mms[22m[39m
+ [32m笨・[39m tests/db/archive.test.js [2m([22m[2m12 tests[22m[2m)[22m[33m 368[2mms[22m[39m
+ [32m笨・[39m tests/db/projects.test.js [2m([22m[2m13 tests[22m[2m)[22m[33m 519[2mms[22m[39m
+     [33m[2m笨・[22m[39m projects繝・・繝悶Ν縺御ｽ懈・縺輔ｌ縺ｦ縺・ｋ [33m 346[2mms[22m[39m
+ [32m笨・[39m tests/db/parentChild.test.js [2m([22m[2m8 tests[22m[2m)[22m[33m 523[2mms[22m[39m
+     [33m[2m笨・[22m[39m 蟄舌ち繧ｹ繧ｯ霑ｽ蜉譎ゅ↓parent_id縺梧ｭ｣縺励￥險ｭ螳壹＆繧後ｋ [33m 365[2mms[22m[39m
+ [32m笨・[39m tests/lib/holidayService.test.js [2m([22m[2m11 tests[22m[2m)[22m[33m 520[2mms[22m[39m
+     [33m[2m笨・[22m[39m 蝨滓屆譌･縺ｯtrue繧定ｿ斐☆ [33m 329[2mms[22m[39m
+ [32m笨・[39m tests/lib/taskListQueries.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m笨・[39m tests/hooks/useTodayGrouping.test.js [2m([22m[2m5 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m笨・[39m tests/hooks/usePanelManager.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m16 passed[39m[22m[90m (16)[39m
+[2m      Tests [22m [1m[32m137 passed[39m[22m[90m (137)[39m
+[2m   Start at [22m 16:40:50
+[2m   Duration [22m 2.98s[2m (transform 2.04s, setup 937ms, import 2.77s, tests 5.18s, environment 3.70s)[22m
+

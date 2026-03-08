@@ -40,4 +40,15 @@ describe('app_settings', () => {
     const rows = await db.select("SELECT value FROM app_settings WHERE key = $1", ['auto_complete_parent']);
     expect(rows[0].value).toBe('0');
   });
+
+  it('デフォルトのtheme_modeはlight', async () => {
+    const rows = await db.select("SELECT value FROM app_settings WHERE key = $1", ['theme_mode']);
+    expect(rows[0]?.value).toBe('light');
+  });
+
+  it('デフォルトのtheme_accentはcoral', async () => {
+    const rows = await db.select("SELECT value FROM app_settings WHERE key = $1", ['theme_accent']);
+    expect(rows[0]?.value).toBe('coral');
+  });
 });
+
