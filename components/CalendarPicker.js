@@ -151,7 +151,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         <span className={`cal-value ${!value ? 'placeholder' : ''}`}>
           {value || '日付を選択'}
         </span>
-        {value && <button type="button" className="cal-clear" onClick={handleClear}>✕</button>}
+        {value && <button type="button" className="cal-clear" onClick={handleClear} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}>✕</button>}
       </div>
 
       {open && (

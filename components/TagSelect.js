@@ -44,8 +44,8 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
         }
     };
 
-    // IMP-21: Escape in search input closes dropdown and returns focus to trigger
-    const handleSearchKeyDown = (e) => {
+    // IMP-21: Escape in dropdown closes it and returns focus to trigger
+    const handleDropdownKeyDown = (e) => {
         if (e.key === 'Escape') {
             e.preventDefault();
             e.stopPropagation();
@@ -73,7 +73,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
                     {selectedTags.map(tag => (
                         <span key={tag.id} className={`ts-pill ${tag.archived ? 'ts-pill-archived' : ''}`} style={{ backgroundColor: tag.color }}>
                             {tag.name}
-                            <button type="button" className="ts-pill-x" onClick={(e) => remove(tag.id, e)}>×</button>
+                            <button type="button" className="ts-pill-x" onClick={(e) => remove(tag.id, e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}>×</button>
                         </span>
                     ))}
                 </div>
@@ -81,7 +81,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
             </div>
 
             {open && (
-                <div className="ts-dropdown" id={dropdownId}>
+                <div className="ts-dropdown" id={dropdownId} onKeyDown={handleDropdownKeyDown}>
                     <div className="ts-search-wrap">
                         <input
                             ref={inputRef}
@@ -91,7 +91,6 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onClick={(e) => e.stopPropagation()}
-                            onKeyDown={handleSearchKeyDown}
                         />
                     </div>
                     <div className="ts-options">
