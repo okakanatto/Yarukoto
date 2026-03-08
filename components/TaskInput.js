@@ -216,7 +216,12 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
 
     return (
         <div className={`task-input-wrapper ${isExpanded ? 'expanded' : ''} ${submitSuccess ? 'success-flash' : ''}`}>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit(e);
+                }
+            }}>
                 <div className="input-primary-row">
                     <input
                         type="text"
