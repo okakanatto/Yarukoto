@@ -472,9 +472,9 @@ export default function TodayPage() {
           color: var(--color-accent);
         }
         .milestone-half {
-          background: rgba(245,158,11,0.06);
-          border: 1px solid rgba(245,158,11,0.2);
-          color: #b45309;
+          background: var(--color-warning-bg);
+          border: 1px solid color-mix(in srgb, var(--color-warning) 20%, transparent);
+          color: var(--color-warning);
         }
         .today-complete-banner {
           margin-top: 1rem; padding: 1.25rem;

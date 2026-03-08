@@ -285,8 +285,8 @@ export default function Settings() {
           box-shadow:0 8px 24px rgba(0,0,0,0.1);
           animation:s-tIn .3s cubic-bezier(.16,1,.3,1);
         }
-        .s-toast-ok  { background:#ecfdf5; border:1px solid #bbf7d0; color:#15803d }
-        .s-toast-err { background:#fef2f2; border:1px solid #fecaca; color:#b91c1c }
+        .s-toast-ok  { background:var(--toast-success-bg); border:1px solid var(--toast-success-border); color:var(--toast-success-text) }
+        .s-toast-err { background:var(--toast-error-bg); border:1px solid var(--toast-error-border); color:var(--toast-error-text) }
         @keyframes s-tIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
         </div>

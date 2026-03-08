@@ -21,6 +21,7 @@
   --color-accent: #F97316;
   --color-accent-hover: #EA580C;
   --color-accent-subtle: rgba(249, 115, 22, 0.10);
+  --color-accent-glow: var(--color-accent-subtle);
 
   /* Status Colors */
   --color-success: #16a34a;
