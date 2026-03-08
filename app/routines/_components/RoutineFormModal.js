@@ -391,7 +391,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-field-label { font-size: 0.82rem; color: var(--color-text-secondary); font-weight: 500; }
 
         .rt-select-clean {
-            background: var(--color-surface-hover); border: 1px solid transparent;
+            background-color: var(--color-surface-hover); border: 1px solid transparent;
             padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-size: 0.95rem;
             cursor: pointer; color: var(--color-text);
         }
@@ -427,7 +427,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-field label { display: block; font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.25rem; font-weight: 500; }
         .rt-select, .rt-input, .rt-textarea {
             width: 100%; padding: 0.5rem; border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm); background: var(--color-surface);
+            border-radius: var(--radius-sm); background-color: var(--color-surface);
             color: var(--color-text); font-size: 0.9rem; transition: border-color 0.2s;
         }
         .rt-select:focus, .rt-input:focus, .rt-textarea:focus { outline: none; border-color: var(--color-primary); }

@@ -437,7 +437,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         input:focus, select:focus, textarea:focus {
           border-color: var(--color-accent);
           box-shadow: 0 0 0 3px var(--color-accent-subtle);
-          background: var(--color-surface);
+          background-color: var(--color-surface);
         }
         textarea { resize: vertical; min-height: 60px; }
         .panel-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; }
