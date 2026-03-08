@@ -50,5 +50,23 @@ describe('app_settings', () => {
     const rows = await db.select("SELECT value FROM app_settings WHERE key = $1", ['theme_accent']);
     expect(rows[0]?.value).toBe('coral');
   });
+
+  it('theme_modeをdarkに変更できる', async () => {
+    await db.execute(
+      'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
+      ['theme_mode', 'dark']
+    );
+    const rows = await db.select("SELECT value FROM app_settings WHERE key = $1", ['theme_mode']);
+    expect(rows[0].value).toBe('dark');
+  });
+
+  it('theme_accentを別のプリセットに変更できる', async () => {
+    await db.execute(
+      'INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)',
+      ['theme_accent', 'violet']
+    );
+    const rows = await db.select("SELECT value FROM app_settings WHERE key = $1", ['theme_accent']);
+    expect(rows[0].value).toBe('violet');
+  });
 });
 
