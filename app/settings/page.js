@@ -83,6 +83,10 @@ export default function Settings() {
 
             {toast && <div className={`s-toast ${toast.type === 'ok' ? 's-toast-ok' : 's-toast-err'}`}>{toast.type === 'ok' ? '✅' : '❌'} {toast.msg}</div>}
 
+            {process.env.NEXT_PUBLIC_APP_VERSION && (
+                <p className="s-version">Yarukoto v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
+            )}
+
             <style jsx global>{`
         .s-page { max-width:700px; animation:s-up .35s ease }
         @keyframes s-up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
@@ -277,6 +281,8 @@ export default function Settings() {
           background:var(--color-surface);
         }
         .opt-number-unit { font-size:.82rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
+
+        .s-version { text-align:center; color:var(--color-text-disabled); font-size:.75rem; margin-top:1.5rem; }
 
         .s-toast {
           position:fixed; bottom:1.5rem; right:1.5rem;
