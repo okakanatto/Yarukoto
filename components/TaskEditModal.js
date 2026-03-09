@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import CalendarPicker from './CalendarPicker';
 import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
-import { fetchDb } from '@/lib/utils';
+import { useDbOperation } from '../hooks/useDbOperation';
+import { fetchDb, safeTransaction } from '@/lib/utils';
 
 export default function TaskEditModal({ task, onClose, onSaved }) {
     const [title, setTitle] = useState(task.title || '');
@@ -23,6 +24,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
     const [projectId, setProjectId] = useState(task.project_id != null ? String(task.project_id) : '');
 
     const { masters, tags: allTags, projects } = useMasterData();
+    const dbOp = useDbOperation();
 
     // IMP-36: Auto-select default project if task has no project_id
     useEffect(() => {
@@ -72,82 +74,85 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
         if (!title.trim() || saving) return;
         setSaving(true);
         try {
-            const db = await fetchDb();
-
-            // BUG-6: DB側バリデーション — 子タスクを持つタスクに親を設定させない
-            if (parentId) {
-                const childCheck = await db.select(
-                    'SELECT COUNT(*) as cnt FROM tasks WHERE parent_id = $1',
-                    [task.id]
-                );
-                if (childCheck[0]?.cnt > 0) {
-                    window.dispatchEvent(new CustomEvent('yarukoto:toast', {
-                        detail: { message: '子タスクを持つタスクには親タスクを設定できません', type: 'error' }
-                    }));
-                    setSaving(false);
-                    return;
+            const saved = await dbOp(async (db) => {
+                // BUG-6: DB側バリデーション — 子タスクを持つタスクに親を設定させない
+                if (parentId) {
+                    const childCheck = await db.select(
+                        'SELECT COUNT(*) as cnt FROM tasks WHERE parent_id = $1',
+                        [task.id]
+                    );
+                    if (childCheck[0]?.cnt > 0) {
+                        window.dispatchEvent(new CustomEvent('yarukoto:toast', {
+                            detail: { message: '子タスクを持つタスクには親タスクを設定できません', type: 'error' }
+                        }));
+                        return false;
+                    }
                 }
-            }
 
-            // Resolve project_id: use selected, or default project
-            let resolvedProjectId = projectId ? parseInt(projectId) : null;
-            if (!resolvedProjectId) {
-                const defaultProj = await db.select('SELECT id FROM projects WHERE is_default = 1 LIMIT 1');
-                resolvedProjectId = defaultProj[0]?.id || null;
-            }
-
-            // Update the main task record
-            await db.execute(`
-                UPDATE tasks
-                SET title = $1, start_date = $2, due_date = $3,
-                importance_level = $4, urgency_level = $5,
-                estimated_hours = $6, notes = $7, status_code = $8,
-                parent_id = $9, project_id = $10,
-                updated_at = datetime('now', 'localtime'),
-                completed_at = CASE
-                        WHEN CAST($8 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
-                        WHEN CAST($8 AS INTEGER) != 3 THEN NULL
-                        ELSE completed_at
-                    END
-                WHERE id = $11
-                `, [
-                title,
-                startDate || null,
-                dueDate || null,
-                importance ? parseInt(importance) : null,
-                urgency ? parseInt(urgency) : null,
-                estimatedMinutes ? parseInt(estimatedMinutes) : null,
-                notes || '',
-                parseInt(statusCode),
-                parentId || null,
-                resolvedProjectId,
-                task.id
-            ]);
-
-            // IMP-39: Cascade project_id to child tasks when parent's project changes
-            if (resolvedProjectId !== task.project_id) {
-                await db.execute(
-                    'UPDATE tasks SET project_id = $1 WHERE parent_id = $2',
-                    [resolvedProjectId, task.id]
-                );
-            }
-
-            // Update tags (delete existing, insert new ones)
-            await db.execute('DELETE FROM task_tags WHERE task_id = $1', [task.id]);
-
-            if (selectedTags && selectedTags.length > 0) {
-                for (const tagId of selectedTags) {
-                    await db.execute('INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [task.id, tagId]);
+                // Resolve project_id: use selected, or default project
+                let resolvedProjectId = projectId ? parseInt(projectId) : null;
+                if (!resolvedProjectId) {
+                    const defaultProj = await db.select('SELECT id FROM projects WHERE is_default = 1 LIMIT 1');
+                    resolvedProjectId = defaultProj[0]?.id || null;
                 }
-            }
 
-            onSaved();
-            onClose();
-        } catch (err) {
-            console.error(err);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', {
-                detail: { message: '保存に失敗しました', type: 'error' }
-            }));
+                // All writes in a single transaction for atomicity
+                await safeTransaction(db, async () => {
+                    // Update the main task record
+                    await db.execute(`
+                        UPDATE tasks
+                        SET title = $1, start_date = $2, due_date = $3,
+                        importance_level = $4, urgency_level = $5,
+                        estimated_hours = $6, notes = $7, status_code = $8,
+                        parent_id = $9, project_id = $10,
+                        updated_at = datetime('now', 'localtime'),
+                        completed_at = CASE
+                                WHEN CAST($8 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
+                                WHEN CAST($8 AS INTEGER) != 3 THEN NULL
+                                ELSE completed_at
+                            END
+                        WHERE id = $11
+                        `, [
+                        title,
+                        startDate || null,
+                        dueDate || null,
+                        importance ? parseInt(importance) : null,
+                        urgency ? parseInt(urgency) : null,
+                        estimatedMinutes ? parseInt(estimatedMinutes) : null,
+                        notes || '',
+                        parseInt(statusCode),
+                        parentId || null,
+                        resolvedProjectId,
+                        task.id
+                    ]);
+
+                    // IMP-39: Cascade project_id to child tasks when parent's project changes
+                    if (resolvedProjectId !== task.project_id) {
+                        await db.execute(
+                            'UPDATE tasks SET project_id = $1 WHERE parent_id = $2',
+                            [resolvedProjectId, task.id]
+                        );
+                    }
+
+                    // Update tags (delete existing, insert new ones)
+                    await db.execute('DELETE FROM task_tags WHERE task_id = $1', [task.id]);
+
+                    if (selectedTags && selectedTags.length > 0) {
+                        for (const tagId of selectedTags) {
+                            await db.execute('INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [task.id, tagId]);
+                        }
+                    }
+                });
+
+                return true;
+            }, { error: '保存に失敗しました' });
+
+            if (saved) {
+                onSaved();
+                onClose();
+            }
+        } catch {
+            // error handled by dbOp
         } finally {
             setSaving(false);
         }

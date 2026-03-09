@@ -126,4 +126,27 @@ describe('タスク・ルーティンとプロジェクトの紐付け', () => {
     expect(rows[0].project_name).toBe('開発');
     expect(rows[0].project_color).toBe('#ef4444');
   });
+
+  it('親タスクのプロジェクト変更時に子タスクのproject_idも連動して更新できる (IMP-39)', async () => {
+    const projA = await seedProject(db, { name: 'プロジェクトA' });
+    const projB = await seedProject(db, { name: 'プロジェクトB' });
+
+    const [parentId] = await seedTasks(db, [{ title: '親タスク', project_id: projA }]);
+    const [child1, child2] = await seedTasks(db, [
+      { title: '子タスク1', parent_id: parentId, project_id: projA },
+      { title: '子タスク2', parent_id: parentId, project_id: projA },
+    ]);
+
+    // 親タスクのプロジェクトをBに変更し、子タスクにもカスケード更新する（TaskEditModalの挙動再現）
+    await db.execute('UPDATE tasks SET project_id = $1 WHERE id = $2', [projB, parentId]);
+    await db.execute('UPDATE tasks SET project_id = $1 WHERE parent_id = $2', [projB, parentId]);
+
+    const parent = await db.select('SELECT project_id FROM tasks WHERE id = $1', [parentId]);
+    const children = await db.select('SELECT project_id FROM tasks WHERE parent_id = $1 ORDER BY id', [parentId]);
+
+    expect(parent[0].project_id).toBe(projB);
+    expect(children).toHaveLength(2);
+    expect(children[0].project_id).toBe(projB);
+    expect(children[1].project_id).toBe(projB);
+  });
 });

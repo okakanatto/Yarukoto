@@ -168,4 +168,33 @@ describe('親子タスクの関係', () => {
     expect(rows[3].title).toBe('独立タスク');
     expect(rows[3].today_sort_order).toBe(4);
   });
+
+  it('同一親タスク内の子タスクのtoday_sort_orderを並び替えることができる (IMP-38)', async () => {
+    const today = new Date().toLocaleDateString('sv-SE');
+    const [parentId] = await seedTasks(db, [{ title: '親タスク', today_date: today }]);
+    const [child1, child2, child3] = await seedTasks(db, [
+      { title: '子タスク1', parent_id: parentId, today_date: today },
+      { title: '子タスク2', parent_id: parentId, today_date: today },
+      { title: '子タスク3', parent_id: parentId, today_date: today },
+    ]);
+
+    // 子タスクの順序を child3 -> child1 -> child2 に変更する（アプリのpersistTodaySortOrderの挙動）
+    let orderIdx = 2; // 親が1だと仮定
+    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child3]);
+    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child1]);
+    await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child2]);
+
+    const rows = await db.select(
+      'SELECT id, title, today_sort_order FROM tasks WHERE parent_id = $1 ORDER BY today_sort_order',
+      [parentId]
+    );
+
+    expect(rows).toHaveLength(3);
+    expect(rows[0].title).toBe('子タスク3');
+    expect(rows[0].today_sort_order).toBe(2);
+    expect(rows[1].title).toBe('子タスク1');
+    expect(rows[1].today_sort_order).toBe(3);
+    expect(rows[2].title).toBe('子タスク2');
+    expect(rows[2].today_sort_order).toBe(4);
+  });
 });

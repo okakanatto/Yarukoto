@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { fetchDb } from '@/lib/utils';
+import { fetchDb, safeTransaction } from '@/lib/utils';
+import { useDbOperation } from '@/hooks/useDbOperation';
 
 /**
  * Custom hook that manages Drag & Drop logic for TaskList.
@@ -17,6 +18,7 @@ import { fetchDb } from '@/lib/utils';
  */
 export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedParentTasks, getChildTasks }) {
     const [activeId, setActiveId] = useState(null);
+    const dbOp = useDbOperation();
 
     const activeTaskData = activeId ? tasks.find(t => t.id === activeId) : null;
     const isDraggingChild = activeTaskData?.parent_id != null;
@@ -25,44 +27,39 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         setActiveId(event.active.id);
     }, []);
 
-    // Helper to persist sort_order for a list of task IDs
-    const persistSortOrder = useCallback(async (orderedIds, parentId = null) => {
-        try {
-            const db = await fetchDb();
+    /**
+     * Pure DB helper to persist sort_order for a list of task IDs.
+     * Must be called within an existing transaction (no own error handling).
+     */
+    const persistSortOrderInTx = async (db, orderedIds, parentId = null) => {
+        const query = parentId != null
+            ? 'SELECT id FROM tasks WHERE parent_id = $1 AND archived_at IS NULL ORDER BY sort_order ASC, id ASC'
+            : 'SELECT id FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL ORDER BY sort_order ASC, id ASC';
+        const params = parentId != null ? [parentId] : [];
+        const rows = await db.select(query, params);
+        let allIds = rows.map(r => r.id);
 
-            const query = parentId != null
-                ? 'SELECT id FROM tasks WHERE parent_id = $1 AND archived_at IS NULL ORDER BY sort_order ASC, id ASC'
-                : 'SELECT id FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL ORDER BY sort_order ASC, id ASC';
-            const params = parentId != null ? [parentId] : [];
-            const rows = await db.select(query, params);
-            let allIds = rows.map(r => r.id);
-
-            for (const id of orderedIds) {
-                if (!allIds.includes(id)) {
-                    allIds.push(id);
-                }
+        for (const id of orderedIds) {
+            if (!allIds.includes(id)) {
+                allIds.push(id);
             }
-
-            const positions = [];
-            for (const id of allIds) {
-                if (orderedIds.includes(id)) {
-                    positions.push(allIds.indexOf(id));
-                }
-            }
-
-            for (let i = 0; i < positions.length; i++) {
-                allIds[positions[i]] = orderedIds[i];
-            }
-
-            for (let i = 0; i < allIds.length; i++) {
-                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [i + 1, allIds[i]]);
-            }
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
-            fetchTasks();
         }
-    }, [fetchTasks]);
+
+        const positions = [];
+        for (const id of allIds) {
+            if (orderedIds.includes(id)) {
+                positions.push(allIds.indexOf(id));
+            }
+        }
+
+        for (let i = 0; i < positions.length; i++) {
+            allIds[positions[i]] = orderedIds[i];
+        }
+
+        for (let i = 0; i < allIds.length; i++) {
+            await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [i + 1, allIds[i]]);
+        }
+    };
 
     // Handle DnD reorder (manual sort mode)
     const handleReorder = useCallback(async (activeTaskId, overId) => {
@@ -114,19 +111,20 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
             return updated;
         });
 
-        // Persist to DB
+        // Persist to DB within a single transaction
         try {
-            const db = await fetchDb();
-            if (isUnnest) {
-                await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
-            }
-            await persistSortOrder(currentOrder, isRoot ? null : parentId);
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
+            await dbOp(async (db) => {
+                await safeTransaction(db, async () => {
+                    if (isUnnest) {
+                        await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
+                    }
+                    await persistSortOrderInTx(db, currentOrder, isRoot ? null : parentId);
+                });
+            }, { error: '並び替えの保存に失敗しました' });
+        } catch {
             fetchTasks();
         }
-    }, [tasks, setTasks, fetchTasks, getSortedParentTasks, getChildTasks, persistSortOrder]);
+    }, [tasks, setTasks, fetchTasks, getSortedParentTasks, getChildTasks, dbOp]);
 
     const handleDragEnd = useCallback(async (event) => {
         const { active, over } = event;
@@ -139,18 +137,19 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         const unnest = async () => {
             setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: null } : t));
             try {
-                const db = await fetchDb();
-                await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
-                // In manual mode, assign sort_order at the end of root tasks
-                if (sortMode === 'manual') {
-                    const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL');
-                    const newOrder = (maxSort[0]?.ms || 0) + 1;
-                    await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
-                    fetchTasks();
-                }
-            } catch (e) {
-                console.error(e);
-                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの処理に失敗しました', type: 'error' } }));
+                await dbOp(async (db) => {
+                    await safeTransaction(db, async () => {
+                        await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
+                        // In manual mode, assign sort_order at the end of root tasks
+                        if (sortMode === 'manual') {
+                            const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL');
+                            const newOrder = (maxSort[0]?.ms || 0) + 1;
+                            await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
+                        }
+                    });
+                }, { error: '並び替えの処理に失敗しました' });
+                if (sortMode === 'manual') fetchTasks();
+            } catch {
                 fetchTasks();
             }
         };
@@ -200,55 +199,46 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         } : t));
 
         try {
-            const db = await fetchDb();
-            await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
+            await dbOp(async (db) => {
+                await safeTransaction(db, async () => {
+                    await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
 
-            // IMP-39: Sync project_id with parent
-            await db.execute('UPDATE tasks SET project_id = $1 WHERE id = $2', [parentTask.project_id, active.id]);
+                    // IMP-39: Sync project_id with parent
+                    await db.execute('UPDATE tasks SET project_id = $1 WHERE id = $2', [parentTask.project_id, active.id]);
 
-            // In manual mode, assign sort_order at end of new parent's children
-            if (sortMode === 'manual') {
-                const maxSort = await db.select(
-                    'SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id = $1 AND archived_at IS NULL',
-                    [parentTask.id]
-                );
-                const newOrder = (maxSort[0]?.ms || 0) + 1;
-                await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
-            }
-
-            // Tag inheritance: copy parent tags to child if setting enabled
-            try {
-                const settingRows = await db.select(
-                    "SELECT value FROM app_settings WHERE key = 'inherit_parent_tags'"
-                );
-                if (settingRows.length > 0 && settingRows[0].value === '1') {
-                    const parentTags = await db.select(
-                        'SELECT tag_id FROM task_tags WHERE task_id = $1',
-                        [parentTask.id]
-                    );
-                    let tagsAdded = false;
-                    for (const row of parentTags) {
-                        await db.execute(
-                            'INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES ($1, $2)',
-                            [active.id, row.tag_id]
+                    // In manual mode, assign sort_order at end of new parent's children
+                    if (sortMode === 'manual') {
+                        const maxSort = await db.select(
+                            'SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id = $1 AND archived_at IS NULL',
+                            [parentTask.id]
                         );
-                        tagsAdded = true;
+                        const newOrder = (maxSort[0]?.ms || 0) + 1;
+                        await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
                     }
-                    if (tagsAdded) {
-                        fetchTasks();
-                        return;
+
+                    // Tag inheritance: copy parent tags to child if setting enabled
+                    const settingRows = await db.select(
+                        "SELECT value FROM app_settings WHERE key = 'inherit_parent_tags'"
+                    );
+                    if (settingRows.length > 0 && settingRows[0].value === '1') {
+                        const parentTags = await db.select(
+                            'SELECT tag_id FROM task_tags WHERE task_id = $1',
+                            [parentTask.id]
+                        );
+                        for (const row of parentTags) {
+                            await db.execute(
+                                'INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES ($1, $2)',
+                                [active.id, row.tag_id]
+                            );
+                        }
                     }
-                }
-            } catch (tagErr) {
-                console.error('Tag inheritance error:', tagErr);
-            }
+                });
+            }, { error: '並び替えの保存に失敗しました' });
             fetchTasks();
-        } catch (e) {
-            console.error(e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '並び替えの保存に失敗しました', type: 'error' } }));
+        } catch {
             fetchTasks();
         }
-    }, [tasks, setTasks, fetchTasks, sortMode, handleReorder]);
+    }, [tasks, setTasks, fetchTasks, sortMode, handleReorder, dbOp]);
 
     return {
         activeId,
