@@ -27,6 +27,15 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
     const { masters, tags: allTags, projects } = useMasterData();
     const [projectId, setProjectId] = useState(defaultProjectId ? String(defaultProjectId) : '');
 
+    // IMP-36: Auto-select default project (Inbox) when no explicit project context
+    useEffect(() => {
+        if (defaultProjectId || predefinedParentId) return;
+        if (projects.length > 0 && !projectId) {
+            const defaultProj = projects.find(p => p.is_default === 1);
+            if (defaultProj) setProjectId(String(defaultProj.id));
+        }
+    }, [projects, defaultProjectId, predefinedParentId]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // IMP-23: Auto-focus title input when autoFocus prop is true (FAB modal)
     useEffect(() => {
         if (autoFocus && titleInputRef.current) {
@@ -210,7 +219,11 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         setNotes('');
         setSelectedTags([]);
         setParentId('');
-        if (!predefinedParentId && !defaultProjectId) setProjectId('');
+        // IMP-36: Reset to default project (Inbox) instead of empty
+        if (!predefinedParentId && !defaultProjectId) {
+            const defaultProj = projects.find(p => p.is_default === 1);
+            setProjectId(defaultProj ? String(defaultProj.id) : '');
+        }
         // setIsExpanded(false); // Removed to allow continuous input
     };
 
@@ -237,6 +250,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
                         className={`btn-add ${submitting ? 'submitting' : ''} ${isExpanded ? 'expanded' : ''}`}
                         disabled={!isExpanded && (!title.trim() || submitting)}
                         title={isExpanded ? '閉じる' : '追加'}
+                        tabIndex={isExpanded ? -1 : undefined}
                         onClick={isExpanded ? (e) => { e.preventDefault(); setIsExpanded(false); } : undefined}
                     >
                         {submitting ? <span className="spinner-sm"></span> : isExpanded ? '−' : '+'}
@@ -267,7 +281,6 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
                             <div className="form-field">
                                 <label>プロジェクト</label>
                                 <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                                    <option value="">デフォルト</option>
                                     {projects.map(p => (
                                         <option key={p.id} value={p.id}>{p.name}</option>
                                     ))}

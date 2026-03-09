@@ -88,10 +88,15 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
   };
 
   // IMP-21: Keyboard support for trigger (Enter/Space to open/close)
+  // IMP-37: Delete/Backspace to clear date from trigger (Tab order optimization)
   const handleTriggerKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (open) { closeCalendar(); } else { openCalendar(); }
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && value) {
+      e.preventDefault();
+      onChange('');
     }
   };
 
@@ -152,7 +157,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         <span className={`cal-value ${!value ? 'placeholder' : ''}`}>
           {value || '日付を選択'}
         </span>
-        {value && <button type="button" className="cal-clear" onClick={handleClear} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}>✕</button>}
+        {value && <button type="button" className="cal-clear" tabIndex={-1} onClick={handleClear}>✕</button>}
       </div>
 
       {open && (

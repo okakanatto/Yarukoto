@@ -73,7 +73,7 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
                     {selectedTags.map(tag => (
                         <span key={tag.id} className={`ts-pill ${tag.archived ? 'ts-pill-archived' : ''}`} style={{ backgroundColor: tag.color }}>
                             {tag.name}
-                            <button type="button" className="ts-pill-x" onClick={(e) => remove(tag.id, e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}>×</button>
+                            <button type="button" className="ts-pill-x" tabIndex={-1} onClick={(e) => remove(tag.id, e)}>×</button>
                         </span>
                     ))}
                 </div>

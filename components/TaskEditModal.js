@@ -24,6 +24,15 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
 
     const { masters, tags: allTags, projects } = useMasterData();
 
+    // IMP-36: Auto-select default project if task has no project_id
+    useEffect(() => {
+        if (projectId) return;
+        if (projects.length > 0) {
+            const defaultProj = projects.find(p => p.is_default === 1);
+            if (defaultProj) setProjectId(String(defaultProj.id));
+        }
+    }, [projects]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Fetch eligible parent tasks and check if this task has children
     useEffect(() => {
         let cancelled = false;
@@ -181,7 +190,6 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         <div className="te-field">
                             <label className="te-label">プロジェクト</label>
                             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="te-select">
-                                <option value="">デフォルト</option>
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
