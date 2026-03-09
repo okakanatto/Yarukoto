@@ -1,6 +1,7 @@
 'use client';
 
 import { fetchDb } from '@/lib/utils';
+import { Tag, AlertTriangle, CircleCheck, Archive } from 'lucide-react';
 
 export default function OptionsPanel({ appSettings, setAppSettings, flash }) {
 
@@ -27,7 +28,7 @@ export default function OptionsPanel({ appSettings, setAppSettings, flash }) {
             <div className="opt-section">
                 <div className="opt-card">
                     <div className="opt-info">
-                        <span className="opt-icon">🏷️</span>
+                        <span className="opt-icon"><Tag size={18} /></span>
                         <div>
                             <strong className="opt-title">子タスクに親タスクのタグを自動付与</strong>
                             <p className="opt-desc">
@@ -47,7 +48,7 @@ export default function OptionsPanel({ appSettings, setAppSettings, flash }) {
                 </div>
                 <div className="opt-card">
                     <div className="opt-info">
-                        <span className="opt-icon">⚠️</span>
+                        <span className="opt-icon"><AlertTriangle size={18} /></span>
                         <div>
                             <strong className="opt-title">期限切れタスクを今日やるタスクに表示する</strong>
                             <p className="opt-desc">
@@ -67,7 +68,7 @@ export default function OptionsPanel({ appSettings, setAppSettings, flash }) {
                 </div>
                 <div className="opt-card">
                     <div className="opt-info">
-                        <span className="opt-icon">✅</span>
+                        <span className="opt-icon"><CircleCheck size={18} /></span>
                         <div>
                             <strong className="opt-title">子タスク全完了で親タスクも完了にする</strong>
                             <p className="opt-desc">
@@ -87,7 +88,7 @@ export default function OptionsPanel({ appSettings, setAppSettings, flash }) {
                 </div>
                 <div className="opt-card">
                     <div className="opt-info">
-                        <span className="opt-icon">📦</span>
+                        <span className="opt-icon"><Archive size={18} /></span>
                         <div>
                             <strong className="opt-title">完了タスクの自動アーカイブ</strong>
                             <p className="opt-desc">

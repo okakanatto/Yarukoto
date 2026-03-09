@@ -11,7 +11,7 @@ import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { useTodayGrouping } from '@/hooks/useTodayGrouping';
-import { Sun, CalendarDays, PartyPopper } from 'lucide-react';
+import { Sun, CalendarDays, PartyPopper, Hand, ArrowUpDown, Pin, RefreshCw } from 'lucide-react';
 import TodayCardItem from './_components/TodayCardItem';
 import TodayGroupHeader from './_components/TodayGroupHeader';
 import TodayStats from './_components/TodayStats';
@@ -239,7 +239,7 @@ export default function TodayPage() {
                             onClick={toggleSortMode}
                             title={sortMode === 'manual' ? '自動ソートに切替' : '手動並び替えに切替'}
                         >
-                            {sortMode === 'manual' ? '✋ 手動' : '🔀 自動'}
+                            {sortMode === 'manual' ? <><Hand size={14} /> 手動</> : <><ArrowUpDown size={14} /> 自動</>}
                         </button>
                         {sortMode === 'auto' && (
                             <div className="today-filter">
@@ -357,13 +357,13 @@ export default function TodayPage() {
                             <div className="today-drag-handle" style={{ opacity: 1 }}>⋮⋮</div>
                             {activeTaskData.is_ghost_parent ? (
                                 <>
-                                    <span className="today-ghost-icon">📌</span>
+                                    <span className="today-ghost-icon"><Pin size={14} /></span>
                                     <span className="today-ghost-title">{activeTaskData.title}</span>
                                 </>
                             ) : (
                                 <div className="today-card-info">
                                     <div className="today-card-title-row">
-                                        {activeTaskData.is_routine && <span className="today-routine-badge">🔄</span>}
+                                        {activeTaskData.is_routine && <span className="today-routine-badge"><RefreshCw size={14} /></span>}
                                         <span className="today-card-title">{activeTaskData.title}</span>
                                     </div>
                                 </div>

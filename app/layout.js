@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import TaskInput from '@/components/TaskInput';
 import { fetchDb } from '@/lib/utils';
-import { BarChart3, Sun, CircleCheckBig, ListTodo, Repeat, Settings, Plus, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BarChart3, Sun, CircleCheckBig, ListTodo, Repeat, Settings, Plus, X, PanelLeftClose, PanelLeftOpen, CircleCheck, XCircle } from 'lucide-react';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
@@ -354,7 +354,7 @@ function LayoutInner({ children }) {
             {/* Global Toast */}
             {toast && (
                 <div className={`global-toast ${toast.type === 'error' ? 'toast-err' : 'toast-ok'}`}>
-                    {toast.type === 'error' ? '❌' : '✅'} {toast.message}
+                    {toast.type === 'error' ? <XCircle size={16} /> : <CircleCheck size={16} />} {toast.message}
                 </div>
             )}
 

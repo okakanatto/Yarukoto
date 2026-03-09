@@ -5,7 +5,7 @@ import { fetchDb, parseTags, formatMin } from '@/lib/utils';
 import { useMasterData } from '@/hooks/useMasterData';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
 import RoutineFormModal from './_components/RoutineFormModal';
-import { CalendarClock, CalendarOff } from 'lucide-react';
+import { CalendarClock, CalendarOff, Clock, Calendar, CircleCheck, XCircle } from 'lucide-react';
 
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -187,10 +187,10 @@ export default function RoutinesPage() {
                                     <span key={t.id} className="rt-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
                                 ))}
                                 {r.estimated_hours > 0 && (
-                                    <span className="rt-meta-item">⏱ {formatMin(r.estimated_hours)}</span>
+                                    <span className="rt-meta-item"><Clock size={12} /> {formatMin(r.estimated_hours)}</span>
                                 )}
                                 {r.end_date && (
-                                    <span className="rt-meta-item rt-end-date">📅 〜{r.end_date}</span>
+                                    <span className="rt-meta-item rt-end-date"><Calendar size={12} /> 〜{r.end_date}</span>
                                 )}
                             </div>
                         </div>
@@ -215,7 +215,7 @@ export default function RoutinesPage() {
                 />
             )}
 
-            {toast && <div className={`rt-toast ${toast.type === 'ok' ? 'rt-toast-ok' : 'rt-toast-err'}`}>{toast.type === 'ok' ? '✅' : '❌'} {toast.msg}</div>}
+            {toast && <div className={`rt-toast ${toast.type === 'ok' ? 'rt-toast-ok' : 'rt-toast-err'}`}>{toast.type === 'ok' ? <CircleCheck size={16} /> : <XCircle size={16} />} {toast.msg}</div>}
 
             <style jsx>{`
         .rt-page { max-width: 800px; margin: 0 auto; animation: slideUp 0.4s ease; }

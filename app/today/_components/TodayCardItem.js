@@ -4,6 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import StatusCheckbox from '@/components/StatusCheckbox';
 import { formatMin } from '@/lib/utils';
+import { Pin, RefreshCw, Archive, Calendar, Clock } from 'lucide-react';
 
 /**
  * Individual today-card with @dnd-kit draggable support.
@@ -43,11 +44,11 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
             />
             <div className="today-card-info">
                 {!isChild && task.parent_title && (
-                    <span className="today-parent-label">📌 {task.parent_title} ›</span>
+                    <span className="today-parent-label"><Pin size={12} /> {task.parent_title} ›</span>
                 )}
                 <div className="today-card-title-row">
-                    {isRoutine && <span className="today-routine-badge">🔄</span>}
-                    {isArchived && <span className="today-archived-badge" title="アーカイブ済み">📦</span>}
+                    {isRoutine && <span className="today-routine-badge"><RefreshCw size={14} /></span>}
+                    {isArchived && <span className="today-archived-badge" title="アーカイブ済み"><Archive size={14} /></span>}
                     <span
                         className={`today-card-title ${isDone ? 'strike' : ''} ${!isRoutine && !isArchived ? 'clickable' : ''}`}
                         onClick={() => {
@@ -69,9 +70,9 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
                         <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
                     ))}
                     {isDone && task.completed_at && <span className="today-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
-                    {task.due_date && !isDone && <span className="today-meta-item">📅 {task.due_date}</span>}
+                    {task.due_date && !isDone && <span className="today-meta-item"><Calendar size={12} /> {task.due_date}</span>}
                     {task.estimated_hours > 0 && (
-                        <span className="today-meta-item">⏱ {formatMin(task.estimated_hours)}</span>
+                        <span className="today-meta-item"><Clock size={12} /> {formatMin(task.estimated_hours)}</span>
                     )}
                 </div>
             </div>

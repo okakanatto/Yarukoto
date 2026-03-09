@@ -5,6 +5,7 @@ import TaskItem from './TaskItem';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { buildTaskListQuery, buildArchiveMonthlySummaryQuery } from '@/lib/taskListQueries';
 import { useDbOperation } from '@/hooks/useDbOperation';
+import { Archive } from 'lucide-react';
 
 const noop = () => {};
 
@@ -273,9 +274,9 @@ export default function ArchiveView({
                         <div className="av-loading"><span className="spinner" /> 読み込み中...</div>
                     ) : monthlySummary.length === 0 ? (
                         <div className="av-empty">
-                            <span className="av-empty-icon">📦</span>
+                            <span className="av-empty-icon"><Archive size={32} /></span>
                             <span className="av-empty-title">アーカイブ済みのタスクはありません</span>
-                            <span className="av-empty-hint">完了・キャンセル済みタスクの📦ボタンでアーカイブできます</span>
+                            <span className="av-empty-hint">完了・キャンセル済みタスクのアーカイブボタンでアーカイブできます</span>
                         </div>
                     ) : (
                         <>

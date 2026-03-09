@@ -4,6 +4,7 @@ import { useDoneData } from '@/hooks/useDoneData';
 import DoneCalendarView from './_components/DoneCalendarView';
 import DoneWeeklyView from './_components/DoneWeeklyView';
 import DoneDayDetail from './_components/DoneDayDetail';
+import { ClipboardList, RefreshCw } from 'lucide-react';
 
 export default function DonePage() {
     const {
@@ -67,8 +68,8 @@ export default function DonePage() {
 
             {/* Period summary */}
             <div className="done-summary">
-                <span className="done-summary-item">📋 タスク <strong>{periodStats.tasks}</strong></span>
-                <span className="done-summary-item">🔄 ルーティン <strong>{periodStats.routines}</strong></span>
+                <span className="done-summary-item"><ClipboardList size={14} /> タスク <strong>{periodStats.tasks}</strong></span>
+                <span className="done-summary-item"><RefreshCw size={14} /> ルーティン <strong>{periodStats.routines}</strong></span>
                 <span className="done-summary-total">合計 <strong>{total}</strong> 件完了</span>
             </div>
 

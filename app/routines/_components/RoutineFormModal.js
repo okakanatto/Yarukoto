@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useMasterData } from '@/hooks/useMasterData';
 import TagSelect from '@/components/TagSelect';
 import { fetchDb } from '@/lib/utils';
+import { RefreshCw, Calendar, CircleCheck, Pause } from 'lucide-react';
 
 const FREQ_OPTIONS = [
     { value: 'daily', label: '毎日' },
@@ -174,7 +175,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
 
                     <div className="rt-section">
                         <div className="rt-section-row">
-                            <span className="rt-icon">🔄</span>
+                            <span className="rt-icon"><RefreshCw size={16} /></span>
                             <div className="rt-control-group">
                                 <select
                                     className="rt-select-clean"
@@ -250,7 +251,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
                     {/* End Date */}
                     <div className="rt-section">
                         <div className="rt-section-row">
-                            <span className="rt-icon">📅</span>
+                            <span className="rt-icon"><Calendar size={16} /></span>
                             <div className="rt-control-group">
                                 <label className="rt-field-label">終了日（この日以降は表示されません）</label>
                                 <input
@@ -274,7 +275,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
                             <div className="rt-divider" />
                             <div className="rt-section">
                                 <div className="rt-section-row rt-toggle-row">
-                                    <span className="rt-icon">{form.enabled ? '✅' : '⏸️'}</span>
+                                    <span className="rt-icon">{form.enabled ? <CircleCheck size={16} /> : <Pause size={16} />}</span>
                                     <div className="rt-toggle-info">
                                         <span className="rt-toggle-label">{form.enabled ? 'このルーティンは有効です' : 'このルーティンは停止中です'}</span>
                                         <span className="rt-toggle-hint">{form.enabled ? '今日のタスクに自動で表示されます' : '今日のタスクには表示されません'}</span>

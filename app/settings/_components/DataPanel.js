@@ -1,6 +1,7 @@
 'use client';
 
 import { fetchDb } from '@/lib/utils';
+import { AlertTriangle } from 'lucide-react';
 
 export default function DataPanel({ flash }) {
 
@@ -113,7 +114,7 @@ export default function DataPanel({ flash }) {
 
                 <div className="dm-card dm-danger">
                     <div className="dm-card-info">
-                        <span className="dm-icon">⚠️</span>
+                        <span className="dm-icon"><AlertTriangle size={18} /></span>
                         <div>
                             <strong>全データ削除</strong>
                             <p className="dm-desc">すべてのタスクおよびルーティンを完全に削除します。この操作は元に戻せません。</p>

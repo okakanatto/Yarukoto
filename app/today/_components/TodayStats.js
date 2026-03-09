@@ -1,6 +1,7 @@
 'use client';
 
 import { formatMin } from '@/lib/utils';
+import { ClipboardList, CircleCheck, Hourglass, Clock } from 'lucide-react';
 
 /**
  * Progress ring + task count summary for the today page.
@@ -25,20 +26,20 @@ export default function TodayStats({ stats }) {
             </div>
             <div className="stat-details">
                 <div className="stat-row">
-                    <span className="stat-icon">📋</span>
+                    <span className="stat-icon"><ClipboardList size={16} /></span>
                     <span className="stat-text">全 <strong>{stats.total}</strong> 件</span>
                 </div>
                 <div className="stat-row">
-                    <span className="stat-icon">✅</span>
+                    <span className="stat-icon"><CircleCheck size={16} /></span>
                     <span className="stat-text">完了 <strong>{stats.completed}</strong> 件</span>
                 </div>
                 <div className="stat-row">
-                    <span className="stat-icon">⏳</span>
+                    <span className="stat-icon"><Hourglass size={16} /></span>
                     <span className="stat-text">残り <strong>{stats.remaining}</strong> 件</span>
                 </div>
                 {stats.remainingMin > 0 && (
                     <div className="stat-row">
-                        <span className="stat-icon">⏱</span>
+                        <span className="stat-icon"><Clock size={16} /></span>
                         <span className="stat-text">残り想定 <strong>{formatMin(stats.remainingMin)}</strong></span>
                     </div>
                 )}

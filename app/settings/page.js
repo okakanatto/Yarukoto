@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchDb } from '@/lib/utils';
-import { Tag, BarChart3, FolderOpen, Wrench, Database, Palette } from 'lucide-react';
+import { Tag, BarChart3, FolderOpen, Wrench, Database, Palette, CircleCheck, XCircle } from 'lucide-react';
 import TagsPanel from './_components/TagsPanel';
 import StatusPanel from './_components/StatusPanel';
 import ProjectsPanel from './_components/ProjectsPanel';
@@ -81,7 +81,7 @@ export default function Settings() {
                 )}
             </div>
 
-            {toast && <div className={`s-toast ${toast.type === 'ok' ? 's-toast-ok' : 's-toast-err'}`}>{toast.type === 'ok' ? '✅' : '❌'} {toast.msg}</div>}
+            {toast && <div className={`s-toast ${toast.type === 'ok' ? 's-toast-ok' : 's-toast-err'}`}>{toast.type === 'ok' ? <CircleCheck size={16} /> : <XCircle size={16} />} {toast.msg}</div>}
 
             {process.env.NEXT_PUBLIC_APP_VERSION && (
                 <p className="s-version">Yarukoto v{process.env.NEXT_PUBLIC_APP_VERSION}</p>

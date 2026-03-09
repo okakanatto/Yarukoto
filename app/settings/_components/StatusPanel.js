@@ -5,6 +5,7 @@ import ColorPalette from '@/components/ColorPalette';
 import { fetchDb } from '@/lib/utils';
 import { useDragReorder } from '@/hooks/useDragReorder';
 import { usePanelManager } from '@/hooks/usePanelManager';
+import { Trash2 } from 'lucide-react';
 
 export default function StatusPanel({ data, setData, flash }) {
     const [newStatus, setNewStatus] = useState({ label: '', color: '#94a3b8' });
@@ -90,7 +91,7 @@ export default function StatusPanel({ data, setData, flash }) {
                         ? <span className="s-label">{label}</span>
                         : <input className="s-input" type="text" value={label} onChange={e => onLabel?.(e.target.value)} onBlur={onBlur} />
                     }
-                    {onDel && <button className="s-del" onClick={onDel} type="button" title="削除">🗑</button>}
+                    {onDel && <button className="s-del" onClick={onDel} type="button" title="削除"><Trash2 size={14} /></button>}
                 </div>
                 {isOpen && <div className="s-palette"><ColorPalette value={color} onChange={c => { onColor?.(c); onBlur?.(); }} /></div>}
             </div>

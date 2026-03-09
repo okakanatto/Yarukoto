@@ -2,6 +2,7 @@
 
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import { Pin } from 'lucide-react';
 
 /**
  * Ghost parent header for children whose parent is not in today's list.
@@ -25,7 +26,7 @@ export default function TodayGroupHeader({ parentId, title, isManual }) {
             {isManual && (
                 <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
             )}
-            <span className="today-ghost-icon">📌</span>
+            <span className="today-ghost-icon"><Pin size={14} /></span>
             <span className="today-ghost-title">{title}</span>
 
             <style jsx global>{`

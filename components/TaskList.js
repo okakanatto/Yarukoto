@@ -13,9 +13,9 @@ import { useTaskDnD } from '../hooks/useTaskDnD';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 import { useDbOperation } from '@/hooks/useDbOperation';
+import { ClipboardList, Archive, Hand, ArrowUpDown } from 'lucide-react';
 import { buildTaskListQuery } from '@/lib/taskListQueries';
 import ArchiveView from './ArchiveView';
-import { ClipboardList } from 'lucide-react';
 
 export default function TaskList({ projectId = null }) {
     const [tasks, setTasks] = useState([]);
@@ -195,10 +195,10 @@ export default function TaskList({ projectId = null }) {
                 {/* Archive Toggle */}
                 <div className="tl-archive-tabs">
                     <button className={`tl-archive-tab ${!showArchived ? 'active' : ''}`} onClick={() => setShowArchived(false)}>
-                        📋 タスク
+                        <ClipboardList size={14} /> タスク
                     </button>
                     <button className={`tl-archive-tab ${showArchived ? 'active' : ''}`} onClick={() => setShowArchived(true)}>
-                        📦 アーカイブ済み
+                        <Archive size={14} /> アーカイブ済み
                     </button>
                 </div>
 
@@ -216,7 +216,7 @@ export default function TaskList({ projectId = null }) {
                                 onClick={toggleSortMode}
                                 title={sortMode === 'manual' ? '自動ソートに切替' : '手動並び替えに切替'}
                             >
-                                {sortMode === 'manual' ? '✋ 手動' : '🔀 自動'}
+                                {sortMode === 'manual' ? <><Hand size={14} /> 手動</> : <><ArrowUpDown size={14} /> 自動</>}
                             </button>
                         )}
                         {!showArchived && sortMode === 'auto' && (

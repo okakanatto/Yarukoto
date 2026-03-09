@@ -97,8 +97,8 @@
 /* --- Dark Mode --- */
 :root[data-theme="dark"] {
   --color-text: #E5E5E5;
-  --color-text-secondary: #9CA3AF;
-  --color-text-muted: #6B7280;
+  --color-text-secondary: #B0B8C4;
+  --color-text-muted: #8B95A5;
   --color-text-disabled: #4B5563;
   --color-background: #111111;
   --color-surface: #1A1A1A;

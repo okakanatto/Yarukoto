@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Calendar } from 'lucide-react';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
@@ -147,7 +148,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         onClick={() => { if (open) { closeCalendar(); } else { openCalendar(); } }}
         onKeyDown={handleTriggerKeyDown}
       >
-        <span className="cal-icon">📅</span>
+        <span className="cal-icon"><Calendar size={14} /></span>
         <span className={`cal-value ${!value ? 'placeholder' : ''}`}>
           {value || '日付を選択'}
         </span>

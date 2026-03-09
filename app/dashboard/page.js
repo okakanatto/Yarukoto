@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchDb, formatMin } from '@/lib/utils';
+import { Calendar } from 'lucide-react';
 
 export default function DashboardPage() {
     const [data, setData] = useState(null);
@@ -268,7 +269,7 @@ export default function DashboardPage() {
                         {overdue.tasks.map(t => (
                             <div key={t.id} className="overdue-item">
                                 <span className="overdue-title">{t.title}</span>
-                                <span className="overdue-date">📅 {t.due_date}</span>
+                                <span className="overdue-date"><Calendar size={12} /> {t.due_date}</span>
                             </div>
                         ))}
                         {overdue.count > 5 && (

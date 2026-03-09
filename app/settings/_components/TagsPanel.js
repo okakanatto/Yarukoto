@@ -5,6 +5,7 @@ import ColorPalette from '@/components/ColorPalette';
 import { fetchDb } from '@/lib/utils';
 import { useDragReorder } from '@/hooks/useDragReorder';
 import { usePanelManager } from '@/hooks/usePanelManager';
+import { Archive, Trash2 } from 'lucide-react';
 
 export default function TagsPanel({ data, setData, flash }) {
     const [newTag, setNewTag] = useState({ name: '', color: '#3b82f6' });
@@ -143,8 +144,8 @@ export default function TagsPanel({ data, setData, flash }) {
                             <button className="s-swatch" style={{ backgroundColor: t.color }} onClick={() => pm.togglePalette(`tag-${t.id}`)} type="button" title="色を変更" />
                             <div className="s-bar" style={{ backgroundColor: t.color }} />
                             <input className="s-input" type="text" value={t.name} onChange={e => pm.updateItem(t.id, 'name', e.target.value)} onBlur={() => commitTag(t.id)} />
-                            <button className="s-archive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="アーカイブ">📦</button>
-                            <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除">🗑</button>
+                            <button className="s-archive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="アーカイブ"><Archive size={14} /></button>
+                            <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除"><Trash2 size={14} /></button>
                         </div>
                         {pm.openPalette === `tag-${t.id}` && <div className="s-palette"><ColorPalette value={t.color} onChange={c => { pm.updateItem(t.id, 'color', c); commitTag(t.id); }} /></div>}
                     </div>
@@ -153,7 +154,7 @@ export default function TagsPanel({ data, setData, flash }) {
             {archivedTags.length > 0 && (
                 <>
                     <div className="s-archived-header">
-                        <span className="s-archived-label">📦 アーカイブ済み（{archivedTags.length}件）</span>
+                        <span className="s-archived-label"><Archive size={14} /> アーカイブ済み（{archivedTags.length}件）</span>
                     </div>
                     <div className="s-list s-list-archived">
                         {archivedTags.map(t => (
@@ -164,7 +165,7 @@ export default function TagsPanel({ data, setData, flash }) {
                                     <div className="s-bar" style={{ backgroundColor: t.color, opacity: 0.5 }} />
                                     <span className="s-label" style={{ opacity: 0.6 }}>{t.name}</span>
                                     <button className="s-archive-btn s-unarchive-btn" onClick={() => toggleArchiveTag(t.id)} type="button" title="復元">&#x21A9;</button>
-                                    <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除">🗑</button>
+                                    <button className="s-del" onClick={() => delTag(t.id)} type="button" title="削除"><Trash2 size={14} /></button>
                                 </div>
                             </div>
                         ))}
