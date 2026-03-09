@@ -12,7 +12,7 @@ import { Pin, RefreshCw, Archive, Calendar, Clock } from 'lucide-react';
 export default function TodayCardItem({ task, isManual, isChild = false, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index, isProcessing }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
-        disabled: !isManual || !!task.is_archived || isChild,
+        disabled: !isManual || !!task.is_archived,
     });
 
     const style = transform ? {
@@ -33,7 +33,7 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
             style={{ ...style, animationDelay: `${index * 40}ms` }}
             className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${isArchived ? 'archived' : ''}`}
         >
-            {isManual && !isArchived && !isChild && (
+            {isManual && !isArchived && (
                 <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
             )}
             <StatusCheckbox

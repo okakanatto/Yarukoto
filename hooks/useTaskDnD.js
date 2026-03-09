@@ -190,12 +190,21 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
             return;
         }
 
-        // Optimistic update
-        setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: parentTask.id } : t));
+        // Optimistic update (IMP-39: also sync project_id with parent)
+        setTasks(prev => prev.map(t => t.id === active.id ? {
+            ...t,
+            parent_id: parentTask.id,
+            project_id: parentTask.project_id,
+            project_name: parentTask.project_name,
+            project_color: parentTask.project_color,
+        } : t));
 
         try {
             const db = await fetchDb();
             await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
+
+            // IMP-39: Sync project_id with parent
+            await db.execute('UPDATE tasks SET project_id = $1 WHERE id = $2', [parentTask.project_id, active.id]);
 
             // In manual mode, assign sort_order at end of new parent's children
             if (sortMode === 'manual') {

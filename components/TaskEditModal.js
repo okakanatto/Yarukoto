@@ -124,6 +124,14 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 task.id
             ]);
 
+            // IMP-39: Cascade project_id to child tasks when parent's project changes
+            if (resolvedProjectId !== task.project_id) {
+                await db.execute(
+                    'UPDATE tasks SET project_id = $1 WHERE parent_id = $2',
+                    [resolvedProjectId, task.id]
+                );
+            }
+
             // Update tags (delete existing, insert new ones)
             await db.execute('DELETE FROM task_tags WHERE task_id = $1', [task.id]);
 

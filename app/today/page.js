@@ -78,10 +78,11 @@ export default function TodayPage() {
     );
 
     // Persist today_sort_order to DB after reorder (group-aware)
-    const persistTodaySortOrder = useCallback(async (newRootItems) => {
+    // childOverrides: optional map to override childrenByParentRef for a specific parent (used for child reorder)
+    const persistTodaySortOrder = useCallback(async (newRootItems, childOverrides = null) => {
         try {
             await dbOp(async (db) => {
-                const currentChildren = childrenByParentRef.current;
+                const currentChildren = childOverrides || childrenByParentRef.current;
                 let orderIdx = 1;
 
                 for (const item of newRootItems) {
@@ -117,7 +118,49 @@ export default function TodayPage() {
 
         if (!over) return;
         const overIdStr = String(over.id);
+
+        // IMP-38: CHILD REORDER — Dropped on a child reorder gap
+        if (overIdStr.startsWith('reorder-today-child-')) {
+            const parts = overIdStr.replace('reorder-today-child-', '').split('-');
+            const parentId = parseInt(parts[0]);
+            let targetIndex = parseInt(parts[1]);
+
+            const currentChildrenMap = childrenByParentRef.current;
+            const childList = [...(currentChildrenMap[parentId] || [])];
+            const childOrder = childList.map(c => c.id);
+            const oldIndex = childOrder.indexOf(active.id);
+            if (oldIndex < 0) return;
+
+            childOrder.splice(oldIndex, 1);
+            if (oldIndex < targetIndex) targetIndex--;
+            childOrder.splice(targetIndex, 0, active.id);
+
+            const reorderedChildren = childOrder.map(id => childList.find(c => c.id === id)).filter(Boolean);
+            const newChildrenMap = { ...currentChildrenMap, [parentId]: reorderedChildren };
+
+            // Rebuild flat task list with reordered children
+            const currentRoots = rootItemsRef.current;
+            const newFlat = [];
+            for (const item of currentRoots) {
+                const pid = item.is_ghost_parent ? item.real_id : item.id;
+                if (!item.is_ghost_parent) {
+                    newFlat.push(item);
+                }
+                const children = newChildrenMap[pid] || [];
+                newFlat.push(...children);
+            }
+            setTasks(newFlat);
+
+            await persistTodaySortOrder(currentRoots, newChildrenMap);
+            return;
+        }
+
+        // ROOT REORDER — Dropped on a root reorder gap
         if (!overIdStr.startsWith('reorder-today-')) return;
+
+        // Don't allow child tasks to be reordered at root level
+        const activeTask = tasks.find(t => t.id === active.id);
+        if (activeTask && !activeTask.is_routine && activeTask.parent_id) return;
 
         const currentRoots = rootItemsRef.current;
         const currentChildren = childrenByParentRef.current;
@@ -149,7 +192,7 @@ export default function TodayPage() {
         setTasks(newFlat);
 
         await persistTodaySortOrder(reorderedRoots);
-    }, [setTasks, persistTodaySortOrder, rootItemsRef, childrenByParentRef]);
+    }, [tasks, setTasks, persistTodaySortOrder, rootItemsRef, childrenByParentRef]);
 
     // Status change wrapper: adds justCompleted animation + routes to routine/task handler
     const handleStatusChange = (taskId, newCode, isRoutine = false) => {
@@ -203,6 +246,16 @@ export default function TodayPage() {
     const activeTaskData = activeId
         ? (tasks.find(t => t.id === activeId) || rootItems.find(t => t.id === activeId))
         : null;
+
+    // IMP-38: Determine if dragging a child task (for showing appropriate ReorderGaps)
+    const draggingChildInfo = useMemo(() => {
+        if (!activeId) return null;
+        const task = tasks.find(t => t.id === activeId);
+        if (task && !task.is_routine && task.parent_id) {
+            return { parentId: task.parent_id };
+        }
+        return null;
+    }, [activeId, tasks]);
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -279,24 +332,38 @@ export default function TodayPage() {
                         const parentId = item.is_ghost_parent ? item.real_id : item.id;
                         const children = childrenByParent[parentId] || [];
                         const isGhost = !!item.is_ghost_parent;
+                        const showChildGaps = isManual && draggingChildInfo && draggingChildInfo.parentId === parentId;
+
+                        // Helper: render children with optional ReorderGaps for child reorder (IMP-38)
+                        const renderChildren = (childList) => (
+                            <div className="today-children">
+                                {childList.map((child, ci) => (
+                                    <React.Fragment key={child.id}>
+                                        {showChildGaps && ci === 0 && (
+                                            <ReorderGap id={`reorder-today-child-${parentId}-0`} />
+                                        )}
+                                        <TodayCardItem task={child} isManual={isManual} isChild
+                                            statuses={statuses} statusMap={statusMap} selectedDate={selectedDate}
+                                            onStatusChange={handleStatusChange} onRemove={handleRemove}
+                                            onEdit={setEditingTask} justCompletedId={justCompletedId}
+                                            index={ci} isProcessing={actions.processingIds.has(child.id)} />
+                                        {showChildGaps && (
+                                            <ReorderGap id={`reorder-today-child-${parentId}-${ci + 1}`} />
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        );
 
                         return (
                             <React.Fragment key={item.id}>
-                                {isManual && activeId && i === 0 && (
+                                {isManual && activeId && !draggingChildInfo && i === 0 && (
                                     <ReorderGap id="reorder-today-0" />
                                 )}
                                 {isGhost ? (
                                     <div className="today-parent-group">
                                         <TodayGroupHeader parentId={item.real_id} title={item.title} isManual={isManual} />
-                                        <div className="today-children">
-                                            {children.map((child, ci) => (
-                                                <TodayCardItem key={child.id} task={child} isManual={isManual} isChild
-                                                    statuses={statuses} statusMap={statusMap} selectedDate={selectedDate}
-                                                    onStatusChange={handleStatusChange} onRemove={handleRemove}
-                                                    onEdit={setEditingTask} justCompletedId={justCompletedId}
-                                                    index={ci} isProcessing={actions.processingIds.has(child.id)} />
-                                            ))}
-                                        </div>
+                                        {renderChildren(children)}
                                     </div>
                                 ) : (
                                     <div className={children.length > 0 ? 'today-parent-group' : undefined}>
@@ -313,20 +380,10 @@ export default function TodayPage() {
                                             index={i}
                                             isProcessing={actions.processingIds.has(item.id)}
                                         />
-                                        {children.length > 0 && (
-                                            <div className="today-children">
-                                                {children.map((child, ci) => (
-                                                    <TodayCardItem key={child.id} task={child} isManual={isManual} isChild
-                                                        statuses={statuses} statusMap={statusMap} selectedDate={selectedDate}
-                                                        onStatusChange={handleStatusChange} onRemove={handleRemove}
-                                                        onEdit={setEditingTask} justCompletedId={justCompletedId}
-                                                        index={ci} isProcessing={actions.processingIds.has(child.id)} />
-                                                ))}
-                                            </div>
-                                        )}
+                                        {children.length > 0 && renderChildren(children)}
                                     </div>
                                 )}
-                                {isManual && activeId && (
+                                {isManual && activeId && !draggingChildInfo && (
                                     <ReorderGap id={`reorder-today-${i + 1}`} />
                                 )}
                             </React.Fragment>
