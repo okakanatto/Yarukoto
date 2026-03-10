@@ -215,11 +215,46 @@ describe('buildHeatmapData', () => {
     expect(cell.dow).toBe(1);
   });
 
-  it('将来日は月曜（dow=1）を含まない（次の月曜で停止）', () => {
-    // 月曜が today の場合、将来日は火〜日のみ（次の月曜で停止）
+  it('将来日は日曜（dow=0）を含まない（groupIntoWeeks境界の手前で停止）', () => {
     const { days } = buildHeatmapData({}, {}, today);
     const future = days.filter(d => d.isFuture);
-    expect(future.every(d => d.dow !== 1)).toBe(true);
+    expect(future.every(d => d.dow !== 0)).toBe(true);
+  });
+
+  it('水曜基準でも将来日に日曜（dow=0）が含まれない', () => {
+    // 2024-01-17 = 水曜 → 将来日: 木(4), 金(5), 土(6) の3日で停止
+    const wed = new Date(2024, 0, 17);
+    const { days } = buildHeatmapData({}, {}, wed);
+    const future = days.filter(d => d.isFuture);
+    expect(future).toHaveLength(3);
+    expect(future.map(d => d.dow)).toEqual([4, 5, 6]);
+  });
+
+  it('土曜基準では将来日が0件（翌日が日曜のため即break）', () => {
+    // 2024-01-20 = 土曜 → i=1 で日曜(dow=0) → break → 将来日なし
+    const sat = new Date(2024, 0, 20);
+    const { days } = buildHeatmapData({}, {}, sat);
+    const future = days.filter(d => d.isFuture);
+    expect(future).toHaveLength(0);
+  });
+
+  it('日曜基準でも将来日に日曜が含まれない（ループ範囲内で次の日曜に到達しない）', () => {
+    // 2024-01-21 = 日曜 → 将来日: 月(1)〜土(6) の6日
+    const sun = new Date(2024, 0, 21);
+    const { days } = buildHeatmapData({}, {}, sun);
+    const future = days.filter(d => d.isFuture);
+    expect(future).toHaveLength(6);
+    expect(future.every(d => d.dow !== 0)).toBe(true);
+  });
+
+  it('groupIntoWeeksと組み合わせて末尾に孤立1セルカラムが生成されない', () => {
+    // 水曜基準: 孤立日曜カラムが発生しないことを結合テストで検証
+    const wed = new Date(2024, 0, 17);
+    const { days } = buildHeatmapData({}, {}, wed);
+    const weeks = groupIntoWeeks(days);
+    // 末尾の週が1セルだけの孤立カラムでないこと
+    const lastWeek = weeks[weeks.length - 1];
+    expect(lastWeek.length).toBeGreaterThan(1);
   });
 });
 
