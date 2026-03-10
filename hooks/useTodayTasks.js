@@ -35,7 +35,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
     // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
     const activeRequestId = useRef(0);
     // Guards against fetching tasks before master data (statuses, settings) is loaded
-    const masterDataReady = useRef(false);
+    const [masterDataReady, setMasterDataReady] = useState(false);
 
     // Load master data once on mount
     useEffect(() => {
@@ -62,7 +62,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                 if (sortModeRows.length > 0) setSortMode(sortModeRows[0].value);
 
                 // Mark master data as ready so loadTasks can proceed
-                masterDataReady.current = true;
+                setMasterDataReady(true);
             } catch (e) { console.error('Failed to load statuses/tags:', e); }
         })();
     }, []);
@@ -71,7 +71,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
     // Filtering is applied in useMemo below (BUG-12 fix).
     const loadTasks = useCallback(async (date) => {
         // Skip fetching until master data (statuses, settings) is loaded.
-        if (!masterDataReady.current) return;
+        if (!masterDataReady) return;
 
         const currentReq = ++activeRequestId.current;
         setLoading(true);
@@ -171,7 +171,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                 setLoading(false);
             }
         }
-    }, [showOverdue]);
+    }, [showOverdue, masterDataReady]);
 
     // Re-fetch tasks when selectedDate or loadTasks changes; listen for taskAdded events
     useEffect(() => {
