@@ -142,7 +142,7 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
                         const newOrder = (maxSort[0]?.ms || 0) + 1;
                         await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
                     }
-                }, { error: '並び替えの処理に失敗しました' });
+                }, { error: '並び替えの保存に失敗しました' });
                 if (sortMode === 'manual') fetchTasks();
             } catch {
                 fetchTasks();
@@ -180,7 +180,9 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         // Validation: Task with children cannot become child
         const activeChildren = tasks.filter(t => t.parent_id === active.id);
         if (activeChildren.length > 0) {
-            alert('子タスクを持つタスクは、他のタスクの子タスクにできません。');
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', {
+                detail: { message: '子タスクを持つタスクには親タスクを設定できません', type: 'error' }
+            }));
             return;
         }
 
