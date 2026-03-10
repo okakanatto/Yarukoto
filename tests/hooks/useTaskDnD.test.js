@@ -6,7 +6,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useTaskDnD } from '@/hooks/useTaskDnD';
 import { createTestDb, seedTasks } from '../__helpers__/testDb.js';
 
-describe('useTaskDnD Transactional Atomicity', () => {
+describe('useTaskDnD Eventual Consistency', () => {
     let db;
     beforeEach(async () => {
         db = await createTestDb();
@@ -14,7 +14,11 @@ describe('useTaskDnD Transactional Atomicity', () => {
         vi.spyOn(window, 'dispatchEvent').mockImplementation(() => { });
     });
 
-    it('should rollback all changes if NEST operation fails midway', async () => {
+    it('should persist earlier writes and call fetchTasks when NEST operation fails midway', async () => {
+        // safeTransaction was removed (BUG-10/BUG-11 fix) because @tauri-apps/plugin-sql
+        // uses a connection pool where BEGIN/COMMIT are dispatched to different connections.
+        // Individual db.execute() calls are auto-committed, so partial writes persist.
+
         // Seed a parent and a child
         const [parentId, childId] = await seedTasks(db, [
             { title: 'Parent Task', project_id: 1 },
@@ -56,12 +60,13 @@ describe('useTaskDnD Transactional Atomicity', () => {
             });
         });
 
-        // Wait for catch block to trigger fetchTasks
+        // fetchTasks is called to reload current DB state after error
         expect(fetchTasks).toHaveBeenCalled();
 
-        // Verify that the parent_id update was rolled back
+        // With eventual consistency, parent_id update was already committed
+        // before project sync failed — earlier writes persist
         const rows = await db.select('SELECT parent_id, project_id FROM tasks WHERE id = $1', [childId]);
-        expect(rows[0].parent_id).toBeNull(); // Should not be nested
-        expect(rows[0].project_id).toBeNull(); // Should not be synced
+        expect(rows[0].parent_id).toBe(parentId); // parent_id committed before failure
+        expect(rows[0].project_id).toBeNull();     // project sync failed, not applied
     });
 });
