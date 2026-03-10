@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { fetchDb } from '@/lib/utils';
+import { computeVelocityText } from '@/lib/dashboardUtils';
 
 const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -229,59 +230,6 @@ async function loadDashboard() {
     const velocity = computeVelocityText(thisWeekCompleted, priorWeekCompletions, chartWeeks, summary);
 
     return { summary, projects, chartWeeks, velocity };
-}
-
-/* ================================================================
-   Velocity Text Generation
-   ================================================================ */
-
-function computeVelocityText(thisWeek, priorWeeks, chartWeeks, summary) {
-    // Need at least 4 weeks of data
-    const validPrior = priorWeeks.filter(c => c > 0);
-    if (validPrior.length < 2) return null; // Not enough data
-
-    const sorted = [...priorWeeks].sort((a, b) => a - b);
-    const median = sorted.length % 2 === 0
-        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-        : sorted[Math.floor(sorted.length / 2)];
-
-    // Special: best in 8 weeks
-    const allWeeklyCompleted = chartWeeks.map(w => w.completed);
-    const maxEver = Math.max(...allWeeklyCompleted.slice(0, 7)); // exclude current week (incomplete)
-    if (thisWeek > maxEver && thisWeek > 0) {
-        return '今週は8週間でいちばんのペースです';
-    }
-
-    // Special: today 3+ completed
-    if (summary.today.completed >= 3) {
-        return '今日の勢いがあります';
-    }
-
-    // Compare to median
-    if (median === 0) {
-        if (thisWeek > 0) return 'いい流れです';
-        return null;
-    }
-
-    const ratio = thisWeek / median;
-
-    if (ratio >= 1.3) {
-        const msgs = ['いい流れです', '今週は調子が出ています', '勢いがあります'];
-        return msgs[Math.floor(Math.random() * msgs.length)];
-    }
-
-    if (ratio >= 0.7) {
-        const msgs = ['安定したペースです', 'ちゃんと動けています'];
-        return msgs[Math.floor(Math.random() * msgs.length)];
-    }
-
-    // Low pace: show positive monthly info instead
-    const monthActiveDays = summary.month.completed > 0 ? Math.min(new Date().getDate(), 30) : 0;
-    if (summary.month.completed > 0) {
-        return `今月は${summary.month.completed}件完了しています`;
-    }
-
-    return null;
 }
 
 /* ================================================================
