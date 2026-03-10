@@ -1,160 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { fetchDb, formatMin } from '@/lib/utils';
-import { Calendar } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { fetchDb } from '@/lib/utils';
+
+const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
 export default function DashboardPage() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const loadDashboard = async () => {
-            try {
-                const db = await fetchDb();
-                const dateStr = new Date().toLocaleDateString('sv-SE');
-
-                // 1. Overall
-                const overallData = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed FROM tasks WHERE status_code != 5 AND archived_at IS NULL`);
-
-                // 2. Today
-                // 2a. Tasks
-                const todayTasks = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed, SUM(CASE WHEN status_code != 3 THEN estimated_hours ELSE 0 END) as remainingMinutes FROM tasks WHERE status_code != 5 AND archived_at IS NULL AND (today_date = $1 OR due_date = $2 OR (due_date < $3 AND status_code != 3) OR (status_code = 3 AND date(completed_at) = $4))`, [dateStr, dateStr, dateStr, dateStr]);
-
-                // 2b. Routines
-                const { isRoutineActiveOnDate } = await import('@/lib/holidayService');
-
-                // Get all active routines
-                const allRoutines = await db.select(`
-                  SELECT r.*
-                  FROM routines r
-                  WHERE r.enabled = 1
-                    AND (r.end_date IS NULL OR r.end_date >= $1)
-                `, [dateStr]);
-
-                // Today completions
-                const todayComps = await db.select(`SELECT routine_id FROM routine_completions WHERE completion_date = $1`, [dateStr]);
-                const todayCompSet = new Set(todayComps.map(c => c.routine_id));
-
-                let todayTotal = todayTasks[0]?.total || 0;
-                let todayCompleted = todayTasks[0]?.completed || 0;
-                let todayRemainingMinutes = todayTasks[0]?.remainingMinutes || 0;
-
-                for (const r of allRoutines) {
-                    if (await isRoutineActiveOnDate(db, r, dateStr)) {
-                        todayTotal++;
-                        if (todayCompSet.has(r.id)) {
-                            todayCompleted++;
-                        } else {
-                            todayRemainingMinutes += r.estimated_hours || 0;
-                        }
-                    }
-                }
-
-                // 3. Biz3
-                const d3 = new Date();
-                d3.setDate(d3.getDate() + 3);
-                const biz3Date = d3.toLocaleDateString('sv-SE');
-                const biz3Tasks = await db.select(`SELECT COUNT(*) as total, SUM(CASE WHEN status_code = 3 THEN 1 ELSE 0 END) as completed FROM tasks WHERE status_code != 5 AND archived_at IS NULL AND due_date >= $1 AND due_date <= $2`, [dateStr, biz3Date]);
-
-                // For Biz3 routines, we need to iterate the next 3 days and count matching routines
-                let biz3Total = biz3Tasks[0]?.total || 0;
-                let biz3Completed = biz3Tasks[0]?.completed || 0;
-
-                for (let i = 0; i <= 3; i++) {
-                    const cd = new Date();
-                    cd.setDate(cd.getDate() + i);
-                    const cdStr = cd.toLocaleDateString('sv-SE');
-
-                    const cdComps = await db.select(`SELECT routine_id FROM routine_completions WHERE completion_date = $1`, [cdStr]);
-                    const cdCompSet = new Set(cdComps.map(c => c.routine_id));
-
-                    for (const r of allRoutines) {
-                        if (await isRoutineActiveOnDate(db, r, cdStr)) {
-                            biz3Total++;
-                            if (cdCompSet.has(r.id)) biz3Completed++;
-                        }
-                    }
-                }
-
-                // 4. Daily Completions
-                const dailyData = await db.select(`
-                    SELECT DATE(completed_at) as date, COUNT(*) as count
-                    FROM tasks
-                    WHERE status_code = 3 AND completed_at IS NOT NULL AND archived_at IS NULL AND DATE(completed_at) >= date('now', 'localtime', '-6 days')
-                    GROUP BY DATE(completed_at)
-                    ORDER BY date ASC
-                `);
-
-                const routineDailyData = await db.select(`
-                    SELECT DATE(completion_date) as date, COUNT(*) as count
-                    FROM routine_completions
-                    WHERE DATE(completion_date) >= date('now', 'localtime', '-6 days')
-                    GROUP BY DATE(completion_date)
-                `);
-
-                const dailyCompletions = [];
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date();
-                    d.setDate(d.getDate() - i);
-                    const ds = d.toLocaleDateString('sv-SE');
-                    const taskCount = dailyData.find(x => x.date === ds)?.count || 0;
-                    const routineCount = routineDailyData.find(x => x.date === ds)?.count || 0;
-                    dailyCompletions.push({ date: ds, count: taskCount + routineCount });
-                }
-
-                // 5. Status Distribution (Tasks Only)
-                const stData = await db.select(`
-                    SELECT sm.code, sm.label, sm.color, COUNT(t.id) as count
-                    FROM status_master sm
-                    LEFT JOIN tasks t ON sm.code = t.status_code AND t.status_code != 5 AND t.archived_at IS NULL
-                    GROUP BY sm.code
-                    ORDER BY sm.sort_order
-                `);
-
-                // 6. Overdue (Tasks Only)
-                const overdueTasks = await db.select(`
-                    SELECT id, title, due_date
-                    FROM tasks
-                    WHERE status_code != 3 AND status_code != 5 AND archived_at IS NULL AND due_date < $1
-                    ORDER BY due_date ASC
-                `, [dateStr]);
-
-                // 7. Today's completed tasks list (ENH-1)
-                const todayCompletedTasks = await db.select(`
-                    SELECT id, title, completed_at
-                    FROM tasks
-                    WHERE status_code = 3 AND date(completed_at) = $1 AND archived_at IS NULL
-                    ORDER BY completed_at DESC
-                `, [dateStr]);
-
-                // Today's completed routines (with title from routines table)
-                const todayCompletedRoutines = allRoutines
-                    .filter(r => todayCompSet.has(r.id))
-                    .map(r => ({ id: `routine_${r.id}`, title: r.title, is_routine: true }));
-
-                setData({
-                    overall: { total: overallData[0]?.total || 0, completed: overallData[0]?.completed || 0 },
-                    today: { total: todayTotal, completed: todayCompleted, remainingMinutes: todayRemainingMinutes },
-                    biz3: { total: biz3Total, completed: biz3Completed },
-                    dailyCompletions,
-                    statusDistribution: stData,
-                    overdue: { count: overdueTasks.length, tasks: overdueTasks.slice(0, 5) },
-                    todayDone: [...todayCompletedTasks.map(t => ({ ...t, is_routine: false })), ...todayCompletedRoutines]
-                });
-            } catch (err) {
-                console.error("Dashboard Tauri DB Error", err);
-                window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'ダッシュボードの読み込みに失敗しました', type: 'error' } }));
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadDashboard();
+        loadDashboard().then(setData).catch(err => {
+            console.error('Dashboard load error', err);
+            window.dispatchEvent(new CustomEvent('yarukoto:toast', {
+                detail: { message: 'ダッシュボードの読み込みに失敗しました', type: 'error' }
+            }));
+        }).finally(() => setLoading(false));
     }, []);
 
     if (loading) return (
-        <div className="page-container" style={{ maxWidth: 960 }}>
+        <div style={{ maxWidth: 960, animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
             <h2 className="page-title">ダッシュボード</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '3rem', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
                 <span className="spinner" /> 読み込み中...
@@ -164,247 +29,538 @@ export default function DashboardPage() {
 
     if (!data) return null;
 
-    const { overall, today, biz3, dailyCompletions, statusDistribution, overdue, todayDone } = data;
-    const overallPct = overall.total > 0 ? Math.round((overall.completed / overall.total) * 100) : 0;
-    const todayPct = today.total > 0 ? Math.round((today.completed / today.total) * 100) : 0;
-    const biz3Pct = biz3.total > 0 ? Math.round((biz3.completed / biz3.total) * 100) : 0;
-    const maxDailyCount = Math.max(...dailyCompletions.map(d => d.count), 1);
-    const maxStatusCount = Math.max(...statusDistribution.map(s => s.count), 1);
+    const now = new Date();
+    const dateLabel = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日（${WEEKDAY_NAMES[now.getDay()]}）`;
 
     return (
         <div className="db-root">
             <h2 className="page-title">ダッシュボード</h2>
-            <p className="db-subtitle">タスクの進捗状況をひと目で確認</p>
+            <p className="db-date">{dateLabel}</p>
 
-            {/* Top Row: 3 ring cards */}
-            <div className="db-top-row">
-                <RingCard title="全体の完了率" pct={overallPct} total={overall.total} done={overall.completed}
-                    color="var(--color-accent)" subtitle={`${overall.completed} / ${overall.total} タスク完了`} />
-                <RingCard title="今日の進捗" pct={todayPct} total={today.total} done={today.completed}
-                    color={todayPct === 100 && today.total > 0 ? 'var(--color-success)' : '#f59e0b'}
-                    subtitle={today.total > 0 ? `残り${today.total - today.completed}件 / 想定${formatMin(today.remainingMinutes)}` : '今日のタスクなし'} />
-                <RingCard title="直近3営業日" pct={biz3Pct} total={biz3.total} done={biz3.completed}
-                    color="#8b5cf6"
-                    subtitle={biz3.total > 0 ? `${biz3.completed} / ${biz3.total} タスク完了` : '期限内タスクなし'} />
-            </div>
-
-            {/* Bottom Row */}
-            <div className="db-bottom-row">
-                {/* Daily Completions Chart */}
-                <div className="db-card db-card-wide">
-                    <h3 className="db-card-title">直近7日間の完了数</h3>
-                    <div className="db-bar-chart">
-                        {dailyCompletions.map((d, i) => {
-                            const dayLabel = new Date(d.date + 'T00:00:00').toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
-                            const dow = new Date(d.date + 'T00:00:00').getDay();
-                            const isWeekend = dow === 0 || dow === 6;
-                            return (
-                                <div key={i} className="bar-col">
-                                    <span className="bar-value">{d.count > 0 ? d.count : ''}</span>
-                                    <div className="bar-track">
-                                        <div className="bar-fill" style={{
-                                            height: `${(d.count / maxDailyCount) * 100}%`,
-                                            background: d.date === new Date().toLocaleDateString('sv-SE')
-                                                ? 'var(--color-accent)' : 'var(--color-accent-subtle)',
-                                            borderColor: d.date === new Date().toLocaleDateString('sv-SE') ? 'var(--color-accent)' : 'transparent'
-                                        }} />
-                                    </div>
-                                    <span className={`bar-label ${isWeekend ? 'weekend' : ''}`}>{dayLabel}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Status Distribution */}
-                <div className="db-card">
-                    <h3 className="db-card-title">ステータス分布</h3>
-                    <div className="db-status-list">
-                        {statusDistribution.map((s, i) => (
-                            <div key={i} className="status-bar-row">
-                                <div className="status-bar-label">
-                                    <span className="status-dot" style={{ background: s.color }} />
-                                    <span>{s.label}</span>
-                                    <span className="status-count">{s.count}</span>
-                                </div>
-                                <div className="status-bar-track">
-                                    <div className="status-bar-fill" style={{
-                                        width: `${(s.count / maxStatusCount) * 100}%`,
-                                        background: s.color
-                                    }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Today's Completed Tasks (ENH-1) */}
-            {todayDone.length > 0 && (
-                <div className="db-card db-today-done">
-                    <h3 className="db-card-title">今日完了したタスク <span className="done-badge">{todayDone.length}件</span></h3>
-                    <div className="done-list">
-                        {todayDone.slice(0, 10).map(t => (
-                            <div key={t.id} className="done-item">
-                                <span className="done-check">✓</span>
-                                <span className="done-title">{t.title}</span>
-                                {t.is_routine && <span className="done-routine-badge">🔁</span>}
-                                {t.completed_at && (
-                                    <span className="done-time">{t.completed_at.split(' ')[1]?.slice(0, 5)}</span>
-                                )}
-                            </div>
-                        ))}
-                        {todayDone.length > 10 && (
-                            <div className="done-more">他 {todayDone.length - 10} 件</div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Overdue Warning */}
-            {overdue.count > 0 && (
-                <div className="db-card db-overdue">
-                    <h3 className="db-card-title">期限切れタスク <span className="overdue-badge">{overdue.count}件</span></h3>
-                    <div className="overdue-list">
-                        {overdue.tasks.map(t => (
-                            <div key={t.id} className="overdue-item">
-                                <span className="overdue-title">{t.title}</span>
-                                <span className="overdue-date"><Calendar size={12} /> {t.due_date}</span>
-                            </div>
-                        ))}
-                        {overdue.count > 5 && (
-                            <div className="overdue-more">他 {overdue.count - 5} 件</div>
-                        )}
-                    </div>
-                </div>
-            )}
+            <SummarySection data={data} />
 
             <style jsx>{`
-        .db-root { max-width: 960px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .db-subtitle { color: var(--color-text-muted); font-size: 0.9rem; margin-top: -1.25rem; margin-bottom: 2rem; }
-
-        /* Top Row */
-        .db-top-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
-
-        /* Bottom Row */
-        .db-bottom-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-
-        /* Cards */
-        .db-card {
-          background: var(--color-surface); border: 1px solid var(--border-color);
-          border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
-          box-shadow: var(--shadow-sm);
-        }
-        .db-card-wide { grid-column: span 1; }
-        .db-card-title {
-          font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary);
-          margin: 0 0 1rem 0;
-        }
-
-        /* Bar Chart */
-        .db-bar-chart { display: flex; gap: 0.5rem; align-items: flex-end; height: 140px; }
-        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; height: 100%; }
-        .bar-value { font-size: 0.7rem; font-weight: 700; color: var(--color-accent); min-height: 16px; }
-        .bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
-        .bar-fill {
-          width: 100%; min-height: 4px; border-radius: 4px 4px 0 0;
-          transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .bar-label { font-size: 0.68rem; color: var(--color-text-muted); white-space: nowrap; }
-        .bar-label.weekend { color: var(--color-danger); opacity: 0.6; }
-
-        /* Status Distribution */
-        .db-status-list { display: flex; flex-direction: column; gap: 0.65rem; }
-        .status-bar-row { display: flex; flex-direction: column; gap: 0.25rem; }
-        .status-bar-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--color-text-secondary); }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .status-count { margin-left: auto; font-weight: 700; color: var(--color-text); font-size: 0.85rem; }
-        .status-bar-track { height: 6px; background: var(--color-surface-hover); border-radius: 3px; overflow: hidden; }
-        .status-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-
-        /* Today Done (ENH-1) */
-        .db-today-done { border-color: color-mix(in srgb, var(--color-success) 20%, transparent); background-color: var(--color-success-bg); margin-bottom: 1rem; }
-        .done-badge {
-          background: var(--color-success); color: white; font-size: 0.7rem;
-          padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; font-weight: 700;
-        }
-        .done-list { display: flex; flex-direction: column; gap: 0.35rem; }
-        .done-item {
-          display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem;
-          border-radius: var(--radius-sm); transition: background 0.15s;
-        }
-        .done-item:hover { background-color: var(--color-surface-hover); }
-        .done-check {
-          color: var(--color-success); font-weight: 700; font-size: 0.78rem;
-          width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
-          background: var(--color-success-bg); border-radius: 50%; flex-shrink: 0;
-        }
-        .done-title { font-size: 0.85rem; color: var(--color-text); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .done-routine-badge { font-size: 0.75rem; flex-shrink: 0; }
-        .done-time { font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0; }
-        .done-more { font-size: 0.8rem; color: var(--color-text-muted); text-align: center; padding-top: 0.3rem; }
-
-        /* Overdue */
-        .db-overdue { border-color: color-mix(in srgb, var(--color-danger) 20%, transparent); background-color: var(--color-danger-bg); }
-        .overdue-badge {
-          background: var(--color-danger); color: white; font-size: 0.7rem;
-          padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; font-weight: 700;
-        }
-        .overdue-list { display: flex; flex-direction: column; gap: 0.4rem; }
-        .overdue-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0; }
-        .overdue-title { font-size: 0.85rem; color: var(--color-text); font-weight: 500; }
-        .overdue-date { font-size: 0.78rem; color: var(--color-danger); white-space: nowrap; }
-        .overdue-more { font-size: 0.8rem; color: var(--color-text-muted); text-align: center; padding-top: 0.3rem; }
-
-        @media (max-width: 768px) {
-          .db-top-row { grid-template-columns: 1fr; }
-          .db-bottom-row { grid-template-columns: 1fr; }
-        }
-      `}</style>
+                .db-root { max-width: 960px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+                .db-date { color: var(--color-text-muted); font-size: 0.82rem; margin-top: -1.25rem; margin-bottom: 1.5rem; }
+            `}</style>
         </div>
     );
 }
 
-/* ---- Reusable Ring Card Component ---- */
-function RingCard({ title, pct, total, done, color, subtitle }) {
+/* ================================================================
+   Data Loading
+   ================================================================ */
+
+async function loadDashboard() {
+    const db = await fetchDb();
+    const today = new Date().toLocaleDateString('sv-SE');
+
+    // Get the start of the current week (Monday)
+    const nowDate = new Date();
+    const dow = nowDate.getDay();
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    const weekStart = new Date(nowDate);
+    weekStart.setDate(weekStart.getDate() + mondayOffset);
+    const weekStartStr = weekStart.toLocaleDateString('sv-SE');
+
+    // Get the start of the current month
+    const monthStart = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-01`;
+
+    // --- Summary: completed & created counts for month/week/today ---
+    const summaryRows = await db.select(`
+        SELECT
+            SUM(CASE WHEN date(completed_at) >= $1 THEN 1 ELSE 0 END) as month_completed,
+            SUM(CASE WHEN date(created_at) >= $2 THEN 1 ELSE 0 END) as month_created,
+            SUM(CASE WHEN date(completed_at) >= $3 THEN 1 ELSE 0 END) as week_completed,
+            SUM(CASE WHEN date(created_at) >= $4 THEN 1 ELSE 0 END) as week_created,
+            SUM(CASE WHEN date(completed_at) = $5 THEN 1 ELSE 0 END) as today_completed,
+            SUM(CASE WHEN date(created_at) = $6 THEN 1 ELSE 0 END) as today_created
+        FROM tasks
+        WHERE archived_at IS NULL AND status_code != 5
+    `, [monthStart, monthStart, weekStartStr, weekStartStr, today, today]);
+
+    // Routine completions for summary
+    const routineSummaryRows = await db.select(`
+        SELECT
+            SUM(CASE WHEN completion_date >= $1 THEN 1 ELSE 0 END) as month_completed,
+            SUM(CASE WHEN completion_date >= $2 THEN 1 ELSE 0 END) as week_completed,
+            SUM(CASE WHEN completion_date = $3 THEN 1 ELSE 0 END) as today_completed
+        FROM routine_completions
+    `, [monthStart, weekStartStr, today]);
+
+    const s = summaryRows[0] || {};
+    const rs = routineSummaryRows[0] || {};
+
+    const summary = {
+        month: { completed: (s.month_completed || 0) + (rs.month_completed || 0), created: s.month_created || 0 },
+        week: { completed: (s.week_completed || 0) + (rs.week_completed || 0), created: s.week_created || 0 },
+        today: { completed: (s.today_completed || 0) + (rs.today_completed || 0), created: s.today_created || 0 },
+    };
+
+    // --- Project breakdown ---
+    const projectRows = await db.select(`
+        SELECT
+            p.id, p.name, p.color,
+            SUM(CASE WHEN date(t.completed_at) >= $1 THEN 1 ELSE 0 END) as month_completed,
+            SUM(CASE WHEN date(t.created_at) >= $2 THEN 1 ELSE 0 END) as month_created,
+            SUM(CASE WHEN date(t.completed_at) >= $3 THEN 1 ELSE 0 END) as week_completed,
+            SUM(CASE WHEN date(t.created_at) >= $4 THEN 1 ELSE 0 END) as week_created,
+            SUM(CASE WHEN date(t.completed_at) = $5 THEN 1 ELSE 0 END) as today_completed,
+            SUM(CASE WHEN date(t.created_at) = $6 THEN 1 ELSE 0 END) as today_created
+        FROM projects p
+        LEFT JOIN tasks t ON t.project_id = p.id AND t.archived_at IS NULL AND t.status_code != 5
+        WHERE p.archived_at IS NULL
+        GROUP BY p.id
+    `, [monthStart, monthStart, weekStartStr, weekStartStr, today, today]);
+
+    // Sort by month activity (completed + created) descending, take top 5
+    const projectsWithActivity = projectRows.map(p => ({
+        ...p,
+        monthActivity: (p.month_completed || 0) + (p.month_created || 0),
+    })).filter(p => p.monthActivity > 0).sort((a, b) => b.monthActivity - a.monthActivity);
+
+    const topProjects = projectsWithActivity.slice(0, 5);
+    const otherProjects = projectsWithActivity.slice(5);
+
+    let projects = topProjects.map(p => ({
+        name: p.name,
+        color: p.color,
+        month: { completed: p.month_completed || 0, created: p.month_created || 0 },
+        week: { completed: p.week_completed || 0, created: p.week_created || 0 },
+        today: { completed: p.today_completed || 0, created: p.today_created || 0 },
+    }));
+
+    if (otherProjects.length > 0) {
+        const other = { name: 'その他', color: '#9CA3AF', month: { completed: 0, created: 0 }, week: { completed: 0, created: 0 }, today: { completed: 0, created: 0 } };
+        for (const p of otherProjects) {
+            other.month.completed += p.month_completed || 0;
+            other.month.created += p.month_created || 0;
+            other.week.completed += p.week_completed || 0;
+            other.week.created += p.week_created || 0;
+            other.today.completed += p.today_completed || 0;
+            other.today.created += p.today_created || 0;
+        }
+        projects.push(other);
+    }
+
+    // --- Weekly data for cumulative chart (8 weeks) ---
+    // Calculate 8 weeks of Monday starts going back from current week
+    const weeksData = [];
+    for (let w = 7; w >= 0; w--) {
+        const wkStart = new Date(weekStart);
+        wkStart.setDate(wkStart.getDate() - w * 7);
+        const wkEnd = new Date(wkStart);
+        wkEnd.setDate(wkEnd.getDate() + 6);
+        const wkStartStr = wkStart.toLocaleDateString('sv-SE');
+        const wkEndStr = wkEnd.toLocaleDateString('sv-SE');
+        const label = `${wkStart.getMonth() + 1}/${wkStart.getDate()}`;
+        weeksData.push({ wkStartStr, wkEndStr, label });
+    }
+
+    const chartStart = weeksData[0].wkStartStr;
+    const chartEnd = weeksData[weeksData.length - 1].wkEndStr;
+
+    // Batch query: daily completed tasks in the 8-week range
+    const dailyCompletedRows = await db.select(`
+        SELECT date(completed_at) as d, COUNT(*) as c
+        FROM tasks
+        WHERE archived_at IS NULL AND status_code != 5 AND date(completed_at) >= $1 AND date(completed_at) <= $2
+        GROUP BY date(completed_at)
+    `, [chartStart, chartEnd]);
+
+    const dailyCreatedRows = await db.select(`
+        SELECT date(created_at) as d, COUNT(*) as c
+        FROM tasks
+        WHERE archived_at IS NULL AND status_code != 5 AND date(created_at) >= $1 AND date(created_at) <= $2
+        GROUP BY date(created_at)
+    `, [chartStart, chartEnd]);
+
+    const dailyRoutineCompRows = await db.select(`
+        SELECT completion_date as d, COUNT(*) as c
+        FROM routine_completions
+        WHERE completion_date >= $1 AND completion_date <= $2
+        GROUP BY completion_date
+    `, [chartStart, chartEnd]);
+
+    // Build day-level lookup
+    const completedByDay = {};
+    for (const r of dailyCompletedRows) { completedByDay[r.d] = (completedByDay[r.d] || 0) + r.c; }
+    for (const r of dailyRoutineCompRows) { completedByDay[r.d] = (completedByDay[r.d] || 0) + r.c; }
+    const createdByDay = {};
+    for (const r of dailyCreatedRows) { createdByDay[r.d] = (createdByDay[r.d] || 0) + r.c; }
+
+    // Aggregate into weekly buckets
+    const chartWeeks = weeksData.map(wk => {
+        let completed = 0, created = 0;
+        const start = new Date(wk.wkStartStr + 'T00:00:00');
+        for (let d = 0; d < 7; d++) {
+            const dt = new Date(start);
+            dt.setDate(dt.getDate() + d);
+            const ds = dt.toLocaleDateString('sv-SE');
+            if (ds > wk.wkEndStr) break;
+            completed += completedByDay[ds] || 0;
+            created += createdByDay[ds] || 0;
+        }
+        return { label: wk.label, completed, created };
+    });
+
+    // --- Velocity: compare this week vs median of prior 4 weeks same-day-count ---
+    // "This week so far" = chartWeeks[7] (current week)
+    // "Prior 4 weeks at same day of week" means completed up to the same weekday
+    const currentDow = nowDate.getDay() === 0 ? 7 : nowDate.getDay(); // Mon=1, Sun=7
+    const thisWeekCompleted = summary.week.completed;
+
+    // For prior 4 weeks, compute completed up to same day
+    const priorWeekCompletions = [];
+    for (let w = 1; w <= 4; w++) {
+        const priorWkStart = new Date(weekStart);
+        priorWkStart.setDate(priorWkStart.getDate() - w * 7);
+        let count = 0;
+        for (let d = 0; d < currentDow; d++) {
+            const dt = new Date(priorWkStart);
+            dt.setDate(dt.getDate() + d);
+            const ds = dt.toLocaleDateString('sv-SE');
+            count += completedByDay[ds] || 0;
+        }
+        priorWeekCompletions.push(count);
+    }
+
+    // Compute velocity text
+    const velocity = computeVelocityText(thisWeekCompleted, priorWeekCompletions, chartWeeks, summary);
+
+    return { summary, projects, chartWeeks, velocity };
+}
+
+/* ================================================================
+   Velocity Text Generation
+   ================================================================ */
+
+function computeVelocityText(thisWeek, priorWeeks, chartWeeks, summary) {
+    // Need at least 4 weeks of data
+    const validPrior = priorWeeks.filter(c => c > 0);
+    if (validPrior.length < 2) return null; // Not enough data
+
+    const sorted = [...priorWeeks].sort((a, b) => a - b);
+    const median = sorted.length % 2 === 0
+        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+        : sorted[Math.floor(sorted.length / 2)];
+
+    // Special: best in 8 weeks
+    const allWeeklyCompleted = chartWeeks.map(w => w.completed);
+    const maxEver = Math.max(...allWeeklyCompleted.slice(0, 7)); // exclude current week (incomplete)
+    if (thisWeek > maxEver && thisWeek > 0) {
+        return '今週は8週間でいちばんのペースです';
+    }
+
+    // Special: today 3+ completed
+    if (summary.today.completed >= 3) {
+        return '今日の勢いがあります';
+    }
+
+    // Compare to median
+    if (median === 0) {
+        if (thisWeek > 0) return 'いい流れです';
+        return null;
+    }
+
+    const ratio = thisWeek / median;
+
+    if (ratio >= 1.3) {
+        const msgs = ['いい流れです', '今週は調子が出ています', '勢いがあります'];
+        return msgs[Math.floor(Math.random() * msgs.length)];
+    }
+
+    if (ratio >= 0.7) {
+        const msgs = ['安定したペースです', 'ちゃんと動けています'];
+        return msgs[Math.floor(Math.random() * msgs.length)];
+    }
+
+    // Low pace: show positive monthly info instead
+    const monthActiveDays = summary.month.completed > 0 ? Math.min(new Date().getDate(), 30) : 0;
+    if (summary.month.completed > 0) {
+        return `今月は${summary.month.completed}件完了しています`;
+    }
+
+    return null;
+}
+
+/* ================================================================
+   [A] Summary Section Component
+   ================================================================ */
+
+function SummarySection({ data }) {
+    const { summary, projects, chartWeeks, velocity } = data;
+
     return (
-        <div className="ring-card">
-            <h3 className="ring-card-title">{title}</h3>
-            <div className="ring-card-body">
-                <div className="ring-area">
-                    <svg viewBox="0 0 120 120" className="ring-svg">
-                        <circle cx="60" cy="60" r="50" className="ring-bg2" />
-                        <circle cx="60" cy="60" r="50" className="ring-fill2"
-                            style={{ strokeDasharray: `${pct * 3.14} 314`, stroke: color }} />
-                    </svg>
-                    <div className="ring-center">
-                        <span className="ring-pct2">{pct}<small>%</small></span>
-                    </div>
+        <div className="summary-card">
+            <div className="summary-header">
+                <span className="summary-label">今週のサマリー</span>
+                {velocity && <span className="summary-velocity">{velocity}</span>}
+            </div>
+
+            <div className="summary-body">
+                {/* Left: tables */}
+                <div className="summary-left">
+                    <SummaryTable summary={summary} />
+                    {projects.length > 0 && <ProjectBreakdown projects={projects} />}
                 </div>
-                <p className="ring-card-sub">{subtitle}</p>
+
+                {/* Right: cumulative chart */}
+                <div className="summary-right">
+                    <CumulativeChart weeks={chartWeeks} />
+                    <span className="chart-caption">直近8週の累積（完了 + 追加）</span>
+                </div>
             </div>
 
             <style jsx>{`
-        .ring-card {
-          background: var(--color-surface); border: 1px solid var(--border-color);
-          border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
-          box-shadow: var(--shadow-sm); text-align: center;
-          transition: all 0.2s;
-        }
-        .ring-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-color-hover); }
-        .ring-card-title { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
-        .ring-card-body { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
-
-        .ring-area { position: relative; width: 90px; height: 90px; }
-        .ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .ring-bg2 { fill: none; stroke: var(--color-surface-hover); stroke-width: 8; }
-        .ring-fill2 { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-        .ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-        .ring-pct2 { font-size: 1.4rem; font-weight: 800; color: var(--color-text); }
-        .ring-pct2 small { font-size: 0.7rem; font-weight: 600; }
-
-        .ring-card-sub { font-size: 0.78rem; color: var(--color-text-muted); margin: 0; }
-      `}</style>
+                .summary-card {
+                    background: var(--color-surface); border: 1px solid var(--border-color);
+                    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
+                    box-shadow: var(--shadow-sm);
+                }
+                .summary-header {
+                    display: flex; justify-content: space-between; align-items: flex-start;
+                    margin-bottom: 1rem;
+                }
+                .summary-label {
+                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.04em; text-transform: uppercase;
+                }
+                .summary-velocity {
+                    font-size: 0.82rem; font-weight: 600; color: var(--color-accent);
+                }
+                .summary-body {
+                    display: flex; gap: 1.5rem; align-items: flex-start;
+                }
+                .summary-left { flex: 0 0 auto; min-width: 280px; }
+                .summary-right {
+                    flex: 1; display: flex; flex-direction: column; align-items: center;
+                    justify-content: center; min-height: 120px;
+                }
+                .chart-caption {
+                    font-size: 0.68rem; color: var(--color-text-muted); margin-top: 0.25rem;
+                }
+                @media (max-width: 700px) {
+                    .summary-body { flex-direction: column; }
+                    .summary-left { min-width: unset; width: 100%; }
+                }
+            `}</style>
         </div>
+    );
+}
+
+/* ================================================================
+   Summary Table
+   ================================================================ */
+
+function SummaryTable({ summary }) {
+    const periods = [
+        ['今月', 'month'],
+        ['今週', 'week'],
+        ['今日', 'today'],
+    ];
+
+    return (
+        <div className="st-wrap">
+            <table className="st-table">
+                <thead>
+                    <tr>
+                        <th className="st-th-label"></th>
+                        <th className="st-th">完了</th>
+                        <th className="st-th">追加</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {periods.map(([label, key], i) => (
+                        <tr key={key} className={i < periods.length - 1 ? 'st-row-border' : ''}>
+                            <td className="st-label">{label}</td>
+                            <td className="st-value">{summary[key].completed}<span className="st-unit">件</span></td>
+                            <td className="st-value">{summary[key].created}<span className="st-unit">件</span></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            <style jsx>{`
+                .st-wrap { margin-bottom: 1rem; }
+                .st-table { border-collapse: collapse; width: 100%; }
+                .st-th-label { text-align: left; font-weight: 400; padding: 0 0 0.35rem; }
+                .st-th {
+                    text-align: right; font-weight: 400; padding: 0 0 0.35rem;
+                    font-size: 0.68rem; color: var(--color-text-muted);
+                }
+                .st-row-border td { border-bottom: 1px solid var(--border-color); }
+                .st-label {
+                    font-size: 0.78rem; color: var(--color-text-secondary);
+                    padding: 0.4rem 0; width: 48px;
+                }
+                .st-value {
+                    font-size: 0.85rem; font-weight: 600; color: var(--color-text);
+                    text-align: right; padding: 0.4rem 0; min-width: 44px;
+                }
+                .st-unit { font-size: 0.65rem; font-weight: 400; color: var(--color-text-muted); margin-left: 2px; }
+            `}</style>
+        </div>
+    );
+}
+
+/* ================================================================
+   Project Breakdown
+   ================================================================ */
+
+function ProjectBreakdown({ projects }) {
+    return (
+        <div className="pb-wrap">
+            <div className="pb-header">プロジェクト別</div>
+            <table className="pb-table">
+                <thead>
+                    <tr>
+                        <th className="pb-th-name"></th>
+                        <th className="pb-th">今月</th>
+                        <th className="pb-th">今週</th>
+                        <th className="pb-th">今日</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {projects.map((p, i) => (
+                        <tr key={i} className={i < projects.length - 1 ? 'pb-row-border' : ''}>
+                            <td className="pb-name">
+                                <span className="pb-dot" style={{ background: p.color }} />
+                                {p.name}
+                            </td>
+                            <ProjCell data={p.month} />
+                            <ProjCell data={p.week} />
+                            <ProjCell data={p.today} />
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            <div className="pb-legend">完了 / <span className="pb-legend-add">追加</span></div>
+
+            <style jsx>{`
+                .pb-wrap { }
+                .pb-header {
+                    font-size: 0.68rem; color: var(--color-text-muted); margin-bottom: 0.35rem;
+                }
+                .pb-table { border-collapse: collapse; width: 100%; }
+                .pb-th-name { text-align: left; font-weight: 400; padding: 0 0 0.25rem; }
+                .pb-th {
+                    text-align: center; font-weight: 400; padding: 0 0.25rem 0.25rem;
+                    font-size: 0.6rem; color: var(--color-text-muted);
+                }
+                .pb-row-border td { border-bottom: 1px solid var(--border-color); }
+                .pb-name {
+                    font-size: 0.73rem; color: var(--color-text-secondary);
+                    padding: 0.3rem 0; display: flex; align-items: center; gap: 0.35rem;
+                }
+                .pb-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+                .pb-legend {
+                    font-size: 0.6rem; color: var(--color-text-muted); margin-top: 0.35rem;
+                }
+                .pb-legend-add { color: var(--color-accent-subtle); }
+            `}</style>
+        </div>
+    );
+}
+
+function ProjCell({ data }) {
+    if (data.completed === 0 && data.created === 0) {
+        return <td className="pc-empty">—</td>;
+    }
+    return (
+        <td className="pc-cell">
+            <span className="pc-comp">{data.completed}</span>
+            <span className="pc-sep">/</span>
+            <span className="pc-add">{data.created}</span>
+
+            <style jsx>{`
+                .pc-empty { font-size: 0.72rem; color: var(--color-text-disabled); text-align: center; padding: 0.2rem 0.25rem; }
+                .pc-cell { font-size: 0.72rem; text-align: center; padding: 0.2rem 0.25rem; white-space: nowrap; }
+                .pc-comp { color: var(--color-text-secondary); }
+                .pc-sep { color: var(--color-text-disabled); margin: 0 1px; }
+                .pc-add { color: var(--color-accent); opacity: 0.7; }
+            `}</style>
+        </td>
+    );
+}
+
+/* ================================================================
+   Cumulative Area Chart (SVG)
+   ================================================================ */
+
+const CHART_W = 380;
+const CHART_H = 110;
+const PAD = { t: 8, r: 12, b: 24, l: 12 };
+const INNER_W = CHART_W - PAD.l - PAD.r;
+const INNER_H = CHART_H - PAD.t - PAD.b;
+
+function CumulativeChart({ weeks }) {
+    // Build cumulative data
+    const pts = useMemo(() => {
+        const result = [];
+        for (let i = 0; i < weeks.length; i++) {
+            const prev = result[i - 1] || { cumC: 0, cumT: 0 };
+            result.push({
+                cumC: prev.cumC + weeks[i].completed,
+                cumT: prev.cumT + weeks[i].completed + weeks[i].created,
+            });
+        }
+        return result;
+    }, [weeks]);
+
+    const max = Math.max(pts[pts.length - 1]?.cumT || 1, 1);
+    const sx = (i) => PAD.l + (i / Math.max(pts.length - 1, 1)) * INNER_W;
+    const sy = (v) => PAD.t + INNER_H - (v / max) * INNER_H;
+
+    if (pts.length === 0) return null;
+
+    const compLine = pts.map((p, i) => `${sx(i)},${sy(p.cumC)}`).join(' ');
+    const totalLine = pts.map((p, i) => `${sx(i)},${sy(p.cumT)}`).join(' ');
+    const compArea = `${PAD.l},${PAD.t + INNER_H} ${compLine} ${sx(pts.length - 1)},${PAD.t + INNER_H}`;
+    const createdArea = pts.map((p, i) => `${sx(i)},${sy(p.cumT)}`).join(' ')
+        + ' ' + [...pts].reverse().map((p, i) => `${sx(pts.length - 1 - i)},${sy(p.cumC)}`).join(' ');
+
+    const last = pts[pts.length - 1];
+
+    return (
+        <svg width={CHART_W} height={CHART_H} viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+            style={{ display: 'block', maxWidth: '100%', height: 'auto' }}>
+            <defs>
+                <linearGradient id="gComp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.03" />
+                </linearGradient>
+                <linearGradient id="gAdd" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-text-muted)" stopOpacity="0.15" />
+                    <stop offset="100%" stopColor="var(--color-text-muted)" stopOpacity="0.02" />
+                </linearGradient>
+            </defs>
+            {/* Area fills */}
+            <polygon points={compArea} fill="url(#gComp)" />
+            <polygon points={createdArea} fill="url(#gAdd)" />
+            {/* Lines */}
+            <polyline points={compLine} fill="none" stroke="var(--color-accent)" strokeWidth="1.8"
+                strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={totalLine} fill="none" stroke="var(--color-text-muted)" strokeWidth="1.2"
+                strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 2" opacity="0.5" />
+            {/* Week labels */}
+            {weeks.map((w, i) => (
+                <text key={i} x={sx(i)} y={CHART_H - 4} textAnchor="middle"
+                    fontSize="8" fill="var(--color-text-disabled)">{w.label}</text>
+            ))}
+            {/* End markers */}
+            <circle cx={sx(pts.length - 1)} cy={sy(last.cumC)} r={3.5} fill="var(--color-accent)" />
+            <circle cx={sx(pts.length - 1)} cy={sy(last.cumT)} r={3.5} fill="var(--color-text-muted)" opacity="0.6" />
+            {/* End values */}
+            <text x={sx(pts.length - 1) - 8} y={sy(last.cumC) - 8} textAnchor="end"
+                fontSize="10" fontWeight="700" fill="var(--color-accent)">{last.cumC}</text>
+            <text x={sx(pts.length - 1) - 8} y={sy(last.cumT) - 8} textAnchor="end"
+                fontSize="10" fontWeight="700" fill="var(--color-text-muted)" opacity="0.7">{last.cumT}</text>
+            {/* Legend */}
+            <rect x={PAD.l} y={0} width={7} height={7} rx={1.5} fill="var(--color-accent)" opacity="0.5" />
+            <text x={PAD.l + 10} y={7} fontSize="8" fill="var(--color-text-muted)">完了</text>
+            <rect x={PAD.l + 36} y={0} width={7} height={7} rx={1.5} fill="var(--color-text-muted)" opacity="0.3" />
+            <text x={PAD.l + 48} y={7} fontSize="8" fill="var(--color-text-muted)">追加</text>
+        </svg>
     );
 }
