@@ -28,7 +28,7 @@ describe('ダッシュボード — サマリークエリ', () => {
         SUM(CASE WHEN date(completed_at) = $5 THEN 1 ELSE 0 END) as today_completed,
         SUM(CASE WHEN date(created_at) = $6 THEN 1 ELSE 0 END) as today_created
       FROM tasks
-      WHERE archived_at IS NULL AND status_code != 5
+      WHERE status_code != 5
     `, ['2026-03-01', '2026-03-01', '2026-03-09', '2026-03-09', '2026-03-10', '2026-03-10']);
 
     expect(rows[0].month_completed).toBe(2);
@@ -39,7 +39,7 @@ describe('ダッシュボード — サマリークエリ', () => {
     expect(rows[0].today_created).toBe(2); // id2 and id3 created today
   });
 
-  it('アーカイブ済みタスクはサマリーに含まれない', async () => {
+  it('アーカイブ済みタスクもサマリーに含まれる', async () => {
     const [id1] = await seedTasks(db, [{ title: 'アーカイブ済み', status_code: 3 }]);
     await db.execute("UPDATE tasks SET created_at = '2026-03-10 10:00:00', completed_at = '2026-03-10 15:00:00', archived_at = '2026-03-10 16:00:00' WHERE id = $1", [id1]);
 
@@ -48,12 +48,12 @@ describe('ダッシュボード — サマリークエリ', () => {
         SUM(CASE WHEN date(completed_at) = $1 THEN 1 ELSE 0 END) as today_completed,
         SUM(CASE WHEN date(created_at) = $2 THEN 1 ELSE 0 END) as today_created
       FROM tasks
-      WHERE archived_at IS NULL AND status_code != 5
+      WHERE status_code != 5
     `, ['2026-03-10', '2026-03-10']);
 
-    // SUM() over zero matching rows returns null; production code handles via || 0
-    expect(rows[0].today_completed).toBeNull();
-    expect(rows[0].today_created).toBeNull();
+    // アーカイブ済みでも完了・追加カウントに含まれる（獲得フレーミング）
+    expect(rows[0].today_completed).toBe(1);
+    expect(rows[0].today_created).toBe(1);
   });
 
   it('キャンセル(status_code=5)はサマリーに含まれない', async () => {
@@ -64,7 +64,7 @@ describe('ダッシュボード — サマリークエリ', () => {
       SELECT
         SUM(CASE WHEN date(created_at) = $1 THEN 1 ELSE 0 END) as today_created
       FROM tasks
-      WHERE archived_at IS NULL AND status_code != 5
+      WHERE status_code != 5
     `, ['2026-03-10']);
 
     // SUM() over zero matching rows returns null; production code handles via || 0
@@ -110,7 +110,7 @@ describe('ダッシュボード — プロジェクト別内訳クエリ', () =>
         SUM(CASE WHEN date(t.completed_at) >= $1 THEN 1 ELSE 0 END) as month_completed,
         SUM(CASE WHEN date(t.created_at) >= $2 THEN 1 ELSE 0 END) as month_created
       FROM projects p
-      LEFT JOIN tasks t ON t.project_id = p.id AND t.archived_at IS NULL AND t.status_code != 5
+      LEFT JOIN tasks t ON t.project_id = p.id AND t.status_code != 5
       WHERE p.archived_at IS NULL
       GROUP BY p.id
     `, ['2026-03-01', '2026-03-01']);
@@ -136,7 +136,7 @@ describe('ダッシュボード — プロジェクト別内訳クエリ', () =>
         SUM(CASE WHEN date(t.completed_at) >= $1 THEN 1 ELSE 0 END) as month_completed,
         SUM(CASE WHEN date(t.created_at) >= $2 THEN 1 ELSE 0 END) as month_created
       FROM projects p
-      LEFT JOIN tasks t ON t.project_id = p.id AND t.archived_at IS NULL AND t.status_code != 5
+      LEFT JOIN tasks t ON t.project_id = p.id AND t.status_code != 5
       WHERE p.archived_at IS NULL
       GROUP BY p.id
     `, ['2026-03-01', '2026-03-01']);
@@ -172,7 +172,7 @@ describe('ダッシュボード — プロジェクト別内訳クエリ', () =>
         SUM(CASE WHEN date(t.created_at) >= $1 THEN 1 ELSE 0 END) as month_created,
         SUM(CASE WHEN date(t.completed_at) >= $2 THEN 1 ELSE 0 END) as month_completed
       FROM projects p
-      LEFT JOIN tasks t ON t.project_id = p.id AND t.archived_at IS NULL AND t.status_code != 5
+      LEFT JOIN tasks t ON t.project_id = p.id AND t.status_code != 5
       WHERE p.archived_at IS NULL
       GROUP BY p.id
     `, ['2026-03-01', '2026-03-01']);
@@ -206,14 +206,14 @@ describe('ダッシュボード — 日別チャートデータクエリ', () =>
     const completedRows = await db.select(`
       SELECT date(completed_at) as d, COUNT(*) as c
       FROM tasks
-      WHERE archived_at IS NULL AND status_code != 5 AND date(completed_at) >= $1 AND date(completed_at) <= $2
+      WHERE status_code != 5 AND date(completed_at) >= $1 AND date(completed_at) <= $2
       GROUP BY date(completed_at)
     `, ['2026-03-01', '2026-03-31']);
 
     const createdRows = await db.select(`
       SELECT date(created_at) as d, COUNT(*) as c
       FROM tasks
-      WHERE archived_at IS NULL AND status_code != 5 AND date(created_at) >= $1 AND date(created_at) <= $2
+      WHERE status_code != 5 AND date(created_at) >= $1 AND date(created_at) <= $2
       GROUP BY date(created_at)
     `, ['2026-03-01', '2026-03-31']);
 

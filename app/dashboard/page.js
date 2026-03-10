@@ -77,7 +77,7 @@ async function loadDashboard() {
             SUM(CASE WHEN date(completed_at) = $5 THEN 1 ELSE 0 END) as today_completed,
             SUM(CASE WHEN date(created_at) = $6 THEN 1 ELSE 0 END) as today_created
         FROM tasks
-        WHERE archived_at IS NULL AND status_code != 5
+        WHERE status_code != 5
     `, [monthStart, monthStart, weekStartStr, weekStartStr, today, today]);
 
     // Routine completions for summary
@@ -109,7 +109,7 @@ async function loadDashboard() {
             SUM(CASE WHEN date(t.completed_at) = $5 THEN 1 ELSE 0 END) as today_completed,
             SUM(CASE WHEN date(t.created_at) = $6 THEN 1 ELSE 0 END) as today_created
         FROM projects p
-        LEFT JOIN tasks t ON t.project_id = p.id AND t.archived_at IS NULL AND t.status_code != 5
+        LEFT JOIN tasks t ON t.project_id = p.id AND t.status_code != 5
         WHERE p.archived_at IS NULL
         GROUP BY p.id
     `, [monthStart, monthStart, weekStartStr, weekStartStr, today, today]);
@@ -165,14 +165,14 @@ async function loadDashboard() {
     const dailyCompletedRows = await db.select(`
         SELECT date(completed_at) as d, COUNT(*) as c
         FROM tasks
-        WHERE archived_at IS NULL AND status_code != 5 AND date(completed_at) >= $1 AND date(completed_at) <= $2
+        WHERE status_code != 5 AND date(completed_at) >= $1 AND date(completed_at) <= $2
         GROUP BY date(completed_at)
     `, [chartStart, chartEnd]);
 
     const dailyCreatedRows = await db.select(`
         SELECT date(created_at) as d, COUNT(*) as c
         FROM tasks
-        WHERE archived_at IS NULL AND status_code != 5 AND date(created_at) >= $1 AND date(created_at) <= $2
+        WHERE status_code != 5 AND date(created_at) >= $1 AND date(created_at) <= $2
         GROUP BY date(created_at)
     `, [chartStart, chartEnd]);
 

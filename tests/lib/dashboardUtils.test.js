@@ -47,10 +47,20 @@ describe('computeVelocityText', () => {
     expect(computeVelocityText(0, [0, 0, 3, 2], chart, summary)).toBeNull();
   });
 
+  it('3週連続好調時に専用メッセージを返す', () => {
+    // priorWeeks [4, 6, 5, 3] → sorted [3,4,5,6] → median=(4+5)/2=4.5
+    // chartWeeks[5]=5, [6]=6, [7]=5 → all >= 4.5 → 3週連続好調
+    const chart = makeChartWeeks([4, 6, 5, 3, 4, 5, 6, 5]);
+    const summary = { month: { completed: 20 }, today: { completed: 1 } };
+    const result = computeVelocityText(5, [4, 6, 5, 3], chart, summary);
+    expect(result).toBe('3週連続で調子がいいです');
+  });
+
   it('今日3件以上完了で「今日の勢いがあります」を返す', () => {
-    const chart = makeChartWeeks([5, 5, 5, 5, 5, 5, 5, 5]);
+    const chart = makeChartWeeks([5, 5, 5, 5, 5, 3, 5, 5]);
     const summary = { month: { completed: 10 }, today: { completed: 3 } };
     // thisWeek(5) is not > maxEver(5), so best-in-8 is skipped
+    // chartWeeks[5]=3 < median(5) → 3週連続好調チェックも不成立
     const result = computeVelocityText(5, [5, 5, 5, 5], chart, summary);
     expect(result).toBe('今日の勢いがあります');
   });
@@ -75,7 +85,8 @@ describe('computeVelocityText', () => {
   it('ratio >= 1.3（高ペース）で正のメッセージを返す', () => {
     // priorWeeks [4, 6, 5, 3] → sorted [3,4,5,6] → median=(4+5)/2=4.5
     // thisWeek=6 → ratio=6/4.5=1.33 → >= 1.3
-    const chart = makeChartWeeks([4, 6, 5, 3, 4, 6, 5, 6]);
+    // chartWeeks[5]=3 < median(4.5) → 3週連続好調チェック不成立
+    const chart = makeChartWeeks([4, 6, 5, 3, 4, 3, 5, 6]);
     const summary = { month: { completed: 20 }, today: { completed: 1 } };
     const result = computeVelocityText(6, [4, 6, 5, 3], chart, summary);
     expect(['いい流れです', '今週は調子が出ています', '勢いがあります']).toContain(result);
@@ -109,10 +120,10 @@ describe('computeVelocityText', () => {
   });
 
   it('中央値の計算: 奇数個の配列', () => {
-    // priorWeeks [3, 5, 7] → but we always pass 4 elements
-    // Let's use [3, 5, 7, 0] → sorted [0,3,5,7] → median=(3+5)/2=4
+    // priorWeeks [3, 5, 7, 0] → sorted [0,3,5,7] → median=(3+5)/2=4
     // thisWeek=6 → ratio=6/4=1.5 → >= 1.3
-    const chart = makeChartWeeks([3, 5, 7, 0, 3, 5, 7, 6]);
+    // chartWeeks[5]=3 < median(4) → 3週連続好調チェック不成立
+    const chart = makeChartWeeks([3, 5, 7, 0, 3, 3, 7, 6]);
     const summary = { month: { completed: 20 }, today: { completed: 0 } };
     const result = computeVelocityText(6, [3, 5, 7, 0], chart, summary);
     expect(['いい流れです', '今週は調子が出ています', '勢いがあります']).toContain(result);
