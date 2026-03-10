@@ -684,7 +684,7 @@ function FootprintMap({ heatmap }) {
                     width: 11px; height: 11px; border-radius: 2.5px;
                     transition: transform 0.12s;
                 }
-                .fm-cell:not(.fm-cell-empty):not(.fm-cell-future):hover {
+                .fm-cell:not(.fm-cell-empty):not(.fm-cell-future):not(.fm-legend-cell):hover {
                     transform: scale(1.35);
                 }
                 .fm-cell-empty { visibility: hidden; }
@@ -708,7 +708,6 @@ function FootprintMap({ heatmap }) {
                 .fm-legend-cell {
                     width: 10px; height: 10px;
                 }
-                .fm-legend-cell:hover { transform: none; }
             `}</style>
         </div>
     );
