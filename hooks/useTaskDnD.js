@@ -165,6 +165,23 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         const isUnnestZone = over.id === 'root' || String(over.id).startsWith('unnest-gap-');
         if (isUnnestZone) {
             if (!activeTask.parent_id) return; // Already root
+
+            // In manual mode with a specific gap, delegate to handleReorder for position-aware unnesting
+            if (sortMode === 'manual' && String(over.id).startsWith('unnest-gap-')) {
+                const gapId = String(over.id).replace('unnest-gap-', '');
+                let reorderIndex;
+                if (gapId === 'top') {
+                    reorderIndex = 0;
+                } else {
+                    const parentTasks = getSortedParentTasks();
+                    const gapTaskId = parseInt(gapId);
+                    const gapTaskIndex = parentTasks.findIndex(t => t.id === gapTaskId);
+                    reorderIndex = gapTaskIndex >= 0 ? gapTaskIndex + 1 : parentTasks.length;
+                }
+                await handleReorder(active.id, `reorder-root-${reorderIndex}`);
+                return;
+            }
+
             await unnest();
             return;
         }
