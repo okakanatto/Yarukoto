@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { fetchDb, safeTransaction } from '@/lib/utils';
 import { useDbOperation } from '@/hooks/useDbOperation';
 
 /**
@@ -111,15 +110,13 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
             return updated;
         });
 
-        // Persist to DB within a single transaction
+        // Persist to DB
         try {
             await dbOp(async (db) => {
-                await safeTransaction(db, async () => {
-                    if (isUnnest) {
-                        await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
-                    }
-                    await persistSortOrderInTx(db, currentOrder, isRoot ? null : parentId);
-                });
+                if (isUnnest) {
+                    await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
+                }
+                await persistSortOrderInTx(db, currentOrder, isRoot ? null : parentId);
             }, { error: '並び替えの保存に失敗しました' });
         } catch {
             fetchTasks();
@@ -138,15 +135,13 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
             setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: null } : t));
             try {
                 await dbOp(async (db) => {
-                    await safeTransaction(db, async () => {
-                        await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
-                        // In manual mode, assign sort_order at the end of root tasks
-                        if (sortMode === 'manual') {
-                            const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL');
-                            const newOrder = (maxSort[0]?.ms || 0) + 1;
-                            await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
-                        }
-                    });
+                    await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
+                    // In manual mode, assign sort_order at the end of root tasks
+                    if (sortMode === 'manual') {
+                        const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL');
+                        const newOrder = (maxSort[0]?.ms || 0) + 1;
+                        await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
+                    }
                 }, { error: '並び替えの処理に失敗しました' });
                 if (sortMode === 'manual') fetchTasks();
             } catch {
@@ -200,39 +195,37 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
 
         try {
             await dbOp(async (db) => {
-                await safeTransaction(db, async () => {
-                    await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
+                await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
 
-                    // IMP-39: Sync project_id with parent
-                    await db.execute('UPDATE tasks SET project_id = $1 WHERE id = $2', [parentTask.project_id, active.id]);
+                // IMP-39: Sync project_id with parent
+                await db.execute('UPDATE tasks SET project_id = $1 WHERE id = $2', [parentTask.project_id, active.id]);
 
-                    // In manual mode, assign sort_order at end of new parent's children
-                    if (sortMode === 'manual') {
-                        const maxSort = await db.select(
-                            'SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id = $1 AND archived_at IS NULL',
-                            [parentTask.id]
-                        );
-                        const newOrder = (maxSort[0]?.ms || 0) + 1;
-                        await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
-                    }
-
-                    // Tag inheritance: copy parent tags to child if setting enabled
-                    const settingRows = await db.select(
-                        "SELECT value FROM app_settings WHERE key = 'inherit_parent_tags'"
+                // In manual mode, assign sort_order at end of new parent's children
+                if (sortMode === 'manual') {
+                    const maxSort = await db.select(
+                        'SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id = $1 AND archived_at IS NULL',
+                        [parentTask.id]
                     );
-                    if (settingRows.length > 0 && settingRows[0].value === '1') {
-                        const parentTags = await db.select(
-                            'SELECT tag_id FROM task_tags WHERE task_id = $1',
-                            [parentTask.id]
+                    const newOrder = (maxSort[0]?.ms || 0) + 1;
+                    await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
+                }
+
+                // Tag inheritance: copy parent tags to child if setting enabled
+                const settingRows = await db.select(
+                    "SELECT value FROM app_settings WHERE key = 'inherit_parent_tags'"
+                );
+                if (settingRows.length > 0 && settingRows[0].value === '1') {
+                    const parentTags = await db.select(
+                        'SELECT tag_id FROM task_tags WHERE task_id = $1',
+                        [parentTask.id]
+                    );
+                    for (const row of parentTags) {
+                        await db.execute(
+                            'INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES ($1, $2)',
+                            [active.id, row.tag_id]
                         );
-                        for (const row of parentTags) {
-                            await db.execute(
-                                'INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES ($1, $2)',
-                                [active.id, row.tag_id]
-                            );
-                        }
                     }
-                });
+                }
             }, { error: '並び替えの保存に失敗しました' });
             fetchTasks();
         } catch {

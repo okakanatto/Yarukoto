@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { taskComparator } from '@/lib/taskSorter';
 
@@ -7,6 +7,7 @@ import { taskComparator } from '@/lib/taskSorter';
  * - Master data loading (statuses, tags, importance, urgency, settings)
  * - Task + routine fetching, merging and sorting
  * - Sort mode / sort key state
+ * - Unfiltered stats for progress ring (BUG-12 fix)
  *
  * Extracted from app/today/page.js (Phase 2-1).
  *
@@ -18,7 +19,8 @@ import { taskComparator } from '@/lib/taskSorter';
  * @param {number[]} filters.filterUrgency
  */
 export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filterImportance, filterUrgency }) {
-    const [tasks, setTasks] = useState([]);
+    // allTasks: unfiltered data from DB (used for stats + as source for filtering)
+    const [allTasks, setAllTasks] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const [statuses, setStatuses] = useState([]);
@@ -65,9 +67,10 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
         })();
     }, []);
 
+    // Fetch all tasks/routines for the date WITHOUT filter conditions.
+    // Filtering is applied in useMemo below (BUG-12 fix).
     const loadTasks = useCallback(async (date) => {
         // Skip fetching until master data (statuses, settings) is loaded.
-        // The effect will re-run once master data updates change loadTasks dependencies.
         if (!masterDataReady.current) return;
 
         const currentReq = ++activeRequestId.current;
@@ -75,71 +78,10 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
         try {
             const db = await fetchDb();
 
-            const dObj = new Date(date + 'T00:00:00');
             const todayStr = new Date().toLocaleDateString('sv-SE');
             const isViewingToday = (date === todayStr);
 
-            // Build condition strings
-            const tConditions = [];
-            const rConditions = [];
-            const sqlParams = [date, date, date, date];
-            let paramIndex = 5;
-
-            if (filterStatuses.length > 0) {
-                const tPlaceholders = filterStatuses.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.status_code IN (${tPlaceholders})`);
-                sqlParams.push(...filterStatuses);
-
-                // Routine status mapping: routines only have done(3) or not-done(1)
-                const showComplete = filterStatuses.includes(3);
-                const showIncomplete = filterStatuses.includes(1) || filterStatuses.includes(2);
-                if (showComplete && !showIncomplete) {
-                    rConditions.push('rc.completion_date IS NOT NULL');
-                } else if (!showComplete && showIncomplete) {
-                    rConditions.push('rc.completion_date IS NULL');
-                } else if (!showComplete && !showIncomplete) {
-                    rConditions.push('1 = 0');
-                }
-            }
-
-            // Routine SQL uses standard args first
-            const rSqlParams = [date, date];
-            let rParamIndex = 3;
-
-            if (filterTags.length > 0) {
-                const tPlaceholders = filterTags.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.id IN (SELECT task_id FROM task_tags WHERE tag_id IN (${tPlaceholders}))`);
-                sqlParams.push(...filterTags);
-
-                const rPlaceholders = filterTags.map(() => `$${rParamIndex++}`).join(',');
-                rConditions.push(`r.id IN (SELECT routine_id FROM routine_tags WHERE tag_id IN (${rPlaceholders}))`);
-                rSqlParams.push(...filterTags);
-            }
-
-            if (filterImportance.length > 0) {
-                const tPlaceholders = filterImportance.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.importance_level IN (${tPlaceholders})`);
-                sqlParams.push(...filterImportance);
-
-                const rPlaceholders = filterImportance.map(() => `$${rParamIndex++}`).join(',');
-                rConditions.push(`r.importance_level IN (${rPlaceholders})`);
-                rSqlParams.push(...filterImportance);
-            }
-
-            if (filterUrgency.length > 0) {
-                const tPlaceholders = filterUrgency.map(() => `$${paramIndex++}`).join(',');
-                tConditions.push(`t.urgency_level IN (${tPlaceholders})`);
-                sqlParams.push(...filterUrgency);
-
-                const rPlaceholders = filterUrgency.map(() => `$${rParamIndex++}`).join(',');
-                rConditions.push(`r.urgency_level IN (${rPlaceholders})`);
-                rSqlParams.push(...filterUrgency);
-            }
-
-            const tConditionStr = tConditions.length > 0 ? ' AND ' + tConditions.join(' AND ') : '';
-            const rConditionStr = rConditions.length > 0 ? ' AND ' + rConditions.join(' AND ') : '';
-
-            // Get valid routines for this date
+            // Get valid routines for this date (no filter conditions in SQL)
             const routinesSql = `
               SELECT r.*,
                      rc.completion_date,
@@ -155,10 +97,9 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
               LEFT JOIN projects pj ON r.project_id = pj.id
               WHERE r.enabled = 1
                 AND (r.end_date IS NULL OR r.end_date >= $2)
-                ${rConditionStr}
               GROUP BY r.id
             `;
-            const rawRoutines = await db.select(routinesSql, rSqlParams);
+            const rawRoutines = await db.select(routinesSql, [date, date]);
 
             const { isRoutineActiveOnDate } = await import('@/lib/holidayService');
             const activeRawRoutines = [];
@@ -184,7 +125,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                     tags: parseTags(r)
                 }));
 
-            // Get tasks assigned to this date OR overdue standard tasks
+            // Get tasks assigned to this date (no filter conditions in SQL)
             // IMP-14: Include archived completed tasks (archived_at IS NULL OR status=3)
             const tasksSql = `
               SELECT t.*,
@@ -206,10 +147,9 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                   ${showOverdue && isViewingToday ? 'OR (t.due_date < $3 AND t.status_code NOT IN (3, 5))' : ''}
                   OR (t.status_code = 3 AND date(t.completed_at) = $4)
                 )
-                ${tConditionStr}
               GROUP BY t.id
             `;
-            const rawTasks = await db.select(tasksSql, sqlParams);
+            const rawTasks = await db.select(tasksSql, [date, date, date, date]);
 
             const standardTasks = rawTasks.map(t => ({
                 ...t,
@@ -217,25 +157,11 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                 tags: parseTags(t)
             }));
 
-            // Combine and sort
+            // Combine (unfiltered)
             const unified = [...routineTasks, ...standardTasks];
 
-            if (sortMode === 'manual') {
-                unified.sort((a, b) => {
-                    const orderDiff = (a.today_sort_order || 0) - (b.today_sort_order || 0);
-                    if (orderDiff !== 0) return orderDiff;
-                    const aDone = a.status_code === 3;
-                    const bDone = b.status_code === 3;
-                    if (aDone && !bDone) return 1;
-                    if (!aDone && bDone) return -1;
-                    return (b.importance_level || 0) - (a.importance_level || 0);
-                });
-            } else {
-                unified.sort(taskComparator(sortKey, statuses));
-            }
-
             if (currentReq === activeRequestId.current) {
-                setTasks(unified);
+                setAllTasks(unified);
             }
         } catch (e) {
             console.error("Tauri DB fetch today error:", e);
@@ -245,7 +171,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
                 setLoading(false);
             }
         }
-    }, [filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, sortMode, showOverdue, statuses]);
+    }, [showOverdue]);
 
     // Re-fetch tasks when selectedDate or loadTasks changes; listen for taskAdded events
     useEffect(() => {
@@ -254,6 +180,69 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
         window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
         return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
     }, [selectedDate, loadTasks]);
+
+    // BUG-12 fix: Apply filters + sort in useMemo (reactive to filter/sort changes).
+    // allTasks is the unfiltered source, ensuring stats are computed from all data.
+    const tasks = useMemo(() => {
+        let filtered = [...allTasks];
+
+        // Status filter
+        if (filterStatuses.length > 0) {
+            const showComplete = filterStatuses.includes(3);
+            const showIncomplete = filterStatuses.includes(1) || filterStatuses.includes(2);
+            filtered = filtered.filter(t => {
+                if (t.is_routine) {
+                    if (t.status_code === 3) return showComplete;
+                    return showIncomplete;
+                }
+                return filterStatuses.includes(t.status_code);
+            });
+        }
+
+        // Tag filter
+        if (filterTags.length > 0) {
+            filtered = filtered.filter(t =>
+                t.tags && t.tags.some(tag => filterTags.includes(tag.id))
+            );
+        }
+
+        // Importance filter
+        if (filterImportance.length > 0) {
+            filtered = filtered.filter(t => filterImportance.includes(t.importance_level));
+        }
+
+        // Urgency filter
+        if (filterUrgency.length > 0) {
+            filtered = filtered.filter(t => filterUrgency.includes(t.urgency_level));
+        }
+
+        // Sort
+        if (sortMode === 'manual') {
+            filtered.sort((a, b) => {
+                const orderDiff = (a.today_sort_order || 0) - (b.today_sort_order || 0);
+                if (orderDiff !== 0) return orderDiff;
+                const aDone = a.status_code === 3;
+                const bDone = b.status_code === 3;
+                if (aDone && !bDone) return 1;
+                if (!aDone && bDone) return -1;
+                return (b.importance_level || 0) - (a.importance_level || 0);
+            });
+        } else {
+            filtered.sort(taskComparator(sortKey, statuses));
+        }
+
+        return filtered;
+    }, [allTasks, filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, sortMode, statuses]);
+
+    // BUG-12 fix: Stats computed from unfiltered allTasks, independent of active filters.
+    const unfilteredStats = useMemo(() => {
+        const total = allTasks.length;
+        const completed = allTasks.filter(t => t.status_code === 3).length;
+        const remaining = allTasks.filter(t => t.status_code !== 3 && t.status_code !== 5);
+        const remainingMin = remaining.reduce((s, t) => s + (t.estimated_hours || 0), 0);
+        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        return { total, completed, remaining: remaining.length, remainingMin, pct };
+    }, [allTasks]);
 
     const toggleSortMode = useCallback(async () => {
         const prevMode = sortMode;
@@ -273,7 +262,8 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
     }, [sortMode]);
 
     return {
-        tasks, setTasks, loading, loadTasks,
+        tasks, setTasks: setAllTasks, loading, loadTasks,
+        unfilteredStats,
         statuses, allTags, allImportance, allUrgency,
         showOverdue, sortMode, sortKey, setSortKey,
         toggleSortMode,

@@ -5,7 +5,7 @@ import CalendarPicker from './CalendarPicker';
 import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
 import { useDbOperation } from '../hooks/useDbOperation';
-import { fetchDb, safeTransaction } from '@/lib/utils';
+import { fetchDb } from '@/lib/utils';
 
 export default function TaskEditModal({ task, onClose, onSaved }) {
     const [title, setTitle] = useState(task.title || '');
@@ -96,53 +96,50 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     resolvedProjectId = defaultProj[0]?.id || null;
                 }
 
-                // All writes in a single transaction for atomicity
-                await safeTransaction(db, async () => {
-                    // Update the main task record
-                    await db.execute(`
-                        UPDATE tasks
-                        SET title = $1, start_date = $2, due_date = $3,
-                        importance_level = $4, urgency_level = $5,
-                        estimated_hours = $6, notes = $7, status_code = $8,
-                        parent_id = $9, project_id = $10,
-                        updated_at = datetime('now', 'localtime'),
-                        completed_at = CASE
-                                WHEN CAST($8 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
-                                WHEN CAST($8 AS INTEGER) != 3 THEN NULL
-                                ELSE completed_at
-                            END
-                        WHERE id = $11
-                        `, [
-                        title,
-                        startDate || null,
-                        dueDate || null,
-                        importance ? parseInt(importance) : null,
-                        urgency ? parseInt(urgency) : null,
-                        estimatedMinutes ? parseInt(estimatedMinutes) : null,
-                        notes || '',
-                        parseInt(statusCode),
-                        parentId || null,
-                        resolvedProjectId,
-                        task.id
-                    ]);
+                // Update the main task record
+                await db.execute(`
+                    UPDATE tasks
+                    SET title = $1, start_date = $2, due_date = $3,
+                    importance_level = $4, urgency_level = $5,
+                    estimated_hours = $6, notes = $7, status_code = $8,
+                    parent_id = $9, project_id = $10,
+                    updated_at = datetime('now', 'localtime'),
+                    completed_at = CASE
+                            WHEN CAST($8 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
+                            WHEN CAST($8 AS INTEGER) != 3 THEN NULL
+                            ELSE completed_at
+                        END
+                    WHERE id = $11
+                    `, [
+                    title,
+                    startDate || null,
+                    dueDate || null,
+                    importance ? parseInt(importance) : null,
+                    urgency ? parseInt(urgency) : null,
+                    estimatedMinutes ? parseInt(estimatedMinutes) : null,
+                    notes || '',
+                    parseInt(statusCode),
+                    parentId || null,
+                    resolvedProjectId,
+                    task.id
+                ]);
 
-                    // IMP-39: Cascade project_id to child tasks when parent's project changes
-                    if (resolvedProjectId !== task.project_id) {
-                        await db.execute(
-                            'UPDATE tasks SET project_id = $1 WHERE parent_id = $2',
-                            [resolvedProjectId, task.id]
-                        );
+                // IMP-39: Cascade project_id to child tasks when parent's project changes
+                if (resolvedProjectId !== task.project_id) {
+                    await db.execute(
+                        'UPDATE tasks SET project_id = $1 WHERE parent_id = $2',
+                        [resolvedProjectId, task.id]
+                    );
+                }
+
+                // Update tags (delete existing, insert new ones)
+                await db.execute('DELETE FROM task_tags WHERE task_id = $1', [task.id]);
+
+                if (selectedTags && selectedTags.length > 0) {
+                    for (const tagId of selectedTags) {
+                        await db.execute('INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [task.id, tagId]);
                     }
-
-                    // Update tags (delete existing, insert new ones)
-                    await db.execute('DELETE FROM task_tags WHERE task_id = $1', [task.id]);
-
-                    if (selectedTags && selectedTags.length > 0) {
-                        for (const tagId of selectedTags) {
-                            await db.execute('INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [task.id, tagId]);
-                        }
-                    }
-                });
+                }
 
                 return true;
             }, { error: '保存に失敗しました' });

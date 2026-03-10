@@ -53,6 +53,7 @@ export default function TodayPage() {
     // Data hook: master data, tasks, sort, loading
     const {
         tasks, setTasks, loading, loadTasks,
+        unfilteredStats,
         statuses, allTags, allImportance, allUrgency,
         sortMode, sortKey, setSortKey,
         toggleSortMode,
@@ -138,18 +139,21 @@ export default function TodayPage() {
             const reorderedChildren = childOrder.map(id => childList.find(c => c.id === id)).filter(Boolean);
             const newChildrenMap = { ...currentChildrenMap, [parentId]: reorderedChildren };
 
-            // Rebuild flat task list with reordered children
+            // Update today_sort_order values in allTasks (preserves filtered-out items for BUG-12)
             const currentRoots = rootItemsRef.current;
-            const newFlat = [];
+            const orderMap = new Map();
+            let orderIdx = 1;
             for (const item of currentRoots) {
                 const pid = item.is_ghost_parent ? item.real_id : item.id;
                 if (!item.is_ghost_parent) {
-                    newFlat.push(item);
+                    orderMap.set(item.id, orderIdx++);
                 }
                 const children = newChildrenMap[pid] || [];
-                newFlat.push(...children);
+                for (const child of children) {
+                    orderMap.set(child.id, orderIdx++);
+                }
             }
-            setTasks(newFlat);
+            setTasks(prev => prev.map(t => orderMap.has(t.id) ? { ...t, today_sort_order: orderMap.get(t.id) } : t));
 
             await persistTodaySortOrder(currentRoots, newChildrenMap);
             return;
@@ -179,17 +183,20 @@ export default function TodayPage() {
 
         const reorderedRoots = currentOrder.map(id => currentRoots.find(t => t.id === id)).filter(Boolean);
 
-        // Rebuild flat task list from reordered roots
-        const newFlat = [];
+        // Update today_sort_order values in allTasks (preserves filtered-out items for BUG-12)
+        const orderMap = new Map();
+        let orderIdx = 1;
         for (const item of reorderedRoots) {
             const pid = item.is_ghost_parent ? item.real_id : item.id;
             if (!item.is_ghost_parent) {
-                newFlat.push(item);
+                orderMap.set(item.id, orderIdx++);
             }
             const children = currentChildren[pid] || [];
-            newFlat.push(...children);
+            for (const child of children) {
+                orderMap.set(child.id, orderIdx++);
+            }
         }
-        setTasks(newFlat);
+        setTasks(prev => prev.map(t => orderMap.has(t.id) ? { ...t, today_sort_order: orderMap.get(t.id) } : t));
 
         await persistTodaySortOrder(reorderedRoots);
     }, [tasks, setTasks, persistTodaySortOrder, rootItemsRef, childrenByParentRef]);
@@ -222,15 +229,8 @@ export default function TodayPage() {
         }
     };
 
-    // Computed values for rendering
-    const stats = useMemo(() => {
-        const total = tasks.length;
-        const completed = tasks.filter(t => t.status_code === 3).length;
-        const remaining = tasks.filter(t => t.status_code !== 3 && t.status_code !== 5);
-        const remainingMin = remaining.reduce((s, t) => s + (t.estimated_hours || 0), 0);
-        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-        return { total, completed, remaining: remaining.length, remainingMin, pct };
-    }, [tasks]);
+    // BUG-12 fix: Use unfilteredStats from the hook (independent of filter state)
+    const stats = unfilteredStats;
 
     const statusMap = useMemo(() => {
         const m = {};
