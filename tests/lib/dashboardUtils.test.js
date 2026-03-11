@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { computeVelocityText, buildHeatmapData, heatmapQuartiles, heatLevel, groupIntoWeeks } from '@/lib/dashboardUtils';
+import { computeVelocityText, buildHeatmapData, heatmapQuartiles, heatLevel, groupIntoWeeks, computeRhythmData, generateRhythmSummary } from '@/lib/dashboardUtils';
 
 // Helper: generate chartWeeks with given completed values (8 weeks)
 function makeChartWeeks(completedArr, createdArr) {
@@ -363,5 +363,176 @@ describe('groupIntoWeeks', () => {
     expect(weeks).toHaveLength(2);
     expect(weeks[0]).toHaveLength(2); // Wed, Thu
     expect(weeks[1]).toHaveLength(2); // Sun, Mon
+  });
+});
+
+// ── computeRhythmData ──────────────────────────────────────────────────────────
+
+describe('computeRhythmData', () => {
+  it('7要素の配列を返し、各要素にday・rateプロパティがある', () => {
+    const today = new Date(2024, 0, 15); // 月曜
+    const result = computeRhythmData({}, {}, today);
+    expect(result).toHaveLength(7);
+    expect(result.map(r => r.day)).toEqual(['月', '火', '水', '木', '金', '土', '日']);
+    result.forEach(r => {
+      expect(r).toHaveProperty('rate');
+      expect(typeof r.rate).toBe('number');
+    });
+  });
+
+  it('活動データがない場合、全曜日のrateが0', () => {
+    const today = new Date(2024, 0, 15);
+    const result = computeRhythmData({}, {}, today);
+    result.forEach(r => {
+      expect(r.rate).toBe(0);
+    });
+  });
+
+  it('特定の曜日に毎週活動がある場合、その曜日のrateが高くなる', () => {
+    // 2024-01-15 = 月曜
+    // 過去10週の月曜すべてに活動を入れる
+    const today = new Date(2024, 0, 15);
+    const completedByDay = {};
+    for (let w = 0; w < 10; w++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - w * 7);
+      completedByDay[d.toLocaleDateString('sv-SE')] = 3;
+    }
+    const result = computeRhythmData(completedByDay, {}, today);
+    // 月曜 (index 0) のrateは1.0になるはず
+    expect(result[0].rate).toBe(1.0);
+    // 他の曜日は0
+    for (let i = 1; i < 7; i++) {
+      expect(result[i].rate).toBe(0);
+    }
+  });
+
+  it('completed と created の両方がカウントされる', () => {
+    const today = new Date(2024, 0, 15); // 月曜
+    const completedByDay = {};
+    const createdByDay = {};
+    // 5週分は completed、残り5週分は created のみ
+    for (let w = 0; w < 5; w++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - w * 7);
+      completedByDay[d.toLocaleDateString('sv-SE')] = 1;
+    }
+    for (let w = 5; w < 10; w++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - w * 7);
+      createdByDay[d.toLocaleDateString('sv-SE')] = 1;
+    }
+    const result = computeRhythmData(completedByDay, createdByDay, today);
+    expect(result[0].rate).toBe(1.0); // 全10週で活動あり
+  });
+
+  it('将来日の活動はカウントされない', () => {
+    // 2024-01-15 = 月曜、火曜以降は将来日扱い
+    const today = new Date(2024, 0, 15);
+    const completedByDay = { '2024-01-16': 5, '2024-01-17': 5 }; // 火曜・水曜
+    const result = computeRhythmData(completedByDay, {}, today);
+    // 火曜・水曜の将来日はカウントされない
+    expect(result[1].rate).toBe(0); // 火
+    expect(result[2].rate).toBe(0); // 水
+  });
+
+  it('日曜基準でも正しくmondayOffsetを計算する', () => {
+    // 2024-01-21 = 日曜 (dow=0)
+    const today = new Date(2024, 0, 21);
+    // mondayOffset = -6 (日曜の場合)
+    // currentWeekStart = 2024-01-15 (月曜)
+    const completedByDay = { '2024-01-21': 1 }; // 日曜に活動
+    const result = computeRhythmData(completedByDay, {}, today);
+    expect(result[6].rate).toBeGreaterThan(0); // 日曜 (index 6)
+  });
+
+  it('rateはactiveWeeks/totalWeeksの比率で計算される', () => {
+    // 2024-01-15 = 月曜、10週中5週のみ月曜に活動あり
+    const today = new Date(2024, 0, 15);
+    const completedByDay = {};
+    for (let w = 0; w < 5; w++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - w * 7);
+      completedByDay[d.toLocaleDateString('sv-SE')] = 1;
+    }
+    const result = computeRhythmData(completedByDay, {}, today);
+    expect(result[0].rate).toBe(0.5); // 5/10 = 0.5
+  });
+});
+
+// ── generateRhythmSummary ────────────────────────────────────────────────────
+
+describe('generateRhythmSummary', () => {
+  it('強い曜日がない場合（全rate < 0.5）はnullを返す', () => {
+    const data = [
+      { day: '月', rate: 0.3 },
+      { day: '火', rate: 0.4 },
+      { day: '水', rate: 0.2 },
+      { day: '木', rate: 0.1 },
+      { day: '金', rate: 0.0 },
+      { day: '土', rate: 0.0 },
+      { day: '日', rate: 0.0 },
+    ];
+    expect(generateRhythmSummary(data)).toBeNull();
+  });
+
+  it('全rateが0の場合はnullを返す', () => {
+    const data = Array.from({ length: 7 }, (_, i) => ({
+      day: ['月', '火', '水', '木', '金', '土', '日'][i],
+      rate: 0,
+    }));
+    expect(generateRhythmSummary(data)).toBeNull();
+  });
+
+  it('1つの強い曜日がある場合、その曜日名を含む要約を返す', () => {
+    const data = [
+      { day: '月', rate: 0.8 },
+      { day: '火', rate: 0.2 },
+      { day: '水', rate: 0.1 },
+      { day: '木', rate: 0.0 },
+      { day: '金', rate: 0.3 },
+      { day: '土', rate: 0.0 },
+      { day: '日', rate: 0.0 },
+    ];
+    expect(generateRhythmSummary(data)).toBe('月に進みやすい傾向');
+  });
+
+  it('複数の強い曜日がある場合、rate降順でトップ3を「・」区切りで返す', () => {
+    const data = [
+      { day: '月', rate: 0.6 },
+      { day: '火', rate: 0.9 },
+      { day: '水', rate: 0.7 },
+      { day: '木', rate: 0.2 },
+      { day: '金', rate: 0.0 },
+      { day: '土', rate: 0.0 },
+      { day: '日', rate: 0.0 },
+    ];
+    expect(generateRhythmSummary(data)).toBe('火・水・月に進みやすい傾向');
+  });
+
+  it('4つ以上の強い曜日があっても上位3つのみ表示する', () => {
+    const data = [
+      { day: '月', rate: 0.5 },
+      { day: '火', rate: 0.6 },
+      { day: '水', rate: 0.7 },
+      { day: '木', rate: 0.8 },
+      { day: '金', rate: 0.3 },
+      { day: '土', rate: 0.0 },
+      { day: '日', rate: 0.0 },
+    ];
+    expect(generateRhythmSummary(data)).toBe('木・水・火に進みやすい傾向');
+  });
+
+  it('rate=0.5の境界値は強い曜日に含まれる', () => {
+    const data = [
+      { day: '月', rate: 0.5 },
+      { day: '火', rate: 0.49 },
+      { day: '水', rate: 0.0 },
+      { day: '木', rate: 0.0 },
+      { day: '金', rate: 0.0 },
+      { day: '土', rate: 0.0 },
+      { day: '日', rate: 0.0 },
+    ];
+    expect(generateRhythmSummary(data)).toBe('月に進みやすい傾向');
   });
 });
