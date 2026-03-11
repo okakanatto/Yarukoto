@@ -686,7 +686,7 @@ function FootprintMap({ heatmap }) {
                 }
                 .fm-stat-num { font-weight: 600; color: var(--color-text-secondary); }
                 .fm-months {
-                    position: relative; height: 14px; margin-bottom: 3px; padding-left: 22px;
+                    position: relative; height: 18px; margin-bottom: 3px; padding-left: 22px;
                 }
                 .fm-month {
                     position: absolute; font-size: 0.56rem; color: var(--color-text-disabled);

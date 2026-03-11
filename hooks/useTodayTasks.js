@@ -218,14 +218,15 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
 
         // Sort
         if (sortMode === 'manual') {
+            // BUG-13 fix: Use only today_sort_order + stable ID tie-breaker.
+            // Avoid status-based secondary sort which causes completed tasks to
+            // jump to the end when today_sort_order values are equal (e.g. 0).
             filtered.sort((a, b) => {
                 const orderDiff = (a.today_sort_order || 0) - (b.today_sort_order || 0);
                 if (orderDiff !== 0) return orderDiff;
-                const aDone = a.status_code === 3;
-                const bDone = b.status_code === 3;
-                if (aDone && !bDone) return 1;
-                if (!aDone && bDone) return -1;
-                return (b.importance_level || 0) - (a.importance_level || 0);
+                // Stable tie-breaker by ID (numeric compare for tasks, string for routines)
+                if (typeof a.id === 'number' && typeof b.id === 'number') return a.id - b.id;
+                return String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0;
             });
         } else {
             filtered.sort(taskComparator(sortKey, statuses));
