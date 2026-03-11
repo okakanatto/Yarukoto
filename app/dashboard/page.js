@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { fetchDb } from '@/lib/utils';
-import { computeVelocityText, buildHeatmapData, heatmapQuartiles, heatLevel, groupIntoWeeks } from '@/lib/dashboardUtils';
+import { computeVelocityText, buildHeatmapData, heatmapQuartiles, heatLevel, groupIntoWeeks, computeRhythmData, generateRhythmSummary } from '@/lib/dashboardUtils';
 
 const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -39,11 +40,22 @@ export default function DashboardPage() {
             <p className="db-date">{dateLabel}</p>
 
             <SummarySection data={data} />
-            <FootprintMap heatmap={data.heatmap} />
+            <div className="db-lower-grid">
+                <RhythmSection rhythm={data.rhythm} />
+                <FootprintMap heatmap={data.heatmap} />
+            </div>
+            <BasecampStrip task={data.basecampTask} />
 
             <style jsx>{`
                 .db-root { max-width: 960px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
                 .db-date { color: var(--color-text-muted); font-size: 0.82rem; margin-top: -1.25rem; margin-bottom: 1.5rem; }
+                .db-lower-grid {
+                    display: grid; grid-template-columns: 260px 1fr;
+                    gap: 1rem; margin-top: 1rem;
+                }
+                @media (max-width: 700px) {
+                    .db-lower-grid { grid-template-columns: 1fr; }
+                }
             `}</style>
         </div>
     );
@@ -239,7 +251,19 @@ async function loadDashboard() {
     // --- Heatmap: 90-day footprint data ---
     const heatmap = buildHeatmapData(completedByDay, createdByDay, nowDate);
 
-    return { summary, projects, chartWeeks, velocity, heatmap };
+    // --- Rhythm: day-of-week activity rates (10 weeks) ---
+    const rhythm = computeRhythmData(completedByDay, createdByDay, nowDate);
+
+    // --- Basecamp: first in-progress task ---
+    const basecampRows = await db.select(`
+        SELECT id, title FROM tasks
+        WHERE status_code = 2 AND archived_at IS NULL
+        ORDER BY sort_order ASC, id ASC
+        LIMIT 1
+    `);
+    const basecampTask = basecampRows.length > 0 ? basecampRows[0] : null;
+
+    return { summary, projects, chartWeeks, velocity, heatmap, rhythm, basecampTask };
 }
 
 /* ================================================================
@@ -647,7 +671,7 @@ function FootprintMap({ heatmap }) {
                 .fm-card {
                     background: var(--color-surface); border: 1px solid var(--border-color);
                     border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
-                    box-shadow: var(--shadow-sm); margin-top: 1rem;
+                    box-shadow: var(--shadow-sm);
                 }
                 .fm-header {
                     display: flex; justify-content: space-between; align-items: baseline;
@@ -668,7 +692,7 @@ function FootprintMap({ heatmap }) {
                     position: absolute; font-size: 0.56rem; color: var(--color-text-disabled);
                 }
                 .fm-grid {
-                    display: flex; gap: 3px;
+                    display: flex; gap: 3px; overflow-x: auto;
                 }
                 .fm-dow-col {
                     display: flex; flex-direction: column; gap: 3px; width: 16px; flex-shrink: 0;
@@ -707,6 +731,185 @@ function FootprintMap({ heatmap }) {
                 }
                 .fm-legend-cell {
                     width: 10px; height: 10px;
+                }
+                @media (max-width: 700px) {
+                    .fm-header { flex-direction: column; gap: 0.35rem; }
+                    .fm-stats { flex-wrap: wrap; }
+                }
+            `}</style>
+        </div>
+    );
+}
+
+/* ================================================================
+   [B] Rhythm Section (自分のリズム)
+   ================================================================ */
+
+function RhythmSection({ rhythm }) {
+    const summary = useMemo(() => generateRhythmSummary(rhythm), [rhythm]);
+    const todayDow = new Date().getDay();
+    const hasData = rhythm.some(d => d.rate > 0);
+
+    return (
+        <div className="rh-card">
+            <span className="rh-label">自分のリズム</span>
+            {hasData ? (
+                <>
+                    {summary && <div className="rh-summary">{summary}</div>}
+                    <div className="rh-bars">
+                        {rhythm.map((r, i) => {
+                            const rhythmDow = i === 6 ? 0 : i + 1;
+                            const isToday = todayDow === rhythmDow;
+                            return (
+                                <div key={i} className="rh-bar-col">
+                                    <div
+                                        className="rh-bar"
+                                        style={{
+                                            height: Math.max(4, r.rate * 44),
+                                            background: r.rate >= 0.3
+                                                ? `color-mix(in srgb, var(--color-accent) ${Math.round(20 + r.rate * 55)}%, transparent)`
+                                                : 'var(--color-surface-active)',
+                                        }}
+                                    />
+                                    <span className={`rh-day ${isToday ? 'rh-day-today' : ''}`}>{r.day}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <span className="rh-caption">直近10週の活動パターン</span>
+                </>
+            ) : (
+                <div className="rh-empty">まだ活動パターンを分析中です</div>
+            )}
+
+            <style jsx>{`
+                .rh-card {
+                    background: var(--color-surface); border: 1px solid var(--border-color);
+                    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
+                    box-shadow: var(--shadow-sm);
+                    display: flex; flex-direction: column;
+                }
+                .rh-label {
+                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.75rem;
+                }
+                .rh-summary {
+                    font-size: 0.92rem; font-weight: 600; color: var(--color-text);
+                    margin-bottom: 0.9rem;
+                }
+                .rh-bars {
+                    display: flex; align-items: flex-end; gap: 8px; height: 52px; margin-bottom: 6px;
+                }
+                .rh-bar-col {
+                    display: flex; flex-direction: column; align-items: center; flex: 1;
+                }
+                .rh-bar {
+                    width: 18px; border-radius: 3px;
+                    transition: height 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .rh-day {
+                    font-size: 0.65rem; color: var(--color-text-disabled);
+                    margin-top: 4px; text-align: center;
+                }
+                .rh-day-today {
+                    font-weight: 700; color: var(--color-text);
+                }
+                .rh-caption {
+                    font-size: 0.6rem; color: var(--color-text-disabled); margin-top: 0.65rem;
+                }
+                .rh-empty {
+                    font-size: 0.82rem; color: var(--color-text-muted);
+                    flex: 1; display: flex; align-items: center;
+                }
+            `}</style>
+        </div>
+    );
+}
+
+/* ================================================================
+   [E] Basecamp Strip (ベースキャンプ・ストリップ)
+   ================================================================ */
+
+function BasecampStrip({ task }) {
+    const handleAddTask = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('yarukoto:openFab'));
+    }, []);
+
+    return (
+        <div className="bc-strip">
+            <div className="bc-left">
+                {task ? (
+                    <>
+                        <span className="bc-dot" />
+                        <span className="bc-text">
+                            中断中: <b className="bc-task-name">{task.title}</b>
+                        </span>
+                    </>
+                ) : (
+                    <span className="bc-empty-text">いつでも再開できます</span>
+                )}
+            </div>
+            <div className="bc-actions">
+                {task && (
+                    <Link href="/tasks" className="bc-chip bc-chip-primary">着手中を開く</Link>
+                )}
+                <Link href="/today" className="bc-chip">今日の一覧</Link>
+                <button className="bc-chip" onClick={handleAddTask} type="button">タスクを追加</button>
+            </div>
+
+            <style jsx global>{`
+                .bc-strip {
+                    background: var(--color-surface); border: 1px solid var(--border-color);
+                    border-radius: var(--radius-md); padding: 0.75rem 1.375rem;
+                    box-shadow: var(--shadow-sm); margin-top: 1rem;
+                    display: flex; align-items: center; justify-content: space-between;
+                    min-height: 56px;
+                }
+                .bc-left {
+                    display: flex; align-items: center; gap: 0.625rem;
+                    flex: 1; min-width: 0;
+                }
+                .bc-dot {
+                    width: 6px; height: 6px; border-radius: 50%;
+                    background: var(--color-accent); flex-shrink: 0;
+                    animation: pulse 2s ease-in-out infinite;
+                }
+                .bc-text {
+                    font-size: 0.78rem; color: var(--color-text-muted);
+                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                }
+                .bc-task-name { color: var(--color-text-secondary); font-weight: 500; }
+                .bc-empty-text {
+                    font-size: 0.78rem; color: var(--color-text-disabled);
+                }
+                .bc-actions {
+                    display: flex; gap: 0.5rem; flex-shrink: 0;
+                }
+                .bc-chip {
+                    font-size: 0.72rem; padding: 0.35rem 0.85rem;
+                    border-radius: var(--radius-sm); cursor: pointer;
+                    transition: all 0.15s; white-space: nowrap;
+                    font-family: inherit; text-decoration: none;
+                    display: inline-flex; align-items: center;
+                    background: transparent; color: var(--color-text-muted);
+                    border: 1px solid var(--border-color);
+                }
+                .bc-chip:hover {
+                    background: var(--color-surface-hover);
+                    color: var(--color-text);
+                    border-color: var(--border-color-hover);
+                }
+                .bc-chip.bc-chip-primary {
+                    background: var(--color-accent); color: #fff;
+                    border: none; font-weight: 600;
+                }
+                .bc-chip.bc-chip-primary:hover {
+                    opacity: 0.85; color: #fff;
+                    background: var(--color-accent);
+                }
+                @media (max-width: 600px) {
+                    .bc-strip { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+                    .bc-actions { width: 100%; }
                 }
             `}</style>
         </div>

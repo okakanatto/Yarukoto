@@ -127,6 +127,14 @@ function LayoutInner({ children }) {
         return () => window.removeEventListener('yarukoto:toast', handleToast);
     }, [mounted]);
 
+    // Listen for FAB open request (from Basecamp strip etc.)
+    useEffect(() => {
+        if (!mounted) return;
+        const handler = () => setFabOpen(true);
+        window.addEventListener('yarukoto:openFab', handler);
+        return () => window.removeEventListener('yarukoto:openFab', handler);
+    }, [mounted]);
+
     // Close FAB modal on Escape key
     useEffect(() => {
         if (!fabOpen) return;
