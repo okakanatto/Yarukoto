@@ -581,10 +581,14 @@ function FootprintMap({ heatmap }) {
         const level = heatLevel(day.total, q1, q3);
         const d = new Date(day.dateStr + 'T00:00:00');
         const label = `${d.getMonth() + 1}/${d.getDate()}（${WEEKDAY_NAMES[d.getDay()]}）`;
+        // BUG-16: Flip tooltip below when cell is near the top of the grid
+        const relativeTop = rect.top - parentRect.top;
+        const showBelow = relativeTop < 28;
         setTooltip({
             text: `${label}: ${HEAT_LEVEL_TIPS[level]}${day.total > 0 ? `（${day.total}件）` : ''}`,
             x: rect.left - parentRect.left + rect.width / 2,
-            y: rect.top - parentRect.top - 4,
+            y: showBelow ? rect.bottom - parentRect.top + 4 : relativeTop - 4,
+            below: showBelow,
         });
     }, [q1, q3]);
 
@@ -649,7 +653,7 @@ function FootprintMap({ heatmap }) {
 
                 {/* Tooltip */}
                 {tooltip && (
-                    <div className="fm-tooltip" style={{
+                    <div className={`fm-tooltip${tooltip.below ? ' fm-tooltip-below' : ''}`} style={{
                         left: tooltip.x, top: tooltip.y,
                     }}>
                         {tooltip.text}
@@ -724,6 +728,9 @@ function FootprintMap({ heatmap }) {
                     background: var(--color-text); color: var(--color-background);
                     font-size: 0.62rem; white-space: nowrap; pointer-events: none;
                     z-index: 10;
+                }
+                .fm-tooltip-below {
+                    transform: translate(-50%, 0);
                 }
                 .fm-legend {
                     display: flex; align-items: center; justify-content: flex-end;

@@ -347,6 +347,7 @@ function LayoutInner({ children }) {
                                 </div>
                                 <TaskInput
                                     autoFocus
+                                    defaultProjectId={pathname === '/projects' ? (parseInt(searchParams.get('id')) || null) : null}
                                     onTaskAdded={() => {
                                         // IMP-24: Don't close modal — allow continuous input
                                         // TaskInput internally resets the form and re-focuses the title input
@@ -486,6 +487,10 @@ function LayoutInner({ children }) {
                     .fab-modal .task-input-wrapper.expanded {
                         box-shadow: none;
                         border: none;
+                    }
+                    /* IMP-43: Hide collapse button (−) in FAB context — ×ボタンと役割重複 */
+                    .fab-modal .btn-add.expanded {
+                        display: none;
                     }
 
                     .global-toast {
