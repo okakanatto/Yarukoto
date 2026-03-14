@@ -13,7 +13,7 @@ import { useTaskDnD } from '../hooks/useTaskDnD';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 import { useDbOperation } from '@/hooks/useDbOperation';
-import { ClipboardList, Archive, Hand, ArrowUpDown } from 'lucide-react';
+import { ClipboardList, Archive, Hand, ArrowUpDown, Search } from 'lucide-react';
 import { buildTaskListQuery } from '@/lib/taskListQueries';
 import ArchiveView from './ArchiveView';
 
@@ -31,11 +31,14 @@ export default function TaskList({ projectId = null }) {
     const [editingTask, setEditingTask] = useState(null);
     const [showArchived, setShowArchived] = useState(false);
     const [justCompletedId, setJustCompletedId] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
 
     const activeRequestId = useRef(0);
     const tasksRef = useRef(tasks);
     tasksRef.current = tasks;
     const sortedParentTasksRef = useRef([]);
+    const searchTimerRef = useRef(null);
 
     const { masters, tags: allTags, projects: allProjects } = useMasterData();
     const allStatuses = useMemo(() => masters.status || [], [masters.status]);
@@ -74,6 +77,7 @@ export default function TaskList({ projectId = null }) {
                 filterUrgency,
                 filterProjects,
                 projectId,
+                searchTerm: debouncedSearch,
             });
 
             const rawTasks = await db.select(sql, params);
@@ -93,7 +97,7 @@ export default function TaskList({ projectId = null }) {
                 setLoading(false);
             }
         }
-    }, [filterStatuses, filterTags, filterImportance, filterUrgency, filterProjects, showArchived, projectId]);
+    }, [filterStatuses, filterTags, filterImportance, filterUrgency, filterProjects, showArchived, projectId, debouncedSearch]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
 
@@ -123,6 +127,19 @@ export default function TaskList({ projectId = null }) {
             setSortMode(prevMode);
         }
     };
+
+    const onSearchChange = useCallback((e) => {
+        const val = e.target.value;
+        setSearchTerm(val);
+        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = setTimeout(() => setDebouncedSearch(val.trim()), 300);
+    }, []);
+
+    const clearSearch = useCallback(() => {
+        setSearchTerm('');
+        setDebouncedSearch('');
+        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    }, []);
 
     const handleTaskAdded = () => setRefreshKey(k => k + 1);
     const handleTaskEdited = () => setRefreshKey(k => k + 1);
@@ -202,6 +219,23 @@ export default function TaskList({ projectId = null }) {
                     </button>
                 </div>
 
+                {/* Search bar (active tasks only) */}
+                {!showArchived && (
+                    <div className="tl-search">
+                        <Search size={15} className="tl-search-icon" />
+                        <input
+                            type="text"
+                            className="tl-search-input"
+                            placeholder="タスクを検索..."
+                            value={searchTerm}
+                            onChange={onSearchChange}
+                        />
+                        {searchTerm && (
+                            <button className="tl-search-clear" onClick={clearSearch} title="検索をクリア">✕</button>
+                        )}
+                    </div>
+                )}
+
                 {/* Toolbar */}
                 <div className="tl-toolbar">
                     <MultiSelectFilter label="ステータス" options={statusOptions} selected={filterStatuses} onChange={setFilterStatuses} />
@@ -250,12 +284,21 @@ export default function TaskList({ projectId = null }) {
                             {loading && tasks.length === 0 && (
                                 <div className="tl-placeholder"><span className="spinner" /> 読み込み中...</div>
                             )}
-                            {!loading && parentTasks.length === 0 && (
+                            {!loading && parentTasks.length === 0 && debouncedSearch && (
+                                <div className="tl-placeholder tl-empty">
+                                    <span className="tl-empty-icon"><Search size={48} strokeWidth={1.2} /></span>
+                                    <span className="tl-empty-title">「{debouncedSearch}」に一致するタスクはありません</span>
+                                </div>
+                            )}
+                            {!loading && parentTasks.length === 0 && !debouncedSearch && (
                                 <div className="tl-placeholder tl-empty">
                                     <span className="tl-empty-icon"><ClipboardList size={48} strokeWidth={1.2} /></span>
                                     <span className="tl-empty-title">タスクはまだありません</span>
                                     <span className="tl-empty-hint">上のフォームからタスクを追加できます</span>
                                 </div>
+                            )}
+                            {!loading && debouncedSearch && tasks.length > 0 && (
+                                <div className="tl-search-count">{tasks.length}件の検索結果</div>
                             )}
                             {sortedParentTasks.map((task, i) => (
                                 <React.Fragment key={task.id}>
@@ -312,6 +355,33 @@ export default function TaskList({ projectId = null }) {
 
                 <style jsx global>{`
             .tl-root { min-height: 100px; }
+
+            .tl-search {
+              display: flex; align-items: center; gap: .5rem;
+              padding: .55rem .85rem; margin-bottom: .75rem;
+              background: var(--color-surface); border: 1px solid var(--border-color);
+              border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+              transition: border-color .2s;
+            }
+            .tl-search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
+            .tl-search-icon { color: var(--color-text-disabled); flex-shrink: 0; }
+            .tl-search-input {
+              flex: 1; border: none; outline: none; background: transparent;
+              font-size: .88rem; font-family: inherit; color: var(--color-text);
+            }
+            .tl-search-input::placeholder { color: var(--color-text-disabled); }
+            .tl-search-clear {
+              background: none; border: none; cursor: pointer;
+              color: var(--color-text-muted); font-size: .75rem;
+              width: 22px; height: 22px; display: flex; align-items: center;
+              justify-content: center; border-radius: 50%;
+              transition: all .15s;
+            }
+            .tl-search-clear:hover { background: var(--color-surface-hover); color: var(--color-text); }
+            .tl-search-count {
+              font-size: .8rem; color: var(--color-text-muted);
+              padding: .15rem 0; font-weight: 500;
+            }
             .tl-toolbar {
               display:flex; align-items:center; gap:.85rem; flex-wrap:wrap;
               margin-bottom:1.25rem; padding:.65rem .85rem;
