@@ -1,9 +1,77 @@
 'use client';
 
 import { fetchDb } from '@/lib/utils';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, HardDriveDownload, HardDriveUpload } from 'lucide-react';
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { copyFile, exists, remove } from '@tauri-apps/plugin-fs';
+import { join, appDataDir } from '@tauri-apps/api/path';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 export default function DataPanel({ flash }) {
+
+    const handleBackup = async () => {
+        try {
+            const db = await fetchDb();
+            // Checkpoint WAL to flush all data to main DB file
+            await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+
+            const dataDir = await appDataDir();
+            const dbPath = await join(dataDir, 'tasks.db');
+
+            const timestamp = new Date().toLocaleDateString('sv-SE');
+            const savePath = await save({
+                defaultPath: `yarukoto-backup-${timestamp}.db`,
+                filters: [{ name: 'SQLite Database', extensions: ['db'] }]
+            });
+
+            if (!savePath) return;
+
+            await copyFile(dbPath, savePath);
+            flash('ok', 'バックアップを保存しました');
+        } catch (e) { console.error(e); flash('err', 'バックアップに失敗しました'); }
+    };
+
+    const handleRestore = async () => {
+        try {
+            const selectedPath = await open({
+                filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+                multiple: false
+            });
+
+            if (!selectedPath) return;
+
+            if (!confirm('選択したデータベースファイルで現在のデータを置き換えます。\n\n現在のデータは自動的にバックアップされます。\n復元後、アプリは再起動されます。\n\n続行しますか？')) return;
+
+            const db = await fetchDb();
+            // Checkpoint WAL to ensure current data is flushed
+            await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+
+            const dataDir = await appDataDir();
+            const dbPath = await join(dataDir, 'tasks.db');
+
+            // Auto-backup current DB before overwriting
+            const now = new Date();
+            const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+            const backupPath = await join(dataDir, `tasks.backup-${ts}.db`);
+            await copyFile(dbPath, backupPath);
+
+            // Close DB connection and clear singleton
+            const { closeDb } = await import('@/lib/db');
+            await closeDb();
+
+            // Clean up WAL/SHM files
+            const walPath = await join(dataDir, 'tasks.db-wal');
+            const shmPath = await join(dataDir, 'tasks.db-shm');
+            try { if (await exists(walPath)) await remove(walPath); } catch (_) { /* ignore */ }
+            try { if (await exists(shmPath)) await remove(shmPath); } catch (_) { /* ignore */ }
+
+            // Replace DB with selected file
+            await copyFile(selectedPath, dbPath);
+
+            // Restart app to load new DB
+            await relaunch();
+        } catch (e) { console.error(e); flash('err', '復元に失敗しました'); }
+    };
 
     const handleExport = async () => {
         try {
@@ -85,6 +153,30 @@ export default function DataPanel({ flash }) {
             <h3 className="s-heading">データ管理</h3>
 
             <div className="dm-section">
+                <div className="dm-card">
+                    <div className="dm-card-info">
+                        <span className="dm-icon"><HardDriveDownload size={18} /></span>
+                        <div>
+                            <strong>データベースバックアップ</strong>
+                            <p className="dm-desc">データベース全体を指定の場所にバックアップファイルとして保存します</p>
+                        </div>
+                    </div>
+                    <button className="s-btn-primary" onClick={handleBackup}>バックアップ</button>
+                </div>
+
+                <div className="dm-card">
+                    <div className="dm-card-info">
+                        <span className="dm-icon"><HardDriveUpload size={18} /></span>
+                        <div>
+                            <strong>データベース復元</strong>
+                            <p className="dm-desc">バックアップファイルからデータを復元します（現在のデータは自動バックアップされます）</p>
+                        </div>
+                    </div>
+                    <button className="s-btn-primary" onClick={handleRestore}>復元</button>
+                </div>
+
+                <div className="dm-divider" />
+
                 <div className="dm-card">
                     <div className="dm-card-info">
                         <span className="dm-icon">📤</span>
