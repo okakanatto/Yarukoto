@@ -5,7 +5,7 @@ import TaskItem from './TaskItem';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { buildTaskListQuery, buildArchiveMonthlySummaryQuery } from '@/lib/taskListQueries';
 import { useDbOperation } from '@/hooks/useDbOperation';
-import { Archive } from 'lucide-react';
+import { Archive, Search } from 'lucide-react';
 
 const noop = () => {};
 
@@ -237,7 +237,7 @@ export default function ArchiveView({
         <div className="av-root">
             {/* Search bar */}
             <div className="av-search">
-                <span className="av-search-icon">🔍</span>
+                <Search size={15} className="av-search-icon" />
                 <input
                     type="text"
                     className="av-search-input"
@@ -257,7 +257,7 @@ export default function ArchiveView({
                         <div className="av-loading"><span className="spinner" /> 検索中...</div>
                     ) : searchResults.length === 0 ? (
                         <div className="av-empty">
-                            <span className="av-empty-icon">🔍</span>
+                            <span className="av-empty-icon"><Search size={48} strokeWidth={1.2} /></span>
                             <span className="av-empty-title">「{searchTerm}」に一致するアーカイブはありません</span>
                         </div>
                     ) : (
@@ -328,7 +328,7 @@ export default function ArchiveView({
                     transition: border-color .2s;
                 }
                 .av-search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
-                .av-search-icon { font-size: .85rem; opacity: .5; flex-shrink: 0; }
+                .av-search-icon { color: var(--color-text-disabled); flex-shrink: 0; }
                 .av-search-input {
                     flex: 1; border: none; outline: none; background: transparent;
                     font-size: .88rem; font-family: inherit; color: var(--color-text);
