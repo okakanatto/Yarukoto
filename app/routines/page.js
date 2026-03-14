@@ -300,7 +300,7 @@ export default function RoutinesPage() {
         .rt-switch.on .rt-switch-knob { left: 22px; }
         .rt-switch.off .rt-switch-knob { left: 2px; }
 
-        .rt-toast { position: fixed; bottom: 2rem; right: 2rem; padding: 0.8rem 1.5rem; border-radius: 8px; z-index: 3000; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.1); animation: slideUp 0.3s; }
+        .rt-toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.75rem 1.25rem; border-radius: var(--radius-md); font-size: 0.85rem; z-index: 3000; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.1); animation: slideUp 0.3s; }
         .rt-toast-ok { background: var(--toast-success-bg); color: var(--toast-success-text); border: 1px solid var(--toast-success-border); }
         .rt-toast-err { background: var(--toast-error-bg); color: var(--toast-error-text); border: 1px solid var(--toast-error-border); }
             `}</style>

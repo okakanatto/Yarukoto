@@ -457,7 +457,7 @@ function LayoutInner({ children }) {
                     .fab-modal-close {
                         background: transparent;
                         border: none;
-                        color: var(--color-text-disabled);
+                        color: var(--color-text-muted);
                         cursor: pointer;
                         font-size: 0.8rem;
                         width: 26px;
