@@ -99,7 +99,7 @@ describe('buildTaskListQuery', () => {
         expect(result.params).toContain('2026-03');
     });
 
-    it('searchTerm が指定された場合、タイトルでの LIKE 検索条件が追加される', () => {
+    it('searchTerm が指定された場合、title・notes・タグ名の3フィールドOR検索条件が追加される', () => {
         const result = buildTaskListQuery({
             showArchived: true,
             filterStatuses: [],
@@ -112,7 +112,30 @@ describe('buildTaskListQuery', () => {
         });
 
         expect(result.sql).toContain("t.title LIKE $1");
-        expect(result.params).toContain('%会議%');
+        expect(result.sql).toContain("t.notes LIKE $2");
+        expect(result.sql).toContain("tg2.name LIKE $3");
+        expect(result.params).toEqual(['%会議%', '%会議%', '%会議%']);
+    });
+
+    it('searchTerm と archiveMonth が同時指定された場合、パラメータが正しくインクリメントされる', () => {
+        const result = buildTaskListQuery({
+            showArchived: true,
+            filterStatuses: [],
+            filterTags: [],
+            filterImportance: [],
+            filterUrgency: [],
+            filterProjects: [],
+            projectId: null,
+            archiveMonth: '2026-03',
+            searchTerm: 'テスト'
+        });
+
+        // archiveMonth が $1 を占有 → searchTerm が $2,$3,$4 になる
+        expect(result.sql).toContain("strftime('%Y-%m', t.archived_at) = $1");
+        expect(result.sql).toContain("t.title LIKE $2");
+        expect(result.sql).toContain("t.notes LIKE $3");
+        expect(result.sql).toContain("tg2.name LIKE $4");
+        expect(result.params).toEqual(['2026-03', '%テスト%', '%テスト%', '%テスト%']);
     });
 
     it('showArchived = true の場合、ORDER BY は archived_at DESC になる', () => {
