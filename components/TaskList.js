@@ -13,7 +13,7 @@ import { useTaskDnD } from '../hooks/useTaskDnD';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { SORT_OPTIONS, taskComparator } from '@/lib/taskSorter';
 import { useDbOperation } from '@/hooks/useDbOperation';
-import { ClipboardList, Archive, Hand, ArrowUpDown, Search } from 'lucide-react';
+import { ClipboardList, Archive, Hand, ArrowUpDown, Search, GripVertical } from 'lucide-react';
 import { buildTaskListQuery } from '@/lib/taskListQueries';
 import ArchiveView from './ArchiveView';
 
@@ -197,7 +197,7 @@ export default function TaskList({ projectId = null }) {
         rawHandleStatusChange(taskId, newCode);
     }, [rawHandleStatusChange]);
 
-    const { activeId, activeTaskData, isDraggingChild, handleDragStart, handleDragEnd } = useTaskDnD({
+    const { activeId, activeTaskData, isDraggingChild, justDroppedId, handleDragStart, handleDragEnd } = useTaskDnD({
         tasks,
         setTasks,
         fetchTasks,
@@ -321,6 +321,7 @@ export default function TaskList({ projectId = null }) {
                                         isProcessing={processingIds.has(task.id)}
                                         processingIds={processingIds}
                                         justCompletedId={justCompletedId}
+                                        justDroppedId={justDroppedId}
                                     />
                                     {sortMode === 'manual' && activeId && (
                                         <ReorderGap id={`reorder-root-${i + 1}`} />
@@ -338,9 +339,11 @@ export default function TaskList({ projectId = null }) {
 
                         <DragOverlay>
                             {activeTaskData ? (
-                                <div className="tc-card" style={{ opacity: 0.8, transform: 'scale(1.02)', cursor: 'grabbing' }}>
+                                <div className="tc-card dnd-overlay">
                                     <div className="tc-body">
-                                        <span style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>📄</span>
+                                        <div className="tc-handle" style={{ opacity: 0.6 }}>
+                                            <GripVertical size={14} strokeWidth={2} />
+                                        </div>
                                         <div className="tc-info">
                                             <div className="tc-title" style={{ fontWeight: 'bold' }}>{activeTaskData.title}</div>
                                         </div>
@@ -400,23 +403,22 @@ export default function TaskList({ projectId = null }) {
             .tl-unnest-gap {
                 position: relative;
                 padding: 6px 0;
-                transition: padding 0.15s ease;
-                animation: fadeIn 0.2s ease;
+                transition: padding 0.12s ease;
             }
             .tl-unnest-gap-line {
                 height: 2px;
                 border-radius: 1px;
                 background: var(--color-accent);
                 opacity: 0.3;
-                transition: all 0.15s ease;
+                transition: all 0.12s ease;
             }
             .tl-unnest-gap.drag-over {
-                padding: 14px 0;
+                padding: 8px 0;
             }
             .tl-unnest-gap.drag-over .tl-unnest-gap-line {
                 height: 3px;
                 opacity: 1;
-                box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 35%, transparent);
+                box-shadow: 0 0 6px color-mix(in srgb, var(--color-accent) 35%, transparent);
             }
             .tl-unnest-gap-label {
                 position: absolute;
@@ -431,7 +433,6 @@ export default function TaskList({ projectId = null }) {
                 border-radius: 8px;
                 border: 1px solid var(--color-accent);
                 white-space: nowrap;
-                animation: fadeIn 0.15s ease;
             }
 
             /* ---- Task Card (v2.0.0 Quiet Confidence) ---- */
@@ -449,6 +450,33 @@ export default function TaskList({ projectId = null }) {
                 z-index: 10;
             }
             @keyframes tcIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+            /* Drag source placeholder */
+            .tc-card.dragging-source {
+                opacity: 0.25;
+                border-style: dashed;
+                border-color: var(--color-accent);
+                background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+                box-shadow: none;
+            }
+            .tc-card.dragging-source > * { visibility: hidden; }
+
+            /* DragOverlay card */
+            .tc-card.dnd-overlay {
+                cursor: grabbing;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px var(--color-accent);
+                border-color: var(--color-accent);
+                transform: rotate(1.5deg) scale(1.02);
+                opacity: 0.92;
+            }
+
+            /* Drop settle animation */
+            @keyframes dropSettle {
+                0% { box-shadow: 0 0 0 3px var(--color-accent), var(--shadow-card); transform: scale(1.02); }
+                100% { box-shadow: var(--shadow-card); transform: scale(1); }
+            }
+            .tc-card.drop-settle { animation: dropSettle 0.35s cubic-bezier(.16,1,.3,1); }
+
             .tc-card:hover { border-color:var(--border-color-hover); box-shadow:var(--shadow-card-hover); }
             .tc-card.done { opacity:.5; }
             .tc-card.done:hover { opacity:.7; }

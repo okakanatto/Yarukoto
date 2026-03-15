@@ -33,19 +33,18 @@ export function ReorderGap({ id }) {
             <div className="tl-reorder-gap-line" />
             <style jsx global>{`
                 .tl-reorder-gap {
-                    position:relative; padding:3px 0;
-                    transition:padding .15s ease; animation:fadeIn .2s ease;
+                    position:relative; padding:4px 0;
+                    transition:padding .12s ease;
                 }
                 .tl-reorder-gap-line {
                     height:2px; border-radius:1px;
-                    background:transparent; transition:all .15s ease;
+                    background:transparent; transition:all .12s ease;
                 }
-                .tl-reorder-gap.drag-over { padding:8px 0; }
+                .tl-reorder-gap.drag-over { padding:5px 0; }
                 .tl-reorder-gap.drag-over .tl-reorder-gap-line {
                     height:3px; background:var(--color-accent);
-                    box-shadow:0 0 8px var(--color-accent-glow);
+                    box-shadow:0 0 6px var(--color-accent-glow);
                 }
-                @keyframes fadeIn { from{opacity:0} to{opacity:1} }
             `}</style>
         </div>
     );

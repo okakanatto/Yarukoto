@@ -17,12 +17,11 @@ export default function TodayGroupHeader({ parentId, title, isManual }) {
 
     const style = transform ? {
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.3 : 1,
         zIndex: isDragging ? 100 : 'auto',
     } : undefined;
 
     return (
-        <div ref={setNodeRef} style={style} className="today-ghost-header">
+        <div ref={setNodeRef} style={style} className={`today-ghost-header ${isDragging ? 'dragging-source' : ''}`}>
             {isManual && (
                 <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
             )}

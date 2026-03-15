@@ -13,7 +13,7 @@ import { formatMin } from '@/lib/utils';
  * Individual task card component with DnD support, status controls, and child task rendering.
  * Extracted from TaskList.js (Phase 1-1).
  */
-export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false, processingIds = new Set(), justCompletedId = null }) {
+export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false, processingIds = new Set(), justCompletedId = null, justDroppedId = null }) {
     const [expanded, setExpanded] = useState(true);
     const [showSub, setShowSub] = useState(false);
 
@@ -37,7 +37,6 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
 
     const style = transform ? {
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.3 : 1,
         zIndex: isDragging ? 100 : 'auto',
     } : undefined;
 
@@ -60,7 +59,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
         <div
             ref={setNodeRef}
             style={style}
-            className={`tc-card ${isDone ? 'done' : ''} ${isCancelled ? 'cancelled' : ''} ${isOver && !isDragging ? 'drag-over' : ''}`}
+            className={`tc-card ${isDone ? 'done' : ''} ${isCancelled ? 'cancelled' : ''} ${isOver && !isDragging ? 'drag-over' : ''} ${isDragging ? 'dragging-source' : ''} ${justDroppedId === task.id ? 'drop-settle' : ''}`}
         >
             <div className="tc-body">
                 {/* Drag Handle */}
@@ -170,6 +169,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                                 isProcessing={isProcessing || processingIds.has(c.id)}
                                 processingIds={processingIds}
                                 justCompletedId={justCompletedId}
+                                justDroppedId={justDroppedId}
                             />
                             {/* ReorderGap after each child in manual mode */}
                             {sortMode === 'manual' && activeId && activeDragParentId === task.id && (

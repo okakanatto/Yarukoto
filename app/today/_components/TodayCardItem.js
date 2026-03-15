@@ -9,7 +9,7 @@ import { Pin, RefreshCw, Archive, Calendar, Clock } from 'lucide-react';
 /**
  * Individual today-card with @dnd-kit draggable support.
  */
-export default function TodayCardItem({ task, isManual, isChild = false, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, index, isProcessing }) {
+export default function TodayCardItem({ task, isManual, isChild = false, statuses, statusMap, selectedDate, onStatusChange, onRemove, onEdit, justCompletedId, justDroppedId = null, index, isProcessing }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
         disabled: !isManual || !!task.is_archived,
@@ -17,7 +17,6 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
 
     const style = transform ? {
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.3 : 1,
         zIndex: isDragging ? 100 : 'auto',
     } : undefined;
 
@@ -31,7 +30,7 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         <div
             ref={setNodeRef}
             style={{ ...style, animationDelay: `${index * 40}ms` }}
-            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${isArchived ? 'archived' : ''}`}
+            className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${isArchived ? 'archived' : ''} ${isDragging ? 'dragging-source' : ''} ${justDroppedId === task.id ? 'drop-settle-today' : ''}`}
         >
             {isManual && !isArchived && (
                 <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
@@ -151,6 +150,40 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
           border-radius: var(--radius-sm); transition: all 0.15s;
         }
         .today-remove:hover { background: var(--color-danger-bg); color: var(--color-danger); border-color: rgba(220,38,38,.2); }
+
+        /* Drag source placeholder */
+        .today-card.dragging-source {
+          opacity: 0.25;
+          border-style: dashed;
+          border-color: var(--color-accent);
+          background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+          box-shadow: none;
+        }
+        .today-card.dragging-source > * { visibility: hidden; }
+        .today-ghost-header.dragging-source {
+          opacity: 0.25;
+          border-style: dashed;
+          border-color: var(--color-accent);
+          background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface-hover));
+          box-shadow: none;
+        }
+        .today-ghost-header.dragging-source > * { visibility: hidden; }
+
+        /* DragOverlay card */
+        .dnd-overlay-today {
+          cursor: grabbing;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px var(--color-accent);
+          border-color: var(--color-accent);
+          transform: rotate(1.5deg) scale(1.02);
+          opacity: 0.92;
+        }
+
+        /* Drop settle animation */
+        @keyframes dropSettleToday {
+          0% { box-shadow: 0 0 0 3px var(--color-accent), var(--shadow-sm); transform: scale(1.02); }
+          100% { box-shadow: var(--shadow-sm); transform: scale(1); }
+        }
+        .today-card.drop-settle-today { animation: dropSettleToday 0.35s cubic-bezier(.16,1,.3,1); }
 
         /* Drag handle (shared with TodayGroupHeader) */
         .today-drag-handle {

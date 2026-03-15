@@ -17,6 +17,7 @@ import { useDbOperation } from '@/hooks/useDbOperation';
  */
 export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedParentTasks, getChildTasks }) {
     const [activeId, setActiveId] = useState(null);
+    const [justDroppedId, setJustDroppedId] = useState(null);
     const dbOp = useDbOperation();
 
     const activeTaskData = activeId ? tasks.find(t => t.id === activeId) : null;
@@ -126,6 +127,9 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
     const handleDragEnd = useCallback(async (event) => {
         const { active, over } = event;
         setActiveId(null);
+        // Trigger drop-settle animation
+        setJustDroppedId(active.id);
+        setTimeout(() => setJustDroppedId(null), 400);
 
         const activeTask = tasks.find(t => t.id === active.id);
         if (!activeTask) return;
@@ -256,6 +260,7 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         activeId,
         activeTaskData,
         isDraggingChild,
+        justDroppedId,
         handleDragStart,
         handleDragEnd,
     };

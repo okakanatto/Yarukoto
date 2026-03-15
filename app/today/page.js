@@ -43,6 +43,7 @@ export default function TodayPage() {
     const [justCompletedId, setJustCompletedId] = useState(null);
     const [editingTask, setEditingTask] = useState(null);
     const [activeId, setActiveId] = useState(null);
+    const [justDroppedId, setJustDroppedId] = useState(null);
 
     // Filter state (UI-managed)
     const [filterStatuses, setFilterStatuses] = useState([]);
@@ -116,6 +117,8 @@ export default function TodayPage() {
     const handleDragEnd = useCallback(async (event) => {
         const { active, over } = event;
         setActiveId(null);
+        setJustDroppedId(active.id);
+        setTimeout(() => setJustDroppedId(null), 400);
 
         if (!over) return;
         const overIdStr = String(over.id);
@@ -346,6 +349,7 @@ export default function TodayPage() {
                                             statuses={statuses} statusMap={statusMap} selectedDate={selectedDate}
                                             onStatusChange={handleStatusChange} onRemove={handleRemove}
                                             onEdit={setEditingTask} justCompletedId={justCompletedId}
+                                            justDroppedId={justDroppedId}
                                             index={ci} isProcessing={actions.processingIds.has(child.id)} />
                                         {showChildGaps && (
                                             <ReorderGap id={`reorder-today-child-${parentId}-${ci + 1}`} />
@@ -377,6 +381,7 @@ export default function TodayPage() {
                                             onRemove={handleRemove}
                                             onEdit={setEditingTask}
                                             justCompletedId={justCompletedId}
+                                            justDroppedId={justDroppedId}
                                             index={i}
                                             isProcessing={actions.processingIds.has(item.id)}
                                         />
@@ -410,8 +415,8 @@ export default function TodayPage() {
 
                 <DragOverlay>
                     {activeTaskData ? (
-                        <div className={activeTaskData.is_ghost_parent ? 'today-ghost-header' : 'today-card'} style={{ opacity: 0.8, transform: 'scale(1.02)', cursor: 'grabbing', animation: 'none' }}>
-                            <div className="today-drag-handle" style={{ opacity: 1 }}>⋮⋮</div>
+                        <div className={`${activeTaskData.is_ghost_parent ? 'today-ghost-header' : 'today-card'} dnd-overlay-today`} style={{ animation: 'none' }}>
+                            <div className="today-drag-handle" style={{ opacity: 0.6 }}>⋮⋮</div>
                             {activeTaskData.is_ghost_parent ? (
                                 <>
                                     <span className="today-ghost-icon"><Pin size={14} /></span>
