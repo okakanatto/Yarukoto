@@ -119,74 +119,73 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
             <style jsx>{`
         .ts-root { position: relative; width: 100%; }
         .ts-trigger {
-          display: flex; align-items: center; gap: 0.5rem;
+          display: flex; align-items: center; gap: 6px;
           background: var(--color-surface-hover); border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); padding: 0.4rem 0.65rem;
-          cursor: pointer; min-height: 38px; transition: border-color 0.2s;
+          border-radius: var(--radius-sm); padding: 5px 8px;
+          cursor: pointer; min-height: 34px; transition: border-color 0.15s;
         }
         .ts-trigger:hover { border-color: var(--border-color-hover); }
         .ts-trigger:focus {
           outline: none; border-color: var(--color-accent);
-          box-shadow: 0 0 0 3px var(--color-accent-glow);
         }
-        .ts-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; flex: 1; }
-        .ts-placeholder { color: var(--color-text-disabled); font-size: 0.85rem; }
+        .ts-pills { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+        .ts-placeholder { color: var(--color-text-disabled); font-size: 0.82rem; }
         .ts-pill {
-          display: inline-flex; align-items: center; gap: 0.3rem;
-          font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.5rem;
-          border-radius: 12px; color: white;
+          display: inline-flex; align-items: center; gap: 4px;
+          font-size: 0.7rem; font-weight: 600; padding: 2px 6px;
+          border-radius: var(--radius-sm); color: white;
         }
         .ts-pill-x {
           background: none; border: none; color: rgba(255,255,255,0.7);
-          cursor: pointer; font-size: 0.8rem; padding: 0; line-height: 1; transition: color 0.15s;
+          cursor: pointer; font-size: 0.75rem; padding: 0; line-height: 1; transition: color 0.15s;
         }
         .ts-pill-x:hover { color: white; }
         .ts-pill-archived { opacity: 0.6; }
-        .ts-chevron { font-size: 0.55rem; color: var(--color-text-muted); flex-shrink: 0; }
+        .ts-chevron { font-size: 0.5rem; color: var(--color-text-muted); flex-shrink: 0; }
 
         .ts-dropdown {
           position: absolute; top: calc(100% + 4px); left: 0; right: 0;
           z-index: 100; background: var(--color-surface);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-md);
-          box-shadow: var(--shadow-lg);
-          animation: dropIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          animation: dropIn 0.15s ease; overflow: hidden;
         }
         @keyframes dropIn {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
 
-        .ts-search-wrap { padding: 0.5rem; border-bottom: 1px solid var(--border-color); }
+        .ts-search-wrap { padding: 6px; border-bottom: 1px solid var(--border-color); }
         .ts-search {
           width: 100%; background: var(--color-surface-hover);
           border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); padding: 0.45rem 0.6rem;
-          color: var(--color-text); font-size: 0.85rem; outline: none;
-          transition: border-color 0.2s; font-family: inherit;
+          border-radius: var(--radius-sm); padding: 5px 8px;
+          color: var(--color-text); font-size: 0.82rem; outline: none;
+          transition: border-color 0.15s; font-family: inherit;
         }
         .ts-search:focus { border-color: var(--color-accent); }
         .ts-search::placeholder { color: var(--color-text-disabled); }
 
-        .ts-options { max-height: 200px; overflow-y: auto; padding: 0.25rem; }
+        .ts-options { max-height: 200px; overflow-y: auto; padding: 4px; }
         .ts-options::-webkit-scrollbar { width: 4px; }
         .ts-options::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
 
         .ts-option {
-          display: flex; align-items: center; gap: 0.6rem;
+          display: flex; align-items: center; gap: 6px;
           width: 100%; background: transparent; border: none;
-          padding: 0.5rem 0.6rem; color: var(--color-text); cursor: pointer;
-          border-radius: var(--radius-sm); font-size: 0.85rem; text-align: left;
-          transition: background 0.12s; font-family: inherit;
+          padding: 5px 8px; color: var(--color-text); cursor: pointer;
+          border-radius: var(--radius-sm); font-size: 0.82rem; text-align: left;
+          transition: background 0.1s; font-family: inherit;
         }
         .ts-option:hover { background: var(--color-surface-hover); }
         .ts-option.selected { background: var(--color-accent-subtle); }
-        .ts-opt-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .ts-opt-color { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
         .ts-opt-name { flex: 1; }
-        .ts-check { color: var(--color-accent); font-weight: 600; font-size: 0.85rem; }
+        .ts-check { color: var(--color-accent); font-weight: 600; font-size: 0.82rem; }
 
         .ts-no-results {
-          padding: 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.85rem;
+          padding: 10px; text-align: center; color: var(--color-text-muted); font-size: 0.82rem;
         }
       `}</style>
         </div>

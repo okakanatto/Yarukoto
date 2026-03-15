@@ -56,38 +56,36 @@ export default function ColorPalette({ value, onChange }) {
             </div>
 
             <style jsx>{`
-        .color-palette-root { display: flex; flex-direction: column; gap: 0.5rem; }
-        .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+        .color-palette-root { display: flex; flex-direction: column; gap: 6px; }
+        .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
         .swatch {
-          width: 100%; aspect-ratio: 1; min-width: 24px; max-width: 32px;
-          border: 2px solid transparent; border-radius: 6px;
-          cursor: pointer; transition: all 0.15s; padding: 0;
+          width: 100%; aspect-ratio: 1; min-width: 22px; max-width: 30px;
+          border: 2px solid transparent; border-radius: var(--radius-sm);
+          cursor: pointer; transition: border-color 0.15s; padding: 0;
         }
-        .swatch:hover { transform: scale(1.2); z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .swatch:hover { border-color: var(--color-text-muted); }
         .swatch.active {
           border-color: var(--color-text);
-          box-shadow: 0 0 0 2px var(--color-accent-glow);
-          transform: scale(1.15);
         }
-        .custom-row { display: flex; align-items: center; gap: 0.5rem; }
+        .custom-row { display: flex; align-items: center; gap: 6px; }
         .toggle-custom {
           background: transparent; border: none;
-          color: var(--color-text-muted); font-size: 0.75rem;
-          cursor: pointer; padding: 0.2rem 0;
+          color: var(--color-text-muted); font-size: 0.72rem;
+          cursor: pointer; padding: 2px 0;
         }
         .toggle-custom:hover { color: var(--color-text); }
         .custom-picker {
-          display: flex; align-items: center; gap: 0.5rem;
-          animation: fadeIn 0.2s;
+          display: flex; align-items: center; gap: 6px;
+          animation: fadeIn 0.15s;
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .color-input {
-          width: 28px; height: 28px;
+          width: 26px; height: 26px;
           border: 1px solid var(--border-color);
-          border-radius: 4px; cursor: pointer; padding: 1px;
+          border-radius: var(--radius-sm); cursor: pointer; padding: 1px;
           background: transparent;
         }
-        .color-hex { font-size: 0.75rem; color: var(--color-text-muted); font-family: monospace; }
+        .color-hex { font-size: 0.72rem; color: var(--color-text-muted); font-family: monospace; }
       `}</style>
         </div>
     );

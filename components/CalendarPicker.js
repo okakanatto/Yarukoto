@@ -210,71 +210,70 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
       <style jsx>{`
         .cal-root { position: relative; width: 100%; }
         .cal-trigger {
-          display: flex; align-items: center; gap: 0.5rem;
+          display: flex; align-items: center; gap: 6px;
           background: var(--color-surface-hover); border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); padding: 0.5rem 0.65rem;
-          cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
-          font-size: 0.875rem; color: var(--color-text);
+          border-radius: var(--radius-sm); padding: 6px 8px;
+          cursor: pointer; transition: border-color 0.15s;
+          font-size: 0.82rem; color: var(--color-text);
         }
         .cal-trigger:hover { border-color: var(--border-color-hover); }
         .cal-trigger:focus {
           outline: none; border-color: var(--color-accent);
-          box-shadow: 0 0 0 3px var(--color-accent-glow);
         }
-        .cal-icon { font-size: 0.9rem; }
+        .cal-icon { font-size: 0.85rem; }
         .cal-value { flex: 1; }
         .cal-value.placeholder { color: var(--color-text-disabled); }
         .cal-clear {
           background: none; border: none; color: var(--color-text-muted); cursor: pointer;
-          font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; transition: color 0.15s;
+          font-size: 0.65rem; padding: 2px 4px; border-radius: var(--radius-sm); transition: color 0.15s;
         }
         .cal-clear:hover { color: var(--color-text); }
 
         .cal-dropdown {
           position: absolute; top: calc(100% + 4px); left: 0;
-          z-index: 1050; min-width: 280px;
+          z-index: 1050; min-width: 270px;
           background: var(--color-surface);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-md);
-          box-shadow: var(--shadow-lg);
-          padding: 0.75rem;
-          animation: calDrop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          padding: 8px;
+          animation: calDrop 0.15s ease;
           outline: none;
         }
         @keyframes calDrop {
-          from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
         .cal-dropdown.align-right { left: auto; right: 0; }
 
         .cal-header {
           display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 0.5rem;
+          margin-bottom: 6px;
         }
         .cal-nav {
           background: none; border: none; color: var(--color-text-muted);
-          font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px;
+          font-size: 1.1rem; cursor: pointer; width: 26px; height: 26px;
           display: flex; align-items: center; justify-content: center;
-          border-radius: var(--radius-sm); transition: all 0.15s;
+          border-radius: var(--radius-sm); transition: background 0.15s, color 0.15s;
         }
         .cal-nav:hover { background: var(--color-surface-hover); color: var(--color-text); }
-        .cal-title { font-size: 0.9rem; font-weight: 600; color: var(--color-text); }
+        .cal-title { font-size: 0.85rem; font-weight: 600; color: var(--color-text); }
 
         .cal-weekdays {
-          display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 0.25rem;
+          display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 2px;
         }
         .cal-wd {
-          text-align: center; font-size: 0.7rem; font-weight: 600;
-          color: var(--color-text-muted); padding: 0.25rem 0;
+          text-align: center; font-size: 0.68rem; font-weight: 600;
+          color: var(--color-text-muted); padding: 3px 0;
         }
         .cal-wd.sun { color: var(--color-danger); }
         .cal-wd.sat { color: var(--color-saturday); }
 
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
         .cal-cell {
           aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-          font-size: 0.8rem; border-radius: var(--radius-sm); border: none; cursor: pointer;
-          background: transparent; color: var(--color-text); transition: all 0.12s;
+          font-size: 0.78rem; border-radius: var(--radius-sm); border: none; cursor: pointer;
+          background: transparent; color: var(--color-text); transition: background 0.1s, color 0.1s;
         }
         .cal-cell.empty { cursor: default; }
         .cal-cell:not(.empty):hover { background: var(--color-surface-hover); }
@@ -297,14 +296,14 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         }
 
         .cal-footer {
-          display: flex; justify-content: center; margin-top: 0.5rem;
-          padding-top: 0.5rem; border-top: 1px solid var(--border-color);
+          display: flex; justify-content: center; margin-top: 6px;
+          padding-top: 6px; border-top: 1px solid var(--border-color);
         }
         .cal-today-btn {
           background: transparent; border: 1px solid var(--border-color);
-          color: var(--color-accent); font-size: 0.78rem; font-weight: 500;
-          padding: 0.3rem 1rem; border-radius: var(--radius-sm); cursor: pointer;
-          transition: all 0.15s;
+          color: var(--color-accent); font-size: 0.76rem; font-weight: 500;
+          padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer;
+          transition: background 0.15s;
         }
         .cal-today-btn:hover { background: var(--color-accent-subtle); }
       `}</style>
