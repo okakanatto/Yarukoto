@@ -4,7 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import StatusCheckbox from '@/components/StatusCheckbox';
 import { formatMin } from '@/lib/utils';
-import { Pin, RefreshCw, Archive, Calendar, Clock } from 'lucide-react';
+import { Pin, RefreshCw, Archive, Calendar, Clock, GripVertical } from 'lucide-react';
 
 /**
  * Individual today-card with @dnd-kit draggable support.
@@ -33,7 +33,7 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
             className={`today-card ${isDone ? 'done' : ''} ${isRoutine ? 'routine' : ''} ${isPickedForToday && !isRoutine ? 'picked' : ''} ${isArchived ? 'archived' : ''} ${isDragging ? 'dragging-source' : ''} ${justDroppedId === task.id ? 'drop-settle-today' : ''}`}
         >
             {isManual && !isArchived && (
-                <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え">⋮⋮</div>
+                <div className="today-drag-handle" {...attributes} {...listeners} title="ドラッグして並び替え"><GripVertical size={14} strokeWidth={2} /></div>
             )}
             <StatusCheckbox
                 statusCode={task.status_code}

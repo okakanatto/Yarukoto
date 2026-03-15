@@ -11,7 +11,7 @@ import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { useTodayGrouping } from '@/hooks/useTodayGrouping';
-import { Sun, CalendarDays, PartyPopper, Hand, ArrowUpDown, Pin, RefreshCw } from 'lucide-react';
+import { Sun, CalendarDays, PartyPopper, Hand, ArrowUpDown, Pin, RefreshCw, GripVertical } from 'lucide-react';
 import TodayCardItem from './_components/TodayCardItem';
 import TodayGroupHeader from './_components/TodayGroupHeader';
 import TodayStats from './_components/TodayStats';
@@ -416,7 +416,7 @@ export default function TodayPage() {
                 <DragOverlay>
                     {activeTaskData ? (
                         <div className={`${activeTaskData.is_ghost_parent ? 'today-ghost-header' : 'today-card'} dnd-overlay-today`} style={{ animation: 'none' }}>
-                            <div className="today-drag-handle" style={{ opacity: 0.6 }}>⋮⋮</div>
+                            <div className="today-drag-handle" style={{ opacity: 0.6 }}><GripVertical size={14} strokeWidth={2} /></div>
                             {activeTaskData.is_ghost_parent ? (
                                 <>
                                     <span className="today-ghost-icon"><Pin size={14} /></span>
