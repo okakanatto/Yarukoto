@@ -374,100 +374,93 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         .task-input-wrapper {
           background: var(--color-surface);
           border: 1px solid var(--border-color);
-          border-radius: var(--radius-lg);
-          padding: 1.25rem 1.5rem;
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: var(--shadow-card);
+          border-radius: var(--radius-md);
+          padding: 14px 16px;
+          transition: border-color 0.15s;
         }
         .task-input-wrapper.expanded {
-          box-shadow: var(--shadow-md);
           border-color: var(--border-color-hover);
         }
         .task-input-wrapper.success-flash {
           border-color: var(--color-success);
-          box-shadow: 0 0 0 3px var(--color-success-bg);
-          animation: successBounce 0.5s cubic-bezier(.34,1.56,.64,1);
+          animation: successBounce 0.4s ease;
         }
         @keyframes successBounce {
           0% { transform: scale(1); }
-          30% { transform: scale(1.02) translateY(-2px); }
-          50% { transform: scale(0.99); }
-          70% { transform: scale(1.005) translateY(-1px); }
-          100% { transform: scale(1) translateY(0); }
+          40% { transform: scale(1.01); }
+          100% { transform: scale(1); }
         }
         .input-primary-row {
-          display: flex; gap: 0.75rem; align-items: center;
+          display: flex; gap: 10px; align-items: center;
         }
         .task-title-input {
           flex: 1; background: transparent; border: none;
-          border-bottom: 1.5px solid var(--border-color); padding: 0.6rem 0.25rem;
-          font-size: 1.05rem; color: var(--color-text); outline: none;
-          transition: border-color 0.25s; font-family: inherit;
+          border-bottom: 1px solid var(--border-color); padding: 6px 2px;
+          font-size: 0.95rem; color: var(--color-text); outline: none;
+          transition: border-color 0.15s; font-family: inherit;
         }
         .task-title-input::placeholder { color: var(--color-text-disabled); }
         .task-title-input:focus { border-bottom-color: var(--color-accent); }
         .btn-add {
-          width: 36px; height: 36px; border-radius: 50%; border: none;
-          background: var(--color-accent); color: white; font-size: 1.3rem;
+          width: 32px; height: 32px; border-radius: var(--radius-sm); border: none;
+          background: var(--color-accent); color: white; font-size: 1.1rem;
           cursor: pointer; display: flex; align-items: center; justify-content: center;
-          transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); flex-shrink: 0;
+          transition: background 0.12s; flex-shrink: 0;
         }
         .btn-add:hover:not(:disabled) {
           background: var(--color-accent-hover);
-          transform: scale(1.08);
         }
         .btn-add:active:not(:disabled) { transform: scale(0.95); }
-        .btn-add:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-add:disabled { opacity: 0.3; cursor: not-allowed; }
         .spinner-sm {
-          width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
+          width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
           border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .details-panel {
-          margin-top: 1.25rem; padding-top: 1.25rem;
-          border-top: 1px dashed var(--border-color);
-          animation: detailsSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          display: flex; flex-direction: column; gap: 1rem;
+          margin-top: 14px; padding-top: 14px;
+          border-top: 1px solid var(--border-color);
+          animation: detailsSlide 0.2s ease;
+          display: flex; flex-direction: column; gap: 12px;
         }
         @keyframes detailsSlide {
-          from { opacity: 0; transform: translateY(-8px); }
+          from { opacity: 0; transform: translateY(-4px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-        .form-row .form-field { flex: 1; min-width: 150px; }
-        .form-field { display: flex; flex-direction: column; gap: 0.4rem; }
-        .form-field--narrow { max-width: 140px; flex: 0 0 auto !important; }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-row .form-field { flex: 1; min-width: 140px; }
+        .form-field { display: flex; flex-direction: column; gap: 4px; }
+        .form-field--narrow { max-width: 130px; flex: 0 0 auto !important; }
         label {
-          font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+          font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
           text-transform: uppercase; letter-spacing: 0.05em;
         }
         input[type="number"], select, textarea {
           background-color: var(--color-surface); border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); padding: 0.55rem 0.65rem;
-          color: var(--color-text); font-family: inherit; font-size: 0.875rem;
-          transition: border-color 0.2s, box-shadow 0.2s; outline: none; width: 100%;
+          border-radius: var(--radius-sm); padding: 6px 8px;
+          color: var(--color-text); font-family: inherit; font-size: 0.82rem;
+          transition: border-color 0.12s; outline: none; width: 100%;
         }
         input:focus, select:focus, textarea:focus {
           border-color: var(--color-accent);
-          box-shadow: 0 0 0 3px var(--color-accent-subtle);
-          background-color: var(--color-surface);
+          box-shadow: 0 0 0 2px var(--color-accent-subtle);
         }
-        textarea { resize: vertical; min-height: 60px; }
-        .panel-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; }
+        textarea { resize: vertical; min-height: 50px; }
+        .panel-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 4px; }
         .btn-collapse {
-          background: transparent; border: 1px solid var(--border-color); color: var(--color-text-secondary);
-          cursor: pointer; font-size: 0.8rem; padding: 0.4rem 0.85rem;
-          border-radius: var(--radius-sm); transition: color 0.2s, background 0.2s;
+          background: transparent; border: 1px solid var(--border-color); color: var(--color-text-muted);
+          cursor: pointer; font-size: 0.78rem; padding: 4px 10px;
+          border-radius: var(--radius-sm); transition: color 0.1s;
         }
-        .btn-collapse:hover { color: var(--color-text); background: var(--color-surface-hover); border-color: var(--border-color-hover); }
+        .btn-collapse:hover { color: var(--color-text); border-color: var(--border-color-hover); }
         .btn-submit {
           background: var(--color-accent); border: none; color: #fff;
-          padding: 0.5rem 1.25rem; border-radius: var(--radius-sm);
-          font-size: 0.85rem; font-weight: 600; cursor: pointer;
-          transition: all 0.18s; font-family: inherit;
+          padding: 6px 16px; border-radius: var(--radius-sm);
+          font-size: 0.82rem; font-weight: 600; cursor: pointer;
+          transition: background 0.12s; font-family: inherit;
         }
-        .btn-submit:hover:not(:disabled) { background: var(--color-accent-hover); transform: translateY(-1px); }
-        .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-submit:hover:not(:disabled) { background: var(--color-accent-hover); }
+        .btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
       `}</style>
         </div>
     );

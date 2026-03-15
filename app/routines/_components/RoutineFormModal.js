@@ -366,113 +366,114 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 100%; max-width: 500px;
-            background: var(--color-surface); border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl); z-index: 2001;
+            background: var(--color-surface); border-radius: var(--radius-md);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 2001;
             display: flex; flex-direction: column;
             animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
             max-height: 90vh;
         }
         @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -45%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 
-        .rt-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); }
-        .rt-close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--color-text-secondary); }
+        .rt-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+        .rt-close-btn { background: none; border: none; font-size: 1rem; cursor: pointer; color: var(--color-text-secondary); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .rt-close-btn:hover { color: var(--color-text); }
 
-        .rt-modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; overflow-y: auto; }
+        .rt-modal-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
         .rt-input-title {
             width: 100%; border: none; border-bottom: 2px solid var(--border-color);
-            font-size: 1.5rem; padding: 0.5rem 0; background: transparent;
+            font-size: 1.3rem; padding: 4px 0; background: transparent;
             color: var(--color-text); transition: border-color 0.2s;
         }
         .rt-input-title:focus { outline: none; border-color: var(--color-accent); }
 
-        .rt-section { display: flex; flex-direction: column; gap: 1rem; }
-        .rt-section-row { display: flex; gap: 1rem; align-items: flex-start; }
-        .rt-icon { font-size: 1.2rem; margin-top: 0.2rem; width: 24px; text-align: center; }
-        .rt-control-group { flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
-        .rt-field-label { font-size: 0.82rem; color: var(--color-text-secondary); font-weight: 500; }
+        .rt-section { display: flex; flex-direction: column; gap: 6px; }
+        .rt-section-row { display: flex; gap: 6px; align-items: flex-start; }
+        .rt-icon { font-size: 1rem; margin-top: 2px; width: 20px; text-align: center; }
+        .rt-control-group { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .rt-field-label { font-size: 0.78rem; color: var(--color-text-secondary); font-weight: 500; }
 
         .rt-select-clean {
             background-color: var(--color-surface-hover); border: 1px solid transparent;
-            padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-size: 0.95rem;
+            padding: 5px 8px; border-radius: var(--radius-sm); font-size: 0.85rem;
             cursor: pointer; color: var(--color-text);
         }
 
         .rt-input-date {
             background: var(--color-surface-hover); border: 1px solid var(--border-color);
-            padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.9rem;
+            padding: 5px 8px; border-radius: var(--radius-sm); font-size: 0.82rem;
             color: var(--color-text); width: 100%;
         }
         .rt-input-date:focus { outline: none; border-color: var(--color-accent); }
         .rt-clear-date {
             background: none; border: none; color: var(--color-text-muted);
-            font-size: 0.78rem; cursor: pointer; text-align: left; padding: 0;
+            font-size: 0.72rem; cursor: pointer; text-align: left; padding: 0;
         }
         .rt-clear-date:hover { color: var(--color-danger); }
 
-        .rt-inline-input { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
-        .rt-input-short { width: 60px; padding: 0.3rem; border: 1px solid var(--border-color); border-radius: 4px; text-align: center; }
+        .rt-inline-input { display: flex; align-items: center; gap: 4px; font-size: 0.82rem; }
+        .rt-input-short { width: 56px; padding: 3px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); text-align: center; }
 
-        .rt-dow-container { display: flex; justify-content: space-between; padding-left: 2rem; }
+        .rt-dow-container { display: flex; justify-content: space-between; padding-left: 1.5rem; }
         .rt-dow-btn {
-            width: 38px; height: 38px; border-radius: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
             border: 1px solid var(--border-color); background: var(--color-surface);
-            cursor: pointer; font-size: 0.8rem; color: var(--color-text-secondary);
+            cursor: pointer; font-size: 0.75rem; color: var(--color-text-secondary);
             transition: all 0.2s;
         }
         .rt-dow-btn.on { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
 
-        .rt-divider { height: 1px; background: var(--border-color); margin: 0.5rem 0; }
-        .rt-section-title { font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary); }
-        .rt-details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .rt-divider { height: 1px; background: var(--border-color); margin: 4px 0; }
+        .rt-section-title { font-size: 0.78rem; font-weight: 600; color: var(--color-text-secondary); }
+        .rt-details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 
-        .rt-field label { display: block; font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.25rem; font-weight: 500; }
+        .rt-field label { display: block; font-size: 0.7rem; color: var(--color-text-secondary); margin-bottom: 2px; font-weight: 500; }
         .rt-select, .rt-input, .rt-textarea {
-            width: 100%; padding: 0.5rem; border: 1px solid var(--border-color);
+            width: 100%; padding: 5px; border: 1px solid var(--border-color);
             border-radius: var(--radius-sm); background-color: var(--color-surface);
-            color: var(--color-text); font-size: 0.9rem; transition: border-color 0.2s;
+            color: var(--color-text); font-size: 0.82rem; transition: border-color 0.2s;
         }
         .rt-select:focus, .rt-input:focus, .rt-textarea:focus { outline: none; border-color: var(--color-accent); }
 
-        .rt-modal-footer { display: flex; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+        .rt-modal-footer { display: flex; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border-color); }
         .rt-btn-save {
             background: var(--color-accent); color: #fff; border: none;
-            padding: 0.6rem 1.5rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
-            transition: all 0.15s;
+            padding: 6px 14px; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
+            font-size: 0.82rem; transition: all 0.15s;
         }
         .rt-btn-save:hover { filter: brightness(1.1); }
         .rt-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
         .rt-btn-cancel {
             background: var(--color-surface-hover); color: var(--color-text-secondary); border: 1px solid var(--border-color);
-            padding: 0.6rem 1rem; border-radius: var(--radius-sm); cursor: pointer;
-            transition: all 0.15s;
+            padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer;
+            font-size: 0.82rem; transition: all 0.15s;
         }
         .rt-btn-cancel:hover { background: var(--color-surface-active); }
-        .rt-btn-danger { background: transparent; color: var(--color-danger); border: none; font-size: 0.9rem; cursor: pointer; }
+        .rt-btn-danger { background: transparent; color: var(--color-danger); border: none; font-size: 0.82rem; cursor: pointer; }
         .rt-btn-danger:hover { text-decoration: underline; }
 
         /* iOS-style Switch (modal, larger) */
         .rt-switch-lg {
-            position: relative; width: 56px; height: 32px;
-            border-radius: 16px; border: none; cursor: pointer;
+            position: relative; width: 48px; height: 28px;
+            border-radius: 14px; border: none; cursor: pointer;
             transition: background 0.3s; flex-shrink: 0;
             padding: 0;
         }
         .rt-switch-lg.on { background: var(--color-accent); }
         .rt-switch-lg.off { background: var(--color-text-disabled); }
         .rt-switch-lg .rt-switch-knob {
-            position: absolute; top: 2px; width: 28px; height: 28px;
+            position: absolute; top: 2px; width: 24px; height: 24px;
             border-radius: 50%; background: #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            box-shadow: none;
             transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .rt-switch-lg.on .rt-switch-knob { left: 26px; }
+        .rt-switch-lg.on .rt-switch-knob { left: 22px; }
         .rt-switch-lg.off .rt-switch-knob { left: 2px; }
 
         /* Toggle row in modal */
         .rt-toggle-row { align-items: center !important; }
-        .rt-toggle-info { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
-        .rt-toggle-label { font-weight: 600; font-size: 0.92rem; color: var(--color-text); }
-        .rt-toggle-hint { font-size: 0.78rem; color: var(--color-text-muted); }
+        .rt-toggle-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+        .rt-toggle-label { font-weight: 600; font-size: 0.85rem; color: var(--color-text); }
+        .rt-toggle-hint { font-size: 0.72rem; color: var(--color-text-muted); }
             `}</style>
         </>
     );

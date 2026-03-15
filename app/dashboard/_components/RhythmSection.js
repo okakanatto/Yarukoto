@@ -46,18 +46,18 @@ export default function RhythmSection({ rhythm }) {
 
             <style jsx>{`
                 .rh-card {
-                    background: var(--color-surface); border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
-                    box-shadow: var(--shadow-sm);
+                    background: transparent; border: none;
+                    border-radius: 0; padding: 12px 0;
+                    box-shadow: none; border-bottom: 1px solid var(--border-color);
                     display: flex; flex-direction: column;
                 }
                 .rh-label {
-                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
-                    letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.75rem;
+                    font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 8px;
                 }
                 .rh-summary {
-                    font-size: 0.92rem; font-weight: 600; color: var(--color-text);
-                    margin-bottom: 0.9rem;
+                    font-size: 0.88rem; font-weight: 600; color: var(--color-text);
+                    margin-bottom: 10px;
                 }
                 .rh-bars {
                     display: flex; align-items: flex-end; gap: 8px; height: 52px; margin-bottom: 6px;
@@ -66,22 +66,22 @@ export default function RhythmSection({ rhythm }) {
                     display: flex; flex-direction: column; align-items: center; flex: 1;
                 }
                 .rh-bar {
-                    width: 18px; border-radius: 3px;
+                    width: 18px; border-radius: 2px;
                     transition: height 0.7s cubic-bezier(0.4, 0, 0.2, 1);
                 }
                 .rh-day {
-                    font-size: 0.65rem; color: var(--color-text-disabled);
+                    font-size: 0.62rem; color: var(--color-text-disabled);
                     margin-top: 4px; text-align: center;
                 }
                 .rh-day-today {
                     font-weight: 700; color: var(--color-text);
                 }
                 .rh-caption {
-                    font-size: 0.6rem; color: var(--color-text-disabled); margin-top: 0.65rem;
+                    font-size: 0.58rem; color: var(--color-text-disabled); margin-top: 8px;
                 }
                 .rh-empty {
-                    font-size: 0.82rem; color: var(--color-text-muted);
-                    flex: 1; display: flex; align-items: center;
+                    font-size: 0.78rem; color: var(--color-text-muted);
+                    flex: 1; display: flex; align-items: flex-start;
                 }
             `}</style>
         </div>

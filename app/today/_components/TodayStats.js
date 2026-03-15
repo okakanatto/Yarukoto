@@ -47,25 +47,25 @@ export default function TodayStats({ stats }) {
 
             <style jsx global>{`
         .today-stats {
-          display: flex; align-items: center; gap: 2rem;
-          background: var(--color-surface); border: 1px solid var(--border-color);
-          border-radius: var(--radius-lg); padding: 1.5rem 2rem;
-          box-shadow: var(--shadow-md); margin-bottom: 1.5rem;
+          display: flex; align-items: center; gap: 24px;
+          padding: 16px 0;
+          border-bottom: 1px solid var(--border-color);
+          margin-bottom: 12px;
         }
-        .stat-ring-area { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
+        .stat-ring-area { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
         .stat-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .ring-bg { fill: none; stroke: var(--color-surface-hover); stroke-width: 8; }
-        .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
+        .ring-bg { fill: none; stroke: var(--color-surface-hover); stroke-width: 6; }
+        .ring-fill { fill: none; stroke-width: 6; stroke-linecap: butt; transition: stroke-dasharray 0.5s ease; }
         .ring-label {
           position: absolute; inset: 0; display: flex; flex-direction: column;
           align-items: center; justify-content: center;
         }
-        .ring-pct { font-size: 1.5rem; font-weight: 800; color: var(--color-text); line-height: 1; }
-        .ring-sub { font-size: 0.7rem; color: var(--color-text-muted); font-weight: 500; }
+        .ring-pct { font-size: 1.2rem; font-weight: 800; color: var(--color-text); line-height: 1; letter-spacing: -0.02em; }
+        .ring-sub { font-size: 0.6rem; color: var(--color-text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
 
-        .stat-details { display: flex; flex-direction: column; gap: 0.5rem; }
-        .stat-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--color-text-secondary); }
-        .stat-icon { font-size: 0.85rem; }
+        .stat-details { display: flex; flex-direction: column; gap: 4px; }
+        .stat-row { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--color-text-secondary); }
+        .stat-icon { color: var(--color-text-muted); display: flex; align-items: center; }
       `}</style>
         </div>
     );

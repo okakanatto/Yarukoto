@@ -68,12 +68,12 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                 .status-cb-wrap {
                     display: flex;
                     align-items: center;
-                    gap: 5px;
+                    gap: 4px;
                     flex-shrink: 0;
                 }
                 .status-cb-main {
-                    width: 22px;
-                    height: 22px;
+                    width: 20px;
+                    height: 20px;
                     border-radius: 50%;
                     border: 1.5px solid var(--color-text-disabled);
                     background: transparent;
@@ -82,9 +82,9 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
-                    font-size: 0.7rem;
+                    font-size: 0.65rem;
                     color: transparent;
-                    transition: all 0.2s;
+                    transition: color 0.15s, background 0.15s, border-color 0.15s;
                     position: relative;
                     overflow: visible;
                     padding: 0;
@@ -109,7 +109,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     border-color: var(--color-accent);
                     color: white;
                     font-weight: 700;
-                    font-size: 0.65rem;
+                    font-size: 0.6rem;
                 }
                 .status-cb-main.checked:not(.cancelled):hover {
                     background: var(--color-accent-hover);
@@ -119,15 +119,15 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     background: transparent;
                     border-color: var(--color-accent);
                     color: var(--color-accent);
-                    font-size: 0.55rem;
+                    font-size: 0.5rem;
                     font-weight: 700;
                 }
                 .status-cb-main.in-progress:hover {
                     background: var(--color-accent-subtle);
                 }
                 .status-cb-play {
-                    width: 20px;
-                    height: 20px;
+                    width: 18px;
+                    height: 18px;
                     border-radius: 50%;
                     border: 1.5px solid var(--color-accent);
                     background: var(--color-accent-subtle);
@@ -136,8 +136,8 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 0.5rem;
-                    transition: all 0.15s;
+                    font-size: 0.45rem;
+                    transition: color 0.15s, background 0.15s;
                     animation: statusCbFadeIn 0.15s ease;
                     flex-shrink: 0;
                     padding: 0;
@@ -145,11 +145,10 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                 .status-cb-play:hover {
                     background: var(--color-accent);
                     color: white;
-                    transform: scale(1.1);
                 }
                 .status-cb-revert {
-                    width: 20px;
-                    height: 20px;
+                    width: 18px;
+                    height: 18px;
                     border-radius: 50%;
                     border: 1.5px solid var(--color-text-muted);
                     background: var(--color-surface-hover);
@@ -158,8 +157,8 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 0.55rem;
-                    transition: all 0.15s;
+                    font-size: 0.5rem;
+                    transition: color 0.15s, background 0.15s;
                     animation: statusCbFadeIn 0.15s ease;
                     flex-shrink: 0;
                     padding: 0;
@@ -167,7 +166,6 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                 .status-cb-revert:hover {
                     background: var(--color-text-muted);
                     color: white;
-                    transform: scale(1.1);
                 }
                 @keyframes statusCbFadeIn {
                     from { opacity: 0; transform: scale(0.8); }
@@ -186,7 +184,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     pointer-events: none;
                 }
                 .status-cb-main.sparkle::before {
-                    width: 40px; height: 40px; top: -9px; left: -9px;
+                    width: 36px; height: 36px; top: -8px; left: -8px;
                     border: 2.5px solid var(--color-accent);
                     animation: statusCbRing 0.7s ease-out forwards;
                 }

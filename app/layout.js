@@ -184,37 +184,32 @@ function LayoutInner({ children }) {
             <style jsx global>{`
                     .fab {
                         position: fixed;
-                        bottom: 1.75rem;
-                        right: 1.75rem;
-                        width: 52px;
-                        height: 52px;
-                        border-radius: 50%;
+                        bottom: 24px;
+                        right: 24px;
+                        width: 44px;
+                        height: 44px;
+                        border-radius: var(--radius-md);
                         border: none;
                         background: var(--color-accent);
                         color: #fff;
-                        font-size: 1.6rem;
                         cursor: pointer;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        box-shadow: 0 4px 20px color-mix(in srgb, var(--color-accent) 40%, transparent);
-                        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+                        transition: background 0.15s, transform 0.15s;
                         z-index: 1000;
                     }
                     .fab:hover {
-                        transform: scale(1.1);
-                        box-shadow: 0 6px 28px color-mix(in srgb, var(--color-accent) 50%, transparent);
+                        background: var(--color-accent-hover);
+                        transform: translateY(-1px);
                     }
                     .fab:active { transform: scale(0.95); }
                     .fab.fab-open {
                         background: var(--color-text-secondary);
-                        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-                        transform: rotate(90deg);
+                        transform: rotate(45deg);
                     }
                     .fab-icon {
                         line-height: 1;
-                        font-weight: 300;
-                        transition: transform 0.2s;
                         display: flex;
                         align-items: center;
                         justify-content: center;
@@ -223,10 +218,9 @@ function LayoutInner({ children }) {
                     .fab-backdrop {
                         position: fixed;
                         inset: 0;
-                        background: rgba(0, 0, 0, 0.25);
-                        backdrop-filter: blur(2px);
+                        background: rgba(0, 0, 0, 0.2);
                         z-index: 999;
-                        animation: fabBdIn 0.2s ease;
+                        animation: fabBdIn 0.15s ease;
                     }
                     @keyframes fabBdIn {
                         from { opacity: 0; }
@@ -235,64 +229,62 @@ function LayoutInner({ children }) {
 
                     .fab-modal {
                         position: fixed;
-                        bottom: calc(1.75rem + 52px + 0.75rem);
-                        right: 1.75rem;
-                        width: min(520px, calc(100vw - 3.5rem));
-                        max-height: calc(100vh - 1.75rem - 52px - 0.75rem - 1rem);
+                        bottom: calc(24px + 44px + 10px);
+                        right: 24px;
+                        width: min(480px, calc(100vw - 48px));
+                        max-height: calc(100vh - 24px - 44px - 10px - 16px);
                         display: flex;
                         flex-direction: column;
                         overflow: hidden;
                         background: var(--color-surface);
                         border: 1px solid var(--border-color);
-                        border-radius: var(--radius-xl);
-                        box-shadow: var(--shadow-lg);
+                        border-radius: var(--radius-md);
+                        box-shadow: 0 4px 24px rgba(0,0,0,0.12);
                         z-index: 1001;
-                        animation: fabModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+                        animation: fabModalIn 0.2s ease;
                         transform-origin: bottom right;
                     }
                     @keyframes fabModalIn {
-                        from { opacity: 0; transform: scale(0.9) translateY(12px); }
-                        to   { opacity: 1; transform: scale(1) translateY(0); }
+                        from { opacity: 0; transform: translateY(8px); }
+                        to   { opacity: 1; transform: translateY(0); }
                     }
 
                     .fab-modal-header {
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        padding: 0.9rem 1.25rem 0.5rem;
+                        padding: 10px 16px 8px;
                         border-bottom: 1px solid var(--border-color);
                     }
                     .fab-modal-title {
-                        font-size: 0.88rem;
+                        font-size: 0.82rem;
                         font-weight: 700;
                         color: var(--color-text-secondary);
                         letter-spacing: 0.02em;
+                        text-transform: uppercase;
                     }
                     .fab-modal-close {
                         background: transparent;
                         border: none;
                         color: var(--color-text-muted);
                         cursor: pointer;
-                        font-size: 0.8rem;
-                        width: 26px;
-                        height: 26px;
+                        width: 24px;
+                        height: 24px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         border-radius: var(--radius-sm);
-                        transition: all 0.15s;
+                        transition: color 0.1s;
                     }
                     .fab-modal-close:hover {
-                        background: var(--color-surface-hover);
                         color: var(--color-text);
                     }
 
-                    /* TaskInput inside FAB modal: strip outer padding to fit cleanly */
                     .fab-modal .task-input-wrapper {
                         border: none;
-                        border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+                        border-radius: 0 0 var(--radius-md) var(--radius-md);
                         box-shadow: none;
-                        padding: 1rem 1.25rem 1.25rem;
+                        padding: 12px 16px 16px;
                         background: transparent;
                         overflow-y: auto;
                         flex: 1;
@@ -302,28 +294,29 @@ function LayoutInner({ children }) {
                         box-shadow: none;
                         border: none;
                     }
-                    /* IMP-43: Hide collapse button (−) in FAB context — ×ボタンと役割重複 */
                     .fab-modal .btn-add.expanded {
                         display: none;
                     }
 
                     .global-toast {
                         position: fixed;
-                        bottom: calc(1.75rem + 52px + 0.75rem);
-                        right: 1.75rem;
-                        padding: 0.75rem 1.25rem;
-                        border-radius: var(--radius-md);
-                        font-size: 0.85rem;
+                        bottom: calc(24px + 44px + 10px);
+                        right: 24px;
+                        padding: 8px 16px;
+                        border-radius: var(--radius-sm);
+                        font-size: 0.82rem;
                         font-weight: 500;
                         z-index: 10000;
-                        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-                        animation: gtIn 0.3s cubic-bezier(0.16,1,0.3,1);
+                        animation: gtIn 0.2s ease;
                         white-space: nowrap;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
                     }
                     .toast-ok  { background: var(--toast-success-bg); border: 1px solid var(--toast-success-border); color: var(--toast-success-text); }
                     .toast-err { background: var(--toast-error-bg); border: 1px solid var(--toast-error-border); color: var(--toast-error-text); }
                     @keyframes gtIn {
-                        from { opacity: 0; transform: translateY(16px); }
+                        from { opacity: 0; transform: translateY(8px); }
                         to   { opacity: 1; transform: translateY(0); }
                     }
                 `}</style>

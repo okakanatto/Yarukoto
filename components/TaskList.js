@@ -360,232 +360,227 @@ export default function TaskList({ projectId = null }) {
             .tl-root { min-height: 100px; }
 
             .tl-search {
-              display: flex; align-items: center; gap: .5rem;
-              padding: .55rem .85rem; margin-bottom: .75rem;
-              background: var(--color-surface); border: 1px solid var(--border-color);
-              border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-              transition: border-color .2s;
+              display: flex; align-items: center; gap: 8px;
+              padding: 6px 12px; margin-bottom: 10px;
+              border-bottom: 1px solid var(--border-color);
+              transition: border-color .15s;
             }
-            .tl-search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
+            .tl-search:focus-within { border-color: var(--color-accent); }
             .tl-search-icon { color: var(--color-text-disabled); flex-shrink: 0; }
             .tl-search-input {
               flex: 1; border: none; outline: none; background: transparent;
-              font-size: .88rem; font-family: inherit; color: var(--color-text);
+              font-size: .86rem; font-family: inherit; color: var(--color-text);
             }
             .tl-search-input::placeholder { color: var(--color-text-disabled); }
             .tl-search-clear {
               background: none; border: none; cursor: pointer;
-              color: var(--color-text-muted); font-size: .75rem;
-              width: 22px; height: 22px; display: flex; align-items: center;
-              justify-content: center; border-radius: 50%;
-              transition: all .15s;
+              color: var(--color-text-muted); font-size: .72rem;
+              width: 20px; height: 20px; display: flex; align-items: center;
+              justify-content: center; border-radius: var(--radius-sm);
+              transition: color .1s;
             }
-            .tl-search-clear:hover { background: var(--color-surface-hover); color: var(--color-text); }
+            .tl-search-clear:hover { color: var(--color-text); }
             .tl-search-count {
-              font-size: .8rem; color: var(--color-text-muted);
-              padding: .15rem 0; font-weight: 500;
+              font-size: .75rem; color: var(--color-text-muted);
+              padding: 2px 0; font-weight: 500;
             }
             .tl-toolbar {
-              display:flex; align-items:center; gap:.85rem; flex-wrap:wrap;
-              margin-bottom:1.25rem; padding:.65rem .85rem;
-              background:var(--color-surface); border:1px solid var(--border-color);
-              border-radius:var(--radius-md); box-shadow:var(--shadow-sm);
+              display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+              margin-bottom:12px; padding:8px 0;
+              border-bottom:1px solid var(--border-color);
             }
-            .tl-filter { display:flex; align-items:center; gap:.4rem; }
-            .tl-filter label { font-size:.78rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
+            .tl-filter { display:flex; align-items:center; gap:4px; }
+            .tl-filter label { font-size:.75rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
             .tl-spin { display:inline-block; animation:spin .8s linear infinite; }
-            .tl-items { display:flex; flex-direction:column; gap:.6rem; }
-            .tl-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; padding:3rem; color:var(--color-text-muted); }
-            .tl-empty-icon { color:var(--color-text-disabled); opacity:.5; }
-            .tl-empty-title { font-size:1rem; font-weight:500; color:var(--color-text-secondary); }
-            .tl-empty-hint { font-size:.82rem; color:var(--color-text-disabled); }
+            .tl-items { display:flex; flex-direction:column; gap:0; }
+            .tl-placeholder { display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:2.5rem 0; color:var(--color-text-muted); }
+            .tl-empty-icon { color:var(--color-text-disabled); opacity:.4; }
+            .tl-empty-title { font-size:.92rem; font-weight:500; color:var(--color-text-secondary); }
+            .tl-empty-hint { font-size:.78rem; color:var(--color-text-disabled); }
 
             .tl-unnest-gap {
                 position: relative;
-                padding: 6px 0;
-                transition: padding 0.12s ease;
+                padding: 4px 0;
+                transition: padding 0.1s ease;
             }
             .tl-unnest-gap-line {
                 height: 2px;
-                border-radius: 1px;
                 background: var(--color-accent);
-                opacity: 0.3;
-                transition: all 0.12s ease;
+                opacity: 0.2;
+                transition: all 0.1s ease;
             }
             .tl-unnest-gap.drag-over {
-                padding: 8px 0;
+                padding: 6px 0;
             }
             .tl-unnest-gap.drag-over .tl-unnest-gap-line {
-                height: 3px;
+                height: 2px;
                 opacity: 1;
-                box-shadow: 0 0 6px color-mix(in srgb, var(--color-accent) 35%, transparent);
             }
             .tl-unnest-gap-label {
                 position: absolute;
                 left: 50%;
                 top: 50%;
                 transform: translate(-50%, -50%);
-                font-size: 0.72rem;
+                font-size: 0.68rem;
                 font-weight: 600;
                 color: var(--color-accent);
-                background: var(--color-surface);
-                padding: 0.15rem 0.6rem;
-                border-radius: 8px;
+                background: var(--color-background);
+                padding: 1px 8px;
+                border-radius: var(--radius-sm);
                 border: 1px solid var(--color-accent);
                 white-space: nowrap;
             }
 
-            /* ---- Task Card (v2.0.0 Quiet Confidence) ---- */
+            /* ---- Task Card ---- */
             .tc-card {
-              background:var(--color-surface); border:1px solid var(--border-color);
-              border-radius:var(--radius-lg); overflow:hidden;
-              transition:all .2s; box-shadow:var(--shadow-card);
-              animation:tcIn .3s cubic-bezier(.16,1,.3,1) both;
+              background: transparent;
+              border: none;
+              border-bottom: 1px solid var(--border-color);
+              border-radius: 0;
+              overflow: hidden;
+              transition: background .12s;
+              animation: tcIn .2s ease both;
               position: relative; touch-action: none;
             }
             .tc-card.drag-over {
-                box-shadow: 0 0 0 2px var(--color-accent), 0 4px 12px rgba(0,0,0,0.08);
-                background: var(--color-surface-active);
-                transform: scale(1.01);
+                background: var(--color-accent-subtle);
+                border-left: 3px solid var(--color-accent);
                 z-index: 10;
             }
-            @keyframes tcIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+            @keyframes tcIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 
-            /* Drag source placeholder */
             .tc-card.dragging-source {
-                opacity: 0.25;
-                border-style: dashed;
-                border-color: var(--color-accent);
-                background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
-                box-shadow: none;
+                opacity: 0.2;
+                border-bottom-style: dashed;
+                border-bottom-color: var(--color-accent);
             }
             .tc-card.dragging-source > * { visibility: hidden; }
 
-            /* DragOverlay card */
             .tc-card.dnd-overlay {
                 cursor: grabbing;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px var(--color-accent);
-                border-color: var(--color-accent);
-                transform: rotate(1.5deg) scale(1.02);
-                opacity: 0.92;
+                background: var(--color-surface);
+                border: 1px solid var(--color-accent);
+                border-radius: var(--radius-sm);
+                opacity: 0.95;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.12);
             }
 
-            /* Drop settle animation */
             @keyframes dropSettle {
-                0% { box-shadow: 0 0 0 3px var(--color-accent), var(--shadow-card); transform: scale(1.02); }
-                100% { box-shadow: var(--shadow-card); transform: scale(1); }
+                0% { background: var(--color-accent-subtle); }
+                100% { background: transparent; }
             }
-            .tc-card.drop-settle { animation: dropSettle 0.35s cubic-bezier(.16,1,.3,1); }
+            .tc-card.drop-settle { animation: dropSettle 0.3s ease; }
 
-            .tc-card:hover { border-color:var(--border-color-hover); box-shadow:var(--shadow-card-hover); }
-            .tc-card.done { opacity:.5; }
-            .tc-card.done:hover { opacity:.7; }
-            .tc-card.cancelled { opacity:.35; filter: grayscale(1); }
-            .tc-card.cancelled:hover { opacity:.55; filter: grayscale(0.8); }
+            .tc-card:hover { background: var(--color-surface-hover); }
+            .tc-card.done { opacity:.45; }
+            .tc-card.done:hover { opacity:.65; }
+            .tc-card.cancelled { opacity:.3; filter: grayscale(1); }
+            .tc-card.cancelled:hover { opacity:.5; filter: grayscale(0.7); }
 
-            .tc-body { display:flex; align-items:flex-start; gap:.75rem; padding:1rem 1.25rem; }
+            .tc-body { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; }
             .tc-handle {
                 cursor: grab; color: var(--color-text-disabled);
                 display: flex; align-items: center; justify-content: center;
-                width: 18px; height: 100%; align-self: stretch;
-                opacity: 0; transition: opacity 0.2s;
+                width: 16px; align-self: stretch;
+                opacity: 0; transition: opacity 0.12s;
                 user-select: none; flex-shrink: 0;
             }
-            .tc-card:hover .tc-handle { opacity: 0.5; }
-            .tc-handle:hover { opacity: 1 !important; }
+            .tc-card:hover .tc-handle { opacity: 0.4; }
+            .tc-handle:hover { opacity: 1 !important; color: var(--color-text-muted); }
             .tc-handle:active { cursor: grabbing; }
 
             .tc-toggle {
               background:none; border:none; color:var(--color-text-muted); cursor:pointer;
-              width:22px; height:22px; flex-shrink:0; display:flex; align-items:center;
-              justify-content:center; border-radius:4px; margin-top:2px;
+              width:20px; height:20px; flex-shrink:0; display:flex; align-items:center;
+              justify-content:center; border-radius:var(--radius-sm); margin-top:1px;
             }
-            .tc-toggle:hover { background:var(--color-surface-hover); }
-            .tc-chev-icon { transition:transform .2s; }
+            .tc-toggle:hover { color:var(--color-text); }
+            .tc-chev-icon { transition:transform .15s; }
             .tc-chev-icon.open { transform:rotate(90deg); }
 
-            .tc-info { flex:1; min-width:0; cursor:pointer; padding:.15rem .35rem; border-radius:var(--radius-sm); transition:background .15s; }
-            .tc-info:hover { background:var(--color-surface-hover); }
-            .tc-parent-label { display:block; font-size:.7rem; font-weight:500; color:var(--color-text-muted); margin-bottom:.15rem; letter-spacing:.01em; }
-            .tc-title-row { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.35rem; }
-            .tc-title { font-weight:600; font-size:.95rem; color:var(--color-text); line-height:1.45; }
+            .tc-info { flex:1; min-width:0; cursor:pointer; padding:1px 4px; border-radius:var(--radius-sm); transition:background .1s; }
+            .tc-info:hover { background:transparent; }
+            .tc-parent-label { display:block; font-size:.68rem; font-weight:500; color:var(--color-text-muted); margin-bottom:1px; letter-spacing:.02em; text-transform:uppercase; }
+            .tc-title-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px; }
+            .tc-title { font-weight:600; font-size:.9rem; color:var(--color-text); line-height:1.4; }
             .tc-title.strike { text-decoration:line-through; color:var(--color-text-disabled); }
             .tc-project-badge {
-              display:inline-flex; align-items:center; gap:.25rem;
-              font-size:.65rem; font-weight:600; padding:.12rem .5rem;
-              border-radius:10px; border:1px solid;
+              display:inline-flex; align-items:center; gap:4px;
+              font-size:.68rem; font-weight:500; padding:1px 8px;
+              border-radius:var(--radius-sm); border:1px solid;
               white-space:nowrap;
             }
-            .tc-project-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-            .tc-tag { font-size:.65rem; font-weight:600; padding:.12rem .5rem; border-radius:10px; color:#fff; }
+            .tc-project-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+            .tc-tag { font-size:.65rem; font-weight:600; padding:1px 7px; border-radius:var(--radius-sm); color:#fff; }
 
-            .tc-meta { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.1rem; }
-            .tc-meta-item { font-size:.78rem; color:var(--color-text-muted); display:flex; align-items:center; gap:.3rem; white-space:nowrap; }
+            .tc-meta { display:flex; gap:8px; flex-wrap:wrap; margin-top:1px; }
+            .tc-meta-item { font-size:.75rem; color:var(--color-text-muted); display:flex; align-items:center; gap:3px; white-space:nowrap; }
             .tc-meta-item svg { flex-shrink:0; }
-            .tc-badge { font-size:.6rem; font-weight:700; padding:.08rem .4rem; border-radius:6px; margin-left:.2rem; }
+            .tc-badge { font-size:.6rem; font-weight:700; padding:0 5px; border-radius:var(--radius-sm); margin-left:2px; }
             .tc-badge-danger  { background:var(--color-danger-bg); color:var(--color-danger); }
             .tc-badge-warning { background:var(--color-warning-bg); color:var(--color-warning); }
             .tc-badge-info    { background:var(--color-accent-subtle); color:var(--color-accent); }
 
-            .tc-actions { display:flex; gap:.25rem; flex-shrink:0; align-items:center; margin-top:2px; }
+            .tc-actions { display:flex; gap:2px; flex-shrink:0; align-items:center; margin-top:1px; opacity:0; transition:opacity .12s; }
+            .tc-card:hover .tc-actions { opacity:1; }
             .tc-status-select {
-              font-weight:600; font-size:.78rem;
-              padding:.3rem .5rem .3rem .5rem;
+              font-weight:600; font-size:.75rem;
+              padding:3px 6px;
               border-radius:var(--radius-sm); cursor:pointer;
+              opacity: 1 !important;
             }
             .tc-act-btn {
-              background:transparent; border:1px solid transparent;
-              color:var(--color-text-muted); cursor:pointer;
-              width:30px; height:30px; display:flex; align-items:center;
-              justify-content:center; border-radius:var(--radius-sm); transition:all .15s;
+              background:transparent; border:none;
+              color:var(--color-text-disabled); cursor:pointer;
+              width:26px; height:26px; display:flex; align-items:center;
+              justify-content:center; border-radius:var(--radius-sm); transition:color .1s;
             }
-            .tc-act-btn:hover { background:var(--color-surface-hover); color:var(--color-text); border-color:var(--border-color); }
-            .tc-act-btn.danger:hover { background:var(--color-danger-bg); color:var(--color-danger); border-color:rgba(220,38,38,.2); }
-            .tc-today-btn.active { background:var(--color-accent-subtle); border-color:var(--color-accent); color:var(--color-accent); }
-            .tc-today-btn.active:hover { background:var(--color-accent-subtle); filter:brightness(0.95); }
-            .tc-archive-btn:hover { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.2); color:#b45309; }
+            .tc-act-btn:hover { color:var(--color-text); }
+            .tc-act-btn.danger:hover { color:var(--color-danger); }
+            .tc-today-btn.active { color:var(--color-accent); }
+            .tc-today-btn.active:hover { color:var(--color-accent-hover); }
+            .tc-archive-btn:hover { color:#b45309; }
             .tc-restore-btn { opacity:1 !important; }
-            .tc-restore-btn:hover { background:var(--color-accent-subtle); border-color:var(--color-accent); color:var(--color-accent); }
-            .tc-status-label { font-size:.78rem; font-weight:600; white-space:nowrap; }
+            .tc-restore-btn:hover { color:var(--color-accent); }
+            .tc-status-label { font-size:.75rem; font-weight:600; white-space:nowrap; }
 
-            .tc-act-btn:disabled { opacity:0.5; cursor:not-allowed; }
-            .tc-status-select:disabled { opacity:0.5; cursor:not-allowed; }
+            .tc-act-btn:disabled { opacity:0.3; cursor:not-allowed; }
+            .tc-status-select:disabled { opacity:0.3; cursor:not-allowed; }
 
             /* Archive Tabs */
             .tl-archive-tabs {
-              display:flex; gap:3px; margin-bottom:1rem; padding:3px;
-              background:var(--color-surface); border:1px solid var(--border-color);
-              border-radius:var(--radius-md); box-shadow:var(--shadow-sm);
+              display:flex; gap:0; margin-bottom:12px;
+              border-bottom:1px solid var(--border-color);
             }
             .tl-archive-tab {
-              flex:1; padding:.5rem .75rem; border:none; background:transparent;
-              color:var(--color-text-muted); font-size:.85rem; font-weight:500;
-              border-radius:8px; cursor:pointer; transition:all .2s; font-family:inherit;
-              display:flex; align-items:center; justify-content:center; gap:.35rem;
+              padding:8px 16px; border:none; background:transparent;
+              color:var(--color-text-muted); font-size:.82rem; font-weight:500;
+              border-bottom:2px solid transparent; cursor:pointer; transition:all .12s; font-family:inherit;
+              display:flex; align-items:center; gap:5px;
+              margin-bottom:-1px;
             }
-            .tl-archive-tab:hover { background:var(--color-surface-hover); color:var(--color-text); }
+            .tl-archive-tab:hover { color:var(--color-text); }
             .tl-archive-tab.active {
-              background:var(--color-accent); color:#fff; font-weight:600;
-              box-shadow:0 2px 10px var(--color-accent-subtle);
+              color:var(--color-accent); font-weight:600;
+              border-bottom-color:var(--color-accent);
             }
 
             /* Sort mode toggle */
             .tl-sort-toggle {
-              padding:.35rem .7rem; border:1px solid var(--border-color);
-              border-radius:var(--radius-sm); font-size:.78rem; font-weight:600;
-              cursor:pointer; transition:all .2s; font-family:inherit;
-              background:var(--color-surface); color:var(--color-text-muted);
+              padding:4px 10px; border:1px solid var(--border-color);
+              border-radius:var(--radius-sm); font-size:.75rem; font-weight:600;
+              cursor:pointer; transition:all .12s; font-family:inherit;
+              background:transparent; color:var(--color-text-muted);
               white-space:nowrap;
             }
             .tl-sort-toggle:hover { border-color:var(--border-color-hover); color:var(--color-text); }
             .tl-sort-toggle.active {
               background:var(--color-accent); color:#fff; border-color:var(--color-accent);
-              box-shadow:0 2px 8px var(--color-accent-subtle);
             }
-            .tl-sort-toggle.active:hover { filter:brightness(1.1); }
+            .tl-sort-toggle.active:hover { background:var(--color-accent-hover); }
 
-            .tc-sub-input { padding:0 1.25rem 1rem 2.75rem; animation:fadeSlideIn .3s ease; }
-            .tc-children { margin-left:2.25rem; padding:.3rem .75rem .6rem 0; border-left:2px solid var(--border-color); }
+            .tc-sub-input { padding:0 12px 10px 36px; animation:fadeSlideIn .2s ease; }
+            .tc-children { margin-left:28px; padding:2px 0 6px 0; border-left:2px solid var(--border-color); }
           `}</style>
             </div>
         </DndContext>

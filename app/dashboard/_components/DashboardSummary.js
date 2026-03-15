@@ -32,23 +32,23 @@ export default function SummarySection({ data }) {
 
             <style jsx>{`
                 .summary-card {
-                    background: var(--color-surface); border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
-                    box-shadow: var(--shadow-sm);
+                    background: transparent; border: none;
+                    border-radius: 0; padding: 12px 0;
+                    box-shadow: none; border-bottom: 1px solid var(--border-color);
                 }
                 .summary-header {
                     display: flex; justify-content: space-between; align-items: flex-start;
-                    margin-bottom: 1rem;
+                    margin-bottom: 10px;
                 }
                 .summary-label {
-                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
-                    letter-spacing: 0.04em; text-transform: uppercase;
+                    font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.03em; text-transform: uppercase;
                 }
                 .summary-velocity {
-                    font-size: 0.82rem; font-weight: 600; color: var(--color-accent);
+                    font-size: 0.78rem; font-weight: 600; color: var(--color-accent);
                 }
                 .summary-body {
-                    display: flex; gap: 1.5rem; align-items: flex-start;
+                    display: flex; gap: 12px; align-items: flex-start;
                 }
                 .summary-left { flex: 0 0 auto; min-width: 280px; }
                 .summary-right {
@@ -56,7 +56,7 @@ export default function SummarySection({ data }) {
                     justify-content: center; min-height: 120px;
                 }
                 .chart-caption {
-                    font-size: 0.68rem; color: var(--color-text-muted); margin-top: 0.25rem;
+                    font-size: 0.65rem; color: var(--color-text-muted); margin-top: 0.25rem;
                 }
                 @media (max-width: 700px) {
                     .summary-body { flex-direction: column; }
@@ -100,23 +100,23 @@ function SummaryTable({ summary }) {
             </table>
 
             <style jsx>{`
-                .st-wrap { margin-bottom: 1rem; }
+                .st-wrap { margin-bottom: 10px; }
                 .st-table { border-collapse: collapse; width: 100%; }
-                .st-th-label { text-align: left; font-weight: 400; padding: 0 0 0.35rem; }
+                .st-th-label { text-align: left; font-weight: 400; padding: 0 0 0.3rem; }
                 .st-th {
-                    text-align: right; font-weight: 400; padding: 0 0 0.35rem;
-                    font-size: 0.68rem; color: var(--color-text-muted);
+                    text-align: right; font-weight: 400; padding: 0 0 0.3rem;
+                    font-size: 0.65rem; color: var(--color-text-muted);
                 }
                 .st-row-border td { border-bottom: 1px solid var(--border-color); }
                 .st-label {
-                    font-size: 0.78rem; color: var(--color-text-secondary);
-                    padding: 0.4rem 0; width: 48px;
+                    font-size: 0.74rem; color: var(--color-text-secondary);
+                    padding: 0.35rem 0; width: 48px;
                 }
                 .st-value {
-                    font-size: 0.85rem; font-weight: 600; color: var(--color-text);
-                    text-align: right; padding: 0.4rem 0; min-width: 44px;
+                    font-size: 0.82rem; font-weight: 600; color: var(--color-text);
+                    text-align: right; padding: 0.35rem 0; min-width: 44px;
                 }
-                .st-unit { font-size: 0.65rem; font-weight: 400; color: var(--color-text-muted); margin-left: 2px; }
+                .st-unit { font-size: 0.62rem; font-weight: 400; color: var(--color-text-muted); margin-left: 2px; }
             `}</style>
         </div>
     );
@@ -158,22 +158,23 @@ function ProjectBreakdown({ projects }) {
             <style jsx>{`
                 .pb-wrap { }
                 .pb-header {
-                    font-size: 0.68rem; color: var(--color-text-muted); margin-bottom: 0.35rem;
+                    font-size: 0.65rem; color: var(--color-text-muted); margin-bottom: 0.3rem;
+                    text-transform: uppercase; letter-spacing: 0.03em;
                 }
                 .pb-table { border-collapse: collapse; width: 100%; }
-                .pb-th-name { text-align: left; font-weight: 400; padding: 0 0 0.25rem; }
+                .pb-th-name { text-align: left; font-weight: 400; padding: 0 0 0.2rem; }
                 .pb-th {
-                    text-align: center; font-weight: 400; padding: 0 0.25rem 0.25rem;
-                    font-size: 0.6rem; color: var(--color-text-muted);
+                    text-align: center; font-weight: 400; padding: 0 0.25rem 0.2rem;
+                    font-size: 0.58rem; color: var(--color-text-muted);
                 }
                 .pb-row-border td { border-bottom: 1px solid var(--border-color); }
                 .pb-name {
-                    font-size: 0.73rem; color: var(--color-text-secondary);
-                    padding: 0.3rem 0; display: flex; align-items: center; gap: 0.35rem;
+                    font-size: 0.7rem; color: var(--color-text-secondary);
+                    padding: 0.25rem 0; display: flex; align-items: center; gap: 0.3rem;
                 }
                 .pb-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
                 .pb-legend {
-                    font-size: 0.6rem; color: var(--color-text-muted); margin-top: 0.35rem;
+                    font-size: 0.58rem; color: var(--color-text-muted); margin-top: 0.3rem;
                 }
                 .pb-legend-add { color: var(--color-accent-subtle); }
             `}</style>
@@ -192,8 +193,8 @@ function ProjCell({ data }) {
             <span className="pc-add">{data.created}</span>
 
             <style jsx>{`
-                .pc-empty { font-size: 0.72rem; color: var(--color-text-disabled); text-align: center; padding: 0.2rem 0.25rem; }
-                .pc-cell { font-size: 0.72rem; text-align: center; padding: 0.2rem 0.25rem; white-space: nowrap; }
+                .pc-empty { font-size: 0.68rem; color: var(--color-text-disabled); text-align: center; padding: 0.15rem 0.2rem; }
+                .pc-cell { font-size: 0.68rem; text-align: center; padding: 0.15rem 0.2rem; white-space: nowrap; }
                 .pc-comp { color: var(--color-text-secondary); }
                 .pc-sep { color: var(--color-text-disabled); margin: 0 1px; }
                 .pc-add { color: var(--color-accent); opacity: 0.7; }

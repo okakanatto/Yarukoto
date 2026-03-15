@@ -130,27 +130,27 @@ export default function FootprintMap({ heatmap }) {
 
             <style jsx>{`
                 .fm-card {
-                    background: var(--color-surface); border: 1px solid var(--border-color);
-                    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
-                    box-shadow: var(--shadow-sm);
+                    background: transparent; border: none;
+                    border-radius: 0; padding: 12px 0;
+                    box-shadow: none; border-bottom: 1px solid var(--border-color);
                 }
                 .fm-header {
                     display: flex; justify-content: space-between; align-items: baseline;
-                    margin-bottom: 0.75rem;
+                    margin-bottom: 8px;
                 }
                 .fm-label {
-                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
-                    letter-spacing: 0.04em; text-transform: uppercase;
+                    font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.03em; text-transform: uppercase;
                 }
                 .fm-stats {
-                    display: flex; gap: 1rem; font-size: 0.72rem; color: var(--color-text-muted);
+                    display: flex; gap: 10px; font-size: 0.68rem; color: var(--color-text-muted);
                 }
                 .fm-stat-num { font-weight: 600; color: var(--color-text-secondary); }
                 .fm-months {
                     position: relative; height: 18px; margin-bottom: 3px; padding-left: 22px;
                 }
                 .fm-month {
-                    position: absolute; font-size: 0.56rem; color: var(--color-text-disabled);
+                    position: absolute; font-size: 0.54rem; color: var(--color-text-disabled);
                 }
                 .fm-grid {
                     display: flex; gap: 3px; overflow-x: auto;
@@ -166,7 +166,7 @@ export default function FootprintMap({ heatmap }) {
                     display: flex; flex-direction: column; gap: 3px;
                 }
                 .fm-cell {
-                    width: 11px; height: 11px; border-radius: 2.5px;
+                    width: 11px; height: 11px; border-radius: 2px;
                     transition: transform 0.12s;
                 }
                 .fm-cell:not(.fm-cell-empty):not(.fm-cell-future):not(.fm-legend-cell):hover {
@@ -181,9 +181,9 @@ export default function FootprintMap({ heatmap }) {
                 .fm-cell-today { outline: 1.5px solid var(--color-text); outline-offset: -1px; }
                 .fm-tooltip {
                     position: absolute; transform: translate(-50%, -100%);
-                    padding: 3px 8px; border-radius: 4px;
+                    padding: 3px 8px; border-radius: 3px;
                     background: var(--color-text); color: var(--color-background);
-                    font-size: 0.62rem; white-space: nowrap; pointer-events: none;
+                    font-size: 0.6rem; white-space: nowrap; pointer-events: none;
                     z-index: 10;
                 }
                 .fm-tooltip-below {
@@ -191,13 +191,13 @@ export default function FootprintMap({ heatmap }) {
                 }
                 .fm-legend {
                     display: flex; align-items: center; justify-content: flex-end;
-                    gap: 4px; margin-top: 0.5rem; font-size: 0.56rem; color: var(--color-text-disabled);
+                    gap: 4px; margin-top: 8px; font-size: 0.54rem; color: var(--color-text-disabled);
                 }
                 .fm-legend-cell {
                     width: 10px; height: 10px;
                 }
                 @media (max-width: 700px) {
-                    .fm-header { flex-direction: column; gap: 0.35rem; }
+                    .fm-header { flex-direction: column; gap: 0.3rem; }
                     .fm-stats { flex-wrap: wrap; }
                 }
             `}</style>

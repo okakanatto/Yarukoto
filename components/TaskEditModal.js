@@ -302,74 +302,73 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
 
             <style jsx>{`
                 .te-backdrop {
-                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
-                    z-index: 2000; backdrop-filter: blur(4px); animation: fadeIn 0.2s;
+                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.3);
+                    z-index: 2000; animation: fadeIn 0.15s;
                 }
                 .te-modal {
                     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                    width: 100%; max-width: 500px; max-height: 90vh;
-                    background: var(--color-surface); border-radius: var(--radius-xl);
+                    width: 100%; max-width: 480px; max-height: 90vh;
+                    background: var(--color-surface); border-radius: var(--radius-md);
                     border: 1px solid var(--border-color);
-                    box-shadow: var(--shadow-lg); z-index: 2001;
+                    box-shadow: 0 4px 24px rgba(0,0,0,0.12); z-index: 2001;
                     display: flex; flex-direction: column;
-                    animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+                    animation: modalIn 0.2s ease;
                 }
                 @keyframes modalIn {
-                    from { opacity: 0; transform: translate(-50%, -45%) scale(0.95); }
-                    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    from { opacity: 0; transform: translate(-50%, -47%); }
+                    to { opacity: 1; transform: translate(-50%, -50%); }
                 }
                 .te-header {
                     display: flex; justify-content: space-between; align-items: center;
-                    padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);
+                    padding: 12px 16px; border-bottom: 1px solid var(--border-color);
                 }
-                .te-header h3 { font-size: 1rem; font-weight: 700; color: var(--color-text); margin: 0; }
+                .te-header h3 { font-size: 0.88rem; font-weight: 700; color: var(--color-text); margin: 0; }
                 .te-close {
-                    background: none; border: none; font-size: 1.1rem; cursor: pointer;
-                    color: var(--color-text-muted); width: 32px; height: 32px;
+                    background: none; border: none; cursor: pointer;
+                    color: var(--color-text-muted); width: 28px; height: 28px;
                     display: flex; align-items: center; justify-content: center;
-                    border-radius: var(--radius-sm); transition: all 0.15s;
+                    border-radius: var(--radius-sm); transition: color 0.1s;
                 }
-                .te-close:hover { background: var(--color-surface-hover); color: var(--color-text); }
-                .te-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; overflow-y: auto; }
-                .te-field { display: flex; flex-direction: column; gap: 0.4rem; }
-                .te-row { display: flex; gap: 1rem; }
-                .te-label { font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+                .te-close:hover { color: var(--color-text); }
+                .te-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+                .te-field { display: flex; flex-direction: column; gap: 4px; }
+                .te-row { display: flex; gap: 10px; }
+                .te-label { font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
                 .te-input-title {
-                    width: 100%; border: none; border-bottom: 1.5px solid var(--border-color);
-                    font-size: 1.05rem; padding: 0.6rem 0.25rem; background: transparent;
-                    color: var(--color-text); transition: border-color 0.2s; font-family: inherit;
+                    width: 100%; border: none; border-bottom: 1px solid var(--border-color);
+                    font-size: 0.95rem; padding: 6px 2px; background: transparent;
+                    color: var(--color-text); transition: border-color 0.12s; font-family: inherit;
                 }
                 .te-input-title:focus { outline: none; border-color: var(--color-accent); }
                 .te-input, .te-select, .te-textarea {
-                    width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--border-color);
+                    width: 100%; padding: 6px 8px; border: 1px solid var(--border-color);
                     border-radius: var(--radius-sm); background-color: var(--color-surface);
-                    color: var(--color-text); font-size: 0.875rem; transition: border-color 0.2s, box-shadow 0.2s;
+                    color: var(--color-text); font-size: 0.82rem; transition: border-color 0.12s;
                     font-family: inherit;
                 }
                 .te-input:focus, .te-select:focus, .te-textarea:focus {
                     outline: none; border-color: var(--color-accent);
-                    box-shadow: 0 0 0 3px var(--color-accent-subtle);
-                    background-color: var(--color-surface);
+                    box-shadow: 0 0 0 2px var(--color-accent-subtle);
                 }
-                .te-textarea { resize: vertical; min-height: 80px; }
+                .te-textarea { resize: vertical; min-height: 60px; }
                 .te-footer {
-                    display: flex; justify-content: flex-end; gap: 0.75rem;
-                    padding: 1.25rem 1.5rem; border-top: 1px solid var(--border-color);
+                    display: flex; justify-content: flex-end; gap: 8px;
+                    padding: 12px 16px; border-top: 1px solid var(--border-color);
                 }
                 .te-btn-cancel {
                     background: transparent; border: 1px solid var(--border-color);
-                    padding: 0.5rem 1.1rem; border-radius: var(--radius-sm); font-size: 0.85rem;
-                    cursor: pointer; color: var(--color-text-secondary); transition: all 0.2s;
+                    padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.82rem;
+                    cursor: pointer; color: var(--color-text-muted); transition: color 0.1s;
                     font-family: inherit;
                 }
-                .te-btn-cancel:hover { background: var(--color-surface-hover); border-color: var(--border-color-hover); }
+                .te-btn-cancel:hover { color: var(--color-text); border-color: var(--border-color-hover); }
                 .te-btn-save {
                     background: var(--color-accent); color: #fff; border: none;
-                    padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); font-size: 0.85rem;
-                    font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+                    padding: 6px 16px; border-radius: var(--radius-sm); font-size: 0.82rem;
+                    font-weight: 600; cursor: pointer; transition: background 0.12s; font-family: inherit;
                 }
-                .te-btn-save:hover:not(:disabled) { background: var(--color-accent-hover); transform: translateY(-1px); }
-                .te-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+                .te-btn-save:hover:not(:disabled) { background: var(--color-accent-hover); }
+                .te-btn-save:disabled { opacity: 0.3; cursor: not-allowed; }
             `}</style>
         </>
     );

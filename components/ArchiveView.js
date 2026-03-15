@@ -316,65 +316,57 @@ export default function ArchiveView({
             )}
 
             <style jsx>{`
-                .av-root { display: flex; flex-direction: column; gap: .75rem; }
+                .av-root { display: flex; flex-direction: column; gap: 8px; }
 
                 .av-search {
-                    display: flex; align-items: center; gap: .5rem;
-                    padding: .55rem .85rem;
-                    background: var(--color-surface);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
-                    box-shadow: var(--shadow-sm);
-                    transition: border-color .2s;
+                    display: flex; align-items: center; gap: 8px;
+                    padding: 6px 12px;
+                    border-bottom: 1px solid var(--border-color);
+                    transition: border-color .12s;
                 }
-                .av-search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
+                .av-search:focus-within { border-color: var(--color-accent); }
                 .av-search-icon { color: var(--color-text-disabled); flex-shrink: 0; }
                 .av-search-input {
                     flex: 1; border: none; outline: none; background: transparent;
-                    font-size: .88rem; font-family: inherit; color: var(--color-text);
+                    font-size: .84rem; font-family: inherit; color: var(--color-text);
                 }
                 .av-search-input::placeholder { color: var(--color-text-disabled); }
                 .av-search-clear {
                     background: none; border: none; cursor: pointer;
-                    color: var(--color-text-muted); font-size: .75rem;
-                    width: 22px; height: 22px; display: flex; align-items: center;
-                    justify-content: center; border-radius: 50%;
-                    transition: all .15s;
+                    color: var(--color-text-muted); font-size: .72rem;
+                    width: 20px; height: 20px; display: flex; align-items: center;
+                    justify-content: center; border-radius: var(--radius-sm);
+                    transition: color .1s;
                 }
-                .av-search-clear:hover { background: var(--color-surface-hover); color: var(--color-text); }
+                .av-search-clear:hover { color: var(--color-text); }
 
                 .av-search-count, .av-total {
-                    font-size: .8rem; color: var(--color-text-muted);
-                    padding: .15rem 0; font-weight: 500;
+                    font-size: .75rem; color: var(--color-text-muted);
+                    padding: 2px 0; font-weight: 500;
                 }
 
-                .av-months { display: flex; flex-direction: column; gap: .5rem; }
+                .av-months { display: flex; flex-direction: column; gap: 0; }
 
                 .av-month-group {
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md);
+                    border-bottom: 1px solid var(--border-color);
                     overflow: hidden;
-                    background: var(--color-surface);
-                    box-shadow: var(--shadow-sm);
                 }
 
                 .av-month-header {
-                    display: flex; align-items: center; gap: .75rem;
-                    width: 100%; padding: .75rem 1rem;
-                    background: var(--color-surface);
+                    display: flex; align-items: center; gap: 8px;
+                    width: 100%; padding: 8px 12px;
+                    background: transparent;
                     border: none; cursor: pointer;
-                    font-family: inherit; font-size: .9rem;
+                    font-family: inherit; font-size: .82rem;
                     color: var(--color-text);
-                    transition: background .15s;
+                    transition: background .1s;
                 }
                 .av-month-header:hover { background: var(--color-surface-hover); }
-                .av-month-header.expanded {
-                    background: var(--color-surface-active, var(--color-surface-hover));
-                }
+                .av-month-header.expanded { background: var(--color-surface-hover); }
 
                 .av-month-arrow {
-                    font-size: .6rem; color: var(--color-text-muted);
-                    transition: transform .2s ease;
+                    font-size: .55rem; color: var(--color-text-muted);
+                    transition: transform .15s ease;
                     flex-shrink: 0;
                 }
                 .av-month-arrow.open { transform: rotate(90deg); }
@@ -382,36 +374,33 @@ export default function ArchiveView({
                 .av-month-label { font-weight: 600; flex: 1; text-align: left; }
 
                 .av-month-count {
-                    font-size: .78rem; color: var(--color-text-muted);
-                    background: var(--color-surface-hover);
-                    padding: .15rem .55rem;
-                    border-radius: 10px;
+                    font-size: .72rem; color: var(--color-text-muted);
                     font-weight: 500;
                 }
 
                 .av-month-content {
-                    padding: .5rem;
+                    padding: 0 0 4px 0;
                     border-top: 1px solid var(--border-color);
                 }
 
                 .av-loading, .av-loading-sm {
-                    display: flex; align-items: center; justify-content: center;
-                    gap: .5rem; padding: 2rem; color: var(--color-text-muted);
-                    font-size: .85rem;
+                    display: flex; align-items: center;
+                    gap: 6px; padding: 2rem 0; color: var(--color-text-muted);
+                    font-size: .82rem;
                 }
-                .av-loading-sm { padding: 1.25rem; }
+                .av-loading-sm { padding: 1rem 0; }
 
                 .av-empty {
-                    display: flex; flex-direction: column; align-items: center;
-                    justify-content: center; gap: .5rem; padding: 3rem;
+                    display: flex; flex-direction: column; align-items: flex-start;
+                    gap: 6px; padding: 2.5rem 0;
                     color: var(--color-text-muted);
                 }
-                .av-empty-icon { font-size: 2.5rem; opacity: .5; }
-                .av-empty-title { font-size: 1rem; font-weight: 500; color: var(--color-text-secondary); }
-                .av-empty-hint { font-size: .82rem; color: var(--color-text-disabled); }
-                .av-empty-sm { padding: 1rem; text-align: center; color: var(--color-text-muted); font-size: .85rem; }
+                .av-empty-icon { opacity: .4; }
+                .av-empty-title { font-size: .92rem; font-weight: 500; color: var(--color-text-secondary); }
+                .av-empty-hint { font-size: .78rem; color: var(--color-text-disabled); }
+                .av-empty-sm { padding: 1rem 0; color: var(--color-text-muted); font-size: .82rem; }
 
-                .av-tasks { display: flex; flex-direction: column; gap: .5rem; }
+                .av-tasks { display: flex; flex-direction: column; gap: 0; }
             `}</style>
         </div>
     );

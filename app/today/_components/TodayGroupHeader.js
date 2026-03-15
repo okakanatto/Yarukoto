@@ -32,22 +32,24 @@ export default function TodayGroupHeader({ parentId, title, isManual }) {
         .today-ghost-header {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
-          background: var(--color-surface-hover);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          font-size: 0.85rem;
+          gap: 6px;
+          padding: 6px 12px;
+          border-bottom: 1px solid var(--border-color);
+          font-size: 0.78rem;
           touch-action: none;
-          animation: tcIn 0.3s cubic-bezier(.16,1,.3,1) both;
+          animation: tcIn 0.2s ease both;
         }
+        .today-ghost-header:hover { background: var(--color-surface-hover); }
         .today-ghost-icon {
-          font-size: 0.8rem;
           flex-shrink: 0;
+          color: var(--color-text-muted);
         }
         .today-ghost-title {
           font-weight: 600;
           color: var(--color-text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          font-size: 0.72rem;
         }
       `}</style>
         </div>

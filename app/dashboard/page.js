@@ -25,7 +25,7 @@ export default function DashboardPage() {
     if (loading) return (
         <div style={{ maxWidth: 960, animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
             <h2 className="page-title">ダッシュボード</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '3rem', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '2rem', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
                 <span className="spinner" /> 読み込み中...
             </div>
         </div>
@@ -50,10 +50,10 @@ export default function DashboardPage() {
 
             <style jsx>{`
                 .db-root { max-width: 960px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-                .db-date { color: var(--color-text-muted); font-size: 0.82rem; margin-top: -1.25rem; margin-bottom: 1.5rem; }
+                .db-date { color: var(--color-text-muted); font-size: 0.78rem; margin-top: -1.25rem; margin-bottom: 1rem; }
                 .db-lower-grid {
                     display: grid; grid-template-columns: 260px 1fr;
-                    gap: 1rem; margin-top: 1rem;
+                    gap: 10px; margin-top: 10px;
                 }
                 @media (max-width: 700px) {
                     .db-lower-grid { grid-template-columns: 1fr; }

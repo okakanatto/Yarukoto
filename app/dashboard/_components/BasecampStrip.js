@@ -36,14 +36,14 @@ export default function BasecampStrip({ task }) {
 
             <style jsx global>{`
                 .bc-strip {
-                    background: var(--color-surface); border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md); padding: 0.75rem 1.375rem;
-                    box-shadow: var(--shadow-sm); margin-top: 1rem;
+                    background: transparent; border: none;
+                    border-radius: 0; padding: 12px 0;
+                    box-shadow: none; margin-top: 10px;
                     display: flex; align-items: center; justify-content: space-between;
-                    min-height: 56px;
+                    min-height: 48px; border-bottom: 1px solid var(--border-color);
                 }
                 .bc-left {
-                    display: flex; align-items: center; gap: 0.625rem;
+                    display: flex; align-items: center; gap: 8px;
                     flex: 1; min-width: 0;
                 }
                 .bc-dot {
@@ -52,19 +52,19 @@ export default function BasecampStrip({ task }) {
                     animation: pulse 2s ease-in-out infinite;
                 }
                 .bc-text {
-                    font-size: 0.78rem; color: var(--color-text-muted);
+                    font-size: 0.74rem; color: var(--color-text-muted);
                     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
                 }
                 .bc-task-name { color: var(--color-text-secondary); font-weight: 500; }
                 .bc-empty-text {
-                    font-size: 0.78rem; color: var(--color-text-disabled);
+                    font-size: 0.74rem; color: var(--color-text-disabled);
                 }
                 .bc-actions {
-                    display: flex; gap: 0.5rem; flex-shrink: 0;
+                    display: flex; gap: 6px; flex-shrink: 0;
                 }
                 .bc-chip {
-                    font-size: 0.72rem; padding: 0.35rem 0.85rem;
-                    border-radius: var(--radius-sm); cursor: pointer;
+                    font-size: 0.68rem; padding: 0.3rem 0.75rem;
+                    border-radius: 3px; cursor: pointer;
                     transition: all 0.15s; white-space: nowrap;
                     font-family: inherit; text-decoration: none;
                     display: inline-flex; align-items: center;
@@ -85,7 +85,7 @@ export default function BasecampStrip({ task }) {
                     background: var(--color-accent);
                 }
                 @media (max-width: 600px) {
-                    .bc-strip { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+                    .bc-strip { flex-direction: column; gap: 8px; align-items: flex-start; }
                     .bc-actions { width: 100%; }
                 }
             `}</style>
