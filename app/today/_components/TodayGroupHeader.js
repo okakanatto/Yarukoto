@@ -34,22 +34,22 @@ export default function TodayGroupHeader({ parentId, title, isManual }) {
           align-items: center;
           gap: 6px;
           padding: 6px 12px;
-          border-left: 3px solid transparent;
+          border-left: 4px solid var(--border-color);
           font-size: 0.78rem;
           touch-action: none;
-          transition: background 80ms, border-left-color 80ms;
+          transition: background 100ms, border-left-color 100ms;
         }
-        .today-ghost-header + .today-ghost-header { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+        .today-ghost-header + .today-ghost-header { border-top: 1px solid var(--border-color); }
         .today-ghost-header:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
         .today-ghost-icon {
           flex-shrink: 0;
           color: var(--color-text-muted);
         }
         .today-ghost-title {
-          font-weight: 600;
+          font-weight: 700;
           color: var(--color-text-secondary);
           text-transform: uppercase;
-          letter-spacing: 0.03em;
+          letter-spacing: 0.05em;
           font-size: 0.72rem;
         }
       `}</style>

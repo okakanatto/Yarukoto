@@ -1,7 +1,7 @@
 'use client';
 
 import { fetchDb } from '@/lib/utils';
-import { AlertTriangle, HardDriveDownload, HardDriveUpload } from 'lucide-react';
+import { AlertTriangle, HardDriveDownload, HardDriveUpload, Upload, Download } from 'lucide-react';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { copyFile, exists, remove } from '@tauri-apps/plugin-fs';
 import { join, appDataDir } from '@tauri-apps/api/path';
@@ -351,7 +351,7 @@ export default function DataPanel({ flash }) {
 
                 <div className="dm-card">
                     <div className="dm-card-info">
-                        <span className="dm-icon">📤</span>
+                        <span className="dm-icon"><Upload size={18} /></span>
                         <div>
                             <strong>CSVエクスポート</strong>
                             <p className="dm-desc">すべてのタスクをCSVファイルとしてダウンロードします（アーカイブ済みを含む全フィールド）</p>
@@ -362,7 +362,7 @@ export default function DataPanel({ flash }) {
 
                 <div className="dm-card">
                     <div className="dm-card-info">
-                        <span className="dm-icon">📥</span>
+                        <span className="dm-icon"><Download size={18} /></span>
                         <div>
                             <strong>CSVインポート</strong>
                             <p className="dm-desc">CSVファイルからタスクを一括登録します（title列必須、エクスポートCSVのラウンドトリップ対応）</p>

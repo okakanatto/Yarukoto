@@ -36,7 +36,7 @@ export default function DoneDayDetail({ selectedDayLabel, dayTasks, detailLoadin
                                 )}
                                 <div className="done-task-meta">
                                     {task.tags?.map(t => (
-                                        <span key={t.id} className="done-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
+                                        <span key={t.id} className="done-tag"><span className="done-tag-dot" style={{ backgroundColor: t.color }} />{t.name}</span>
                                     ))}
                                     {task.estimated_hours > 0 && (
                                         <span className="done-meta-text"><Clock size={12} /> {formatMin(task.estimated_hours)}</span>

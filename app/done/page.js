@@ -115,31 +115,22 @@ export default function DonePage() {
                 /* Toolbar */
                 .done-toolbar {
                     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-                    margin-bottom: 10px; padding: 6px 0;
-                    background: transparent; border: none;
-                    border-bottom: 1px solid var(--border-color);
-                    border-radius: 0; box-shadow: none;
+                    margin-bottom: 14px; padding: 8px 14px;
+                    background: var(--color-surface); border-radius: var(--radius-md);
                 }
                 .done-view-modes {
-                    display: flex; gap: 0; background: transparent;
-                    border-radius: 0; padding: 0;
+                    display: flex; gap: 4px; background: transparent;
+                    padding: 0;
                 }
                 .done-view-btn {
                     padding: 4px 10px; border: none; background: transparent;
-                    border-bottom: none; position: relative;
-                    border-radius: 0; font-size: 0.78rem; font-weight: 600;
+                    border-radius: var(--radius-md); font-size: 0.78rem; font-weight: 600;
                     color: var(--color-text-muted); cursor: pointer;
-                    transition: color 80ms; font-family: inherit;
+                    transition: background 100ms, color 100ms; font-family: inherit;
                 }
-                .done-view-btn:hover { color: var(--color-text); }
+                .done-view-btn:hover { background: var(--color-surface-hover); color: var(--color-text); }
                 .done-view-btn.active {
-                    background: transparent; color: var(--color-accent);
-                    box-shadow: none;
-                }
-                .done-view-btn.active::after {
-                    content: ''; position: absolute; bottom: 4px; left: 50%;
-                    transform: translateX(-50%); width: 5px; height: 5px;
-                    border-radius: 50%; background: var(--color-accent);
+                    background: var(--color-accent); color: #fff; font-weight: 700;
                 }
                 .done-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
                 .done-nav-btn {
@@ -147,7 +138,7 @@ export default function DonePage() {
                     border-radius: 3px; width: 28px; height: 28px;
                     display: flex; align-items: center; justify-content: center;
                     font-size: 1.1rem; color: var(--color-text-muted);
-                    cursor: pointer; transition: border-color 80ms, color 80ms, background 80ms; font-family: inherit;
+                    cursor: pointer; transition: border-color 100ms, color 100ms, background 100ms; font-family: inherit;
                 }
                 .done-nav-btn:hover { border-color: var(--border-color-hover); color: var(--color-text); background: var(--color-surface-hover); }
                 .done-period { font-size: 0.82rem; font-weight: 600; color: var(--color-text); min-width: 120px; text-align: center; }
@@ -155,17 +146,15 @@ export default function DonePage() {
                     padding: 4px 10px; border: 1px solid var(--border-color);
                     border-radius: 3px; font-size: 0.78rem; font-weight: 500;
                     color: var(--color-accent); background: transparent;
-                    cursor: pointer; transition: background 80ms; font-family: inherit;
+                    cursor: pointer; transition: background 100ms; font-family: inherit;
                 }
                 .done-today-btn:hover { background: var(--color-accent-subtle); }
 
                 /* Summary */
                 .done-summary {
                     display: flex; align-items: center; gap: 10px;
-                    margin-bottom: 10px; padding: 6px 0;
-                    background: transparent; border: none;
-                    border-bottom: 1px solid var(--border-color);
-                    border-radius: 0; box-shadow: none;
+                    margin-bottom: 14px; padding: 8px 14px;
+                    background: var(--color-surface); border-radius: var(--radius-md);
                 }
                 .done-summary-item { font-size: 0.78rem; color: var(--color-text-secondary); }
                 .done-summary-total { margin-left: auto; font-size: 0.78rem; color: var(--color-success); font-weight: 500; }
@@ -178,10 +167,8 @@ export default function DonePage() {
 
                 /* Monthly Calendar */
                 .done-calendar {
-                    background: transparent; border: none;
-                    border-radius: 0; padding: 10px 0;
-                    box-shadow: none; margin-bottom: 10px;
-                    border-bottom: 1px solid var(--border-color);
+                    background: var(--color-surface); border-radius: var(--radius-md);
+                    padding: 16px; margin-bottom: 12px;
                 }
                 .done-cal-weekdays {
                     display: grid; grid-template-columns: repeat(7, 1fr);
@@ -198,7 +185,7 @@ export default function DonePage() {
                     display: flex; flex-direction: column; align-items: center;
                     justify-content: center; gap: 1px;
                     aspect-ratio: 1; border: none; border-radius: 4px;
-                    cursor: pointer; transition: box-shadow 80ms; font-family: inherit;
+                    cursor: pointer; transition: box-shadow 100ms; font-family: inherit;
                 }
                 .done-cal-cell.empty { cursor: default; }
                 .done-cal-cell:not(.empty):hover { box-shadow: 0 0 0 1px var(--border-color-hover); }
@@ -219,19 +206,19 @@ export default function DonePage() {
                 /* Weekly View */
                 .done-weekly {
                     display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
-                    margin-bottom: 10px;
+                    margin-bottom: 12px;
                 }
                 .done-week-item {
                     display: flex; flex-direction: column; align-items: center;
                     gap: 2px; padding: 6px 4px;
                     background: transparent; border: 1px solid var(--border-color);
                     border-radius: 3px; cursor: pointer;
-                    transition: border-color 80ms, background 80ms; font-family: inherit;
+                    transition: border-color 100ms, background 100ms; font-family: inherit;
                 }
-                .done-week-item:hover { border-color: var(--border-color-hover); box-shadow: none; }
+                .done-week-item:hover { border-color: var(--border-color-hover); }
                 .done-week-item.selected {
                     background: var(--color-accent); border-color: var(--color-accent);
-                    color: #fff; box-shadow: none;
+                    color: #fff;
                 }
                 .done-week-item.is-today:not(.selected) { box-shadow: inset 0 0 0 2px var(--color-accent); }
                 .done-week-wd { font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted); }
@@ -253,7 +240,6 @@ export default function DonePage() {
                 .done-detail {
                     background: transparent; border: none;
                     border-radius: 0; padding: 10px 0;
-                    box-shadow: none;
                 }
                 .done-detail-title {
                     font-size: 0.82rem; font-weight: 600; color: var(--color-text-secondary);
@@ -271,8 +257,8 @@ export default function DonePage() {
                     padding: 12px 0; color: var(--color-text-muted); font-size: 0.82rem;
                 }
                 .done-empty::before {
-                    content: ''; display: block; width: 28px; height: 2px;
-                    background: var(--color-accent); margin-bottom: 4px;
+                    content: ''; display: block; width: 32px; height: 3px;
+                    background: var(--color-accent); margin-bottom: 8px;
                 }
                 .done-empty-icon { display: none; }
 
@@ -280,15 +266,15 @@ export default function DonePage() {
                 .done-task-list { display: flex; flex-direction: column; gap: 0; }
                 .done-task {
                     display: flex; align-items: center; gap: 6px;
-                    padding: 6px 0; border-radius: 0;
+                    padding: 6px 8px; border-radius: 0;
                     background: transparent;
-                    border-left: 3px solid transparent;
-                    transition: background 80ms, border-left-color 80ms;
+                    border-left: 4px solid var(--border-color);
+                    transition: background 100ms, border-left-color 100ms;
                 }
-                .done-task + .done-task { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+                .done-task + .done-task { border-top: 1px solid var(--border-color); }
                 .done-task:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
                 .done-task.archived { opacity: 0.5; }
-                .done-task.routine { border-left: 2px solid var(--color-accent); }
+                .done-task.routine { border-left-color: var(--color-accent); }
                 .done-check {
                     color: var(--color-success); font-weight: 700; font-size: 0.72rem;
                     width: 20px; height: 20px; display: flex; align-items: center;
@@ -308,13 +294,15 @@ export default function DonePage() {
                 }
                 .done-task-meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
                 .done-tag {
+                    display: inline-flex; align-items: center; gap: 4px;
                     font-size: 0.6rem; font-weight: 600; padding: 1px 5px;
-                    border-radius: var(--radius-sm); color: #fff;
+                    border-radius: var(--radius-sm); background: var(--color-surface-hover); color: var(--color-text-secondary);
                 }
-                .done-meta-text { font-size: 0.68rem; color: var(--color-text-muted); }
+                .done-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+                .done-meta-text { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
                 .done-time {
                     font-size: 0.72rem; color: var(--color-text-muted); white-space: nowrap;
-                    flex-shrink: 0; opacity: 0; transition: opacity 80ms;
+                    flex-shrink: 0; opacity: 0; transition: opacity 100ms;
                 }
                 .done-task:hover .done-time { opacity: 1; }
             `}</style>

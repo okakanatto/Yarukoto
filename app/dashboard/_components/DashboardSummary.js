@@ -32,17 +32,16 @@ export default function SummarySection({ data }) {
 
             <style jsx>{`
                 .summary-card {
-                    background: transparent; border: none;
-                    border-radius: 0; padding: 12px 0;
-                    box-shadow: none; border-bottom: 1px solid var(--border-color);
+                    background: var(--color-surface); border-radius: var(--radius-md);
+                    padding: 16px; margin-bottom: 12px;
                 }
                 .summary-header {
                     display: flex; justify-content: space-between; align-items: flex-start;
                     margin-bottom: 10px;
                 }
                 .summary-label {
-                    font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
-                    letter-spacing: 0.03em; text-transform: uppercase;
+                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.05em; text-transform: uppercase;
                 }
                 .summary-velocity {
                     font-size: 0.78rem; font-weight: 600; color: var(--color-accent);

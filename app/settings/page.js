@@ -92,11 +92,12 @@ export default function Settings() {
         @keyframes s-up { from{opacity:0} to{opacity:1} }
         .s-sub { color:var(--color-text-muted); font-size:.82rem; margin-top:-1rem; margin-bottom:1.25rem }
 
-        .s-tabs { display:flex; gap:0; margin-bottom:1rem; border-bottom:1px solid var(--border-color); background:transparent }
-        .s-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:.3rem; padding:8px 6px; border:none; background:transparent; color:var(--color-text-muted); font-size:.78rem; font-weight:500; border-radius:0; cursor:pointer; transition:color 80ms; font-family:inherit; position:relative }
-        .s-tab:hover { color:var(--color-text) }
-        .s-tab.on { color:var(--color-accent); font-weight:600 }
-        .s-tab.on::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:var(--color-accent) }
+        /* Tabs — filled active */
+        .s-tabs { display:flex; gap:4px; margin-bottom:1rem; background:transparent }
+        .s-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:.3rem; padding:8px 6px; border:none; background:transparent; color:var(--color-text-muted); font-size:.78rem; font-weight:500; border-radius:var(--radius-md); cursor:pointer; transition:background 100ms, color 100ms; font-family:inherit }
+        .s-tab:hover { background:var(--color-surface-hover); color:var(--color-text) }
+        .s-tab.on { background:var(--color-accent); color:#fff; font-weight:700 }
+        .s-tab.on:hover { color:#fff }
 
         .s-panel { background:transparent; border:none; border-radius:0; padding:10px 0; min-height:200px }
         .s-center { display:flex; align-items:center; justify-content:center; gap:.5rem; padding:2rem; color:var(--color-text-muted) }
@@ -105,7 +106,7 @@ export default function Settings() {
         .s-heading { font-size:.88rem; font-weight:700; color:var(--color-text); margin:0 0 8px }
         .s-head-row .s-heading { margin-bottom:0 }
 
-        .s-add-row { display:flex; align-items:center; gap:6px; padding-bottom:8px; margin-bottom:6px; border-bottom:1px solid var(--border-color) }
+        .s-add-row { display:flex; align-items:center; gap:6px; padding-bottom:8px; margin-bottom:6px; border-bottom:2px solid var(--border-color) }
         .s-add-pal { margin-bottom:6px }
 
         .s-list { display:flex; flex-direction:column; gap:0 }
@@ -114,16 +115,16 @@ export default function Settings() {
         .s-row {
           display:flex; align-items:center; gap:6px;
           padding:6px 8px; background:transparent;
-          border-radius:0; border:none; border-left:3px solid transparent; transition:background 80ms, border-left-color 80ms;
+          border-radius:0; border:none; border-left:4px solid var(--border-color); transition:background 100ms, border-left-color 100ms;
         }
-        .s-row + .s-row { border-top:1px solid color-mix(in srgb, var(--border-color) 50%, transparent) }
+        .s-row + .s-row { border-top:1px solid var(--border-color) }
         .s-row:hover { background:var(--color-surface-hover); border-left-color:var(--color-accent) }
 
         .s-grip {
           color:var(--color-text-disabled); font-size:.88rem;
           cursor:grab; user-select:none; line-height:1;
           width:18px; text-align:center; flex-shrink:0;
-          transition:color 80ms;
+          transition:color 100ms;
         }
         .s-row:hover .s-grip { color:var(--color-text-muted); }
 
@@ -136,7 +137,7 @@ export default function Settings() {
           width:20px; height:13px; border-radius:var(--radius-sm);
           display:flex; align-items:center; justify-content:center;
           font-size:.55rem; line-height:1; padding:0;
-          transition:color 80ms; font-family:inherit;
+          transition:color 100ms; font-family:inherit;
         }
         .s-move-btn:hover:not(:disabled) {
           color:var(--color-accent);
@@ -147,7 +148,7 @@ export default function Settings() {
           width:28px; height:28px; min-width:28px;
           border-radius:var(--radius-sm); border:2px solid var(--border-color);
           cursor:pointer; padding:0;
-          transition:border-color 80ms;
+          transition:border-color 100ms;
         }
         .s-swatch:hover { border-color:var(--border-color-hover) }
 
@@ -163,7 +164,7 @@ export default function Settings() {
         .s-input {
           flex:1; background:transparent; border:1px solid transparent;
           padding:4px 8px; color:var(--color-text); border-radius:var(--radius-sm);
-          font-size:.82rem; font-weight:500; outline:none; transition:border-color 80ms; font-family:inherit;
+          font-size:.82rem; font-weight:500; outline:none; transition:border-color 100ms; font-family:inherit;
         }
         .s-input:focus { background:var(--color-surface-hover); border-color:var(--color-accent) }
         .s-input::placeholder { color:var(--color-text-disabled); font-weight:400 }
@@ -172,7 +173,7 @@ export default function Settings() {
         .s-btn-primary {
           background:var(--color-accent); border:none; color:#fff;
           padding:5px 10px; border-radius:var(--radius-sm); font-size:.78rem;
-          font-weight:600; cursor:pointer; white-space:nowrap; transition:filter 80ms; font-family:inherit;
+          font-weight:600; cursor:pointer; white-space:nowrap; transition:filter 100ms; font-family:inherit;
         }
         .s-btn-primary:hover:not(:disabled) { filter:brightness(1.1) }
         .s-btn-primary:disabled { opacity:.4; cursor:not-allowed }
@@ -182,13 +183,13 @@ export default function Settings() {
           color:var(--color-text-disabled); cursor:pointer;
           width:26px; height:26px; min-width:26px; border-radius:var(--radius-sm);
           display:flex; align-items:center; justify-content:center;
-          font-size:.75rem; transition:color 80ms; opacity:0;
+          font-size:.75rem; transition:color 100ms; opacity:0;
         }
         .s-row:hover .s-del { opacity:1 }
         .s-del:hover { color:var(--color-danger) }
 
         .s-empty { color:var(--color-text-disabled); font-size:.8rem; padding:1.5rem; text-align:left; display:flex; flex-direction:column; align-items:flex-start }
-        .s-empty::before { content:''; display:block; width:28px; height:2px; background:var(--color-accent); margin-bottom:4px }
+        .s-empty::before { content:''; display:block; width:32px; height:3px; background:var(--color-accent); margin-bottom:8px }
         .s-hint { color:var(--color-text-muted); font-size:.72rem; padding:6px 0 0; margin:0; font-style:italic; }
 
         .s-archive-btn {
@@ -196,7 +197,7 @@ export default function Settings() {
           color:var(--color-text-disabled); cursor:pointer;
           width:26px; height:26px; min-width:26px; border-radius:var(--radius-sm);
           display:flex; align-items:center; justify-content:center;
-          font-size:.75rem; transition:color 80ms; opacity:0;
+          font-size:.75rem; transition:color 100ms; opacity:0;
         }
         .s-row:hover .s-archive-btn { opacity:1 }
         .s-archive-btn:hover { color:var(--color-accent) }
@@ -206,9 +207,9 @@ export default function Settings() {
         .s-archived-header {
           display:flex; align-items:center; gap:6px;
           margin-top:10px; padding:8px 0 6px;
-          border-top:1px solid var(--border-color);
+          border-top:2px solid var(--border-color);
         }
-        .s-archived-label { font-size:.78rem; font-weight:600; color:var(--color-text-muted); }
+        .s-archived-label { font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-muted); }
 
         .s-archived-section { margin-top:8px; }
         .s-archived-toggle {
@@ -217,7 +218,7 @@ export default function Settings() {
           display:flex; align-items:center; gap:.3rem; font-family:inherit;
         }
         .s-archived-toggle:hover { color:var(--color-text-secondary); }
-        .s-archived-chev { display:inline-block; transition:transform 80ms; font-size:.88rem; line-height:1; }
+        .s-archived-chev { display:inline-block; transition:transform 100ms; font-size:.88rem; line-height:1; }
         .s-archived-chev.open { transform:rotate(90deg); }
         .s-label-archived { flex:1; font-size:.8rem; color:var(--color-text-muted); padding:4px 8px; opacity:.7; }
         .s-list-archived { opacity:.75; }
@@ -227,26 +228,28 @@ export default function Settings() {
         .s-item-archived .s-row:hover .s-del { opacity:1; }
 
         .dm-section { display:flex; flex-direction:column; gap:0 }
-        .dm-card { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border:none; border-bottom:1px solid var(--border-color); border-radius:0; background:transparent; transition:none }
-        .dm-card:hover { }
+        .dm-card { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 8px; border:none; border-left:4px solid var(--border-color); border-radius:0; background:transparent; transition:background 100ms, border-left-color 100ms }
+        .dm-card + .dm-card { border-top:1px solid var(--border-color) }
+        .dm-card:hover { background:var(--color-surface-hover); border-left-color:var(--color-accent) }
         .dm-card-info { display:flex; align-items:center; gap:8px; flex:1 }
         .dm-icon { font-size:1.1rem }
         .dm-card-info strong { font-size:.82rem; color:var(--color-text); display:block }
         .dm-desc { font-size:.75rem; color:var(--color-text-muted); margin:.1rem 0 0 }
         .dm-file-label { cursor:pointer }
-        .dm-divider { height:1px; background:var(--border-color); margin:4px 0 }
-        .dm-danger { background:transparent; border-bottom-color:rgba(220,38,38,.2) }
-        .dm-danger:hover { }
-        .s-btn-danger { background:var(--color-danger,#dc2626); border:none; color:#fff; padding:5px 10px; border-radius:var(--radius-sm); font-size:.78rem; font-weight:600; cursor:pointer; font-family:inherit; transition:filter 80ms; white-space:nowrap }
+        .dm-divider { height:2px; background:var(--border-color); margin:4px 0 }
+        .dm-danger { border-left-color:var(--color-danger) }
+        .dm-danger:hover { border-left-color:var(--color-danger) }
+        .s-btn-danger { background:var(--color-danger,#dc2626); border:none; color:#fff; padding:5px 10px; border-radius:var(--radius-sm); font-size:.78rem; font-weight:600; cursor:pointer; font-family:inherit; transition:filter 100ms; white-space:nowrap }
         .s-btn-danger:hover { filter:brightness(1.1) }
 
         .opt-section { display:flex; flex-direction:column; gap:0 }
         .opt-card {
           display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:10px 0; border:none; border-bottom:1px solid var(--border-color);
-          border-radius:0; background:transparent; transition:none;
+          padding:10px 8px; border:none; border-left:4px solid var(--border-color);
+          border-radius:0; background:transparent; transition:background 100ms, border-left-color 100ms;
         }
-        .opt-card:hover { }
+        .opt-card + .opt-card { border-top:1px solid var(--border-color) }
+        .opt-card:hover { background:var(--color-surface-hover); border-left-color:var(--color-accent) }
         .opt-info { display:flex; align-items:flex-start; gap:8px; flex:1 }
         .opt-icon { font-size:1.1rem; margin-top:2px }
         .opt-title { font-size:.82rem; color:var(--color-text); display:block }
@@ -272,7 +275,7 @@ export default function Settings() {
           width:60px; padding:4px 6px; border:1px solid var(--border-color);
           border-radius:var(--radius-sm); background:var(--color-surface-hover);
           color:var(--color-text); font-size:.82rem; font-family:inherit;
-          text-align:center; transition:border-color 80ms;
+          text-align:center; transition:border-color 100ms;
         }
         .opt-number-input:focus {
           outline:none; border-color:var(--color-accent);

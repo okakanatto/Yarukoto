@@ -84,7 +84,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     flex-shrink: 0;
                     font-size: 0.65rem;
                     color: transparent;
-                    transition: color 80ms, background 80ms, border-color 80ms;
+                    transition: color 100ms, background 100ms, border-color 100ms;
                     position: relative;
                     overflow: visible;
                     padding: 0;
@@ -137,8 +137,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     align-items: center;
                     justify-content: center;
                     font-size: 0.45rem;
-                    transition: color 80ms, background 80ms;
-                    animation: statusCbFadeIn 0.15s ease;
+                    transition: color 100ms, background 100ms;
                     flex-shrink: 0;
                     padding: 0;
                 }
@@ -158,8 +157,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     align-items: center;
                     justify-content: center;
                     font-size: 0.5rem;
-                    transition: color 80ms, background 80ms;
-                    animation: statusCbFadeIn 0.15s ease;
+                    transition: color 100ms, background 100ms;
                     flex-shrink: 0;
                     padding: 0;
                 }
@@ -167,12 +165,8 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     background: var(--color-text-muted);
                     color: white;
                 }
-                @keyframes statusCbFadeIn {
-                    from { opacity: 0; transform: scale(0.8); }
-                    to { opacity: 1; transform: scale(1); }
-                }
 
-                /* Sparkle animations (enhanced v2.0.0) */
+                /* Sparkle animations */
                 .status-cb-main.sparkle {
                     animation: statusCbPop 0.5s cubic-bezier(.34,1.56,.64,1);
                 }

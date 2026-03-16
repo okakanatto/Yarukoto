@@ -130,20 +130,19 @@ export default function FootprintMap({ heatmap }) {
 
             <style jsx>{`
                 .fm-card {
-                    background: transparent; border: none;
-                    border-radius: 0; padding: 12px 0;
-                    box-shadow: none; border-bottom: 1px solid var(--border-color);
+                    background: var(--color-surface); border-radius: var(--radius-md);
+                    padding: 16px; margin-bottom: 12px;
                 }
                 .fm-header {
                     display: flex; justify-content: space-between; align-items: baseline;
                     margin-bottom: 8px;
                 }
                 .fm-label {
-                    font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
-                    letter-spacing: 0.03em; text-transform: uppercase;
+                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.05em; text-transform: uppercase;
                 }
                 .fm-stats {
-                    display: flex; gap: 10px; font-size: 0.68rem; color: var(--color-text-muted);
+                    display: flex; gap: 10px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);
                 }
                 .fm-stat-num { font-weight: 600; color: var(--color-text-secondary); }
                 .fm-months {
@@ -167,7 +166,7 @@ export default function FootprintMap({ heatmap }) {
                 }
                 .fm-cell {
                     width: 11px; height: 11px; border-radius: 2px;
-                    transition: transform 80ms;
+                    transition: transform 100ms;
                 }
                 .fm-cell:not(.fm-cell-empty):not(.fm-cell-future):not(.fm-legend-cell):hover {
                     transform: scale(1.35);

@@ -327,7 +327,7 @@ export default function TodayPage() {
                         <div className="today-empty">
                             <span className="today-empty-icon">{currentTab.isToday ? <Sun size={48} strokeWidth={1.2} /> : <CalendarDays size={48} strokeWidth={1.2} />}</span>
                             <span className="today-empty-title">{currentTab.isToday ? '今日やるタスクがありません' : `${currentTab.label}のタスクがありません`}</span>
-                            <span className="today-empty-hint">タスク一覧の ☀ ボタンでタスクをピックしましょう</span>
+                            <span className="today-empty-hint">タスク一覧の「今日やる」ボタンでタスクをピックしましょう</span>
                         </div>
                     )}
 
@@ -438,58 +438,50 @@ export default function TodayPage() {
         .today-root { max-width: 780px; animation: slideUp 0.3s ease; }
         .today-header { margin-bottom: 10px; }
         .today-title-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-        .today-date { font-size: 0.82rem; color: var(--color-text-muted); font-weight: 500; }
+        .today-date { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); font-weight: 500; }
         .today-subtitle { color: var(--color-text-muted); font-size: 0.78rem; margin-top: -8px; }
 
-        /* Date Navigation Tabs — dot indicator */
+        /* Date Navigation Tabs — filled active */
         .date-tabs {
-          display: flex; gap: 0; margin-bottom: 20px;
+          display: flex; gap: 4px; margin-bottom: 20px;
           overflow-x: auto;
         }
         .date-tab {
           flex: 1; min-width: 0;
           display: flex; flex-direction: column; align-items: center;
-          gap: 2px; padding: 10px 4px 14px;
+          gap: 2px; padding: 8px 4px;
           border: none; background: transparent;
           cursor: pointer;
-          transition: color 80ms; font-family: inherit;
-          position: relative;
+          transition: background 100ms, color 100ms; font-family: inherit;
+          border-radius: var(--radius-md);
         }
-        .date-tab:hover { color: var(--color-text); }
-        .date-tab.active::after {
-          content: '';
-          position: absolute;
-          bottom: 4px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          background: var(--color-accent);
+        .date-tab:hover { background: var(--color-surface-hover); }
+        .date-tab.active {
+          background: var(--color-accent); color: #fff;
         }
         .date-tab-label {
           font-size: 0.82rem; font-weight: 600;
           color: var(--color-text-muted);
         }
-        .date-tab.active .date-tab-label { color: var(--color-text); font-weight: 800; }
+        .date-tab.active .date-tab-label { color: #fff; font-weight: 700; }
         .date-tab-wd {
           font-size: 0.62rem; font-weight: 500;
           color: var(--color-text-disabled);
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
-        .date-tab.active .date-tab-wd { color: var(--color-text-secondary); }
+        .date-tab.active .date-tab-wd { color: rgba(255,255,255,0.8); }
         .date-tab.weekend .date-tab-wd { color: var(--color-danger); }
-        .date-tab.weekend.active .date-tab-wd { color: var(--color-danger); }
+        .date-tab.weekend.active .date-tab-wd { color: rgba(255,200,200,0.9); }
 
         /* Toolbar */
         .today-toolbar {
           display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-          margin-bottom: 12px; padding: 8px 0;
-          border-bottom: 1px solid var(--border-color);
+          margin-bottom: 14px; padding: 8px 14px;
+          background: var(--color-surface); border-radius: var(--radius-md);
         }
         .today-filter { display: flex; align-items: center; gap: 4px; }
-        .today-filter label { font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; }
+        .today-filter label { font-size: 0.72rem; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
 
         /* Parent-child grouping */
         .today-parent-group { }
@@ -512,10 +504,10 @@ export default function TodayPage() {
         .today-empty::before {
           content: '';
           display: block;
-          width: 28px;
-          height: 2px;
+          width: 32px;
+          height: 3px;
           background: var(--color-accent);
-          margin-bottom: 4px;
+          margin-bottom: 8px;
         }
         .today-empty-icon { display: none; }
         .today-empty-title { font-size: .88rem; font-weight: 600; color: var(--color-text-secondary); }
@@ -523,41 +515,40 @@ export default function TodayPage() {
 
         /* Sort mode toggle */
         .today-sort-toggle {
-          padding:4px 10px; border:1px solid var(--border-color);
-          border-radius:var(--radius-sm); font-size:.75rem; font-weight:600;
-          cursor:pointer; transition:all .12s; font-family:inherit;
-          background:transparent; color:var(--color-text-muted);
-          white-space:nowrap;
+          padding: 4px 10px; border: 1px solid var(--border-color);
+          border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600;
+          cursor: pointer; transition: background 100ms, color 100ms, border-color 100ms; font-family: inherit;
+          background: transparent; color: var(--color-text-muted);
+          white-space: nowrap;
         }
-        .today-sort-toggle:hover { border-color:var(--border-color-hover); color:var(--color-text); }
+        .today-sort-toggle:hover { border-color: var(--border-color-hover); color: var(--color-text); }
         .today-sort-toggle.active {
-          background:var(--color-accent); color:#fff; border-color:var(--color-accent);
+          background: var(--color-accent); color: #fff; border-color: var(--color-accent);
         }
-        .today-sort-toggle.active:hover { background:var(--color-accent-hover); }
+        .today-sort-toggle.active:hover { background: var(--color-accent-hover); }
 
+        /* Milestone banners — full accent background */
         .today-milestone-banner {
-          margin-top: 12px; padding: 10px 16px;
-          border-left: 3px solid;
+          margin-top: 12px; padding: 12px 16px;
+          border-radius: var(--radius-md);
           font-size: 0.85rem; font-weight: 600;
           animation: celebIn 0.3s ease;
         }
         .milestone-start {
-          background: var(--color-accent-subtle);
-          border-left-color: var(--color-accent);
-          color: var(--color-accent);
+          background: var(--color-accent);
+          color: #fff;
         }
         .milestone-half {
-          background: var(--color-warning-bg);
-          border-left-color: var(--color-warning);
-          color: var(--color-warning);
+          background: var(--color-warning);
+          color: #fff;
         }
         .today-complete-banner {
-          margin-top: 16px; padding: 16px;
-          background: var(--color-success-bg);
-          border-left: 3px solid var(--color-success);
+          margin-top: 16px; padding: 12px 16px;
+          background: var(--color-success);
+          border-radius: var(--radius-md);
           display: flex; align-items: center; gap: 10px;
           font-size: 1rem; font-weight: 600;
-          color: var(--color-success);
+          color: #fff;
           animation: celebIn 0.4s ease;
         }
         .today-complete-icon {

@@ -184,7 +184,7 @@ export default function RoutinesPage() {
                             </div>
                             <div className="rt-card-meta">
                                 {r.tags && r.tags.map(t => (
-                                    <span key={t.id} className="rt-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
+                                    <span key={t.id} className="rt-tag"><span className="rt-tag-dot" style={{ backgroundColor: t.color }} />{t.name}</span>
                                 ))}
                                 {r.estimated_hours > 0 && (
                                     <span className="rt-meta-item"><Clock size={12} /> {formatMin(r.estimated_hours)}</span>
@@ -226,36 +226,31 @@ export default function RoutinesPage() {
             background: var(--color-accent); color: #fff; border: none;
             padding: 6px 14px; border-radius: var(--radius-sm);
             font-size: 0.82rem; font-weight: 600; cursor: pointer;
-            box-shadow: none; transition: filter 80ms;
+            transition: filter 100ms;
         }
         .rt-btn-add:hover { filter: brightness(1.1); }
 
-        /* Tabs */
-        .rt-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; }
+        /* Tabs — filled active */
+        .rt-tabs { display: flex; gap: 4px; margin-bottom: 14px; }
         .rt-tab {
-            background: none; border: none; padding: 6px 6px;
-            color: var(--color-text-secondary); font-weight: 500; cursor: pointer;
-            position: relative; transition: color 80ms; font-size: 0.82rem;
+            background: transparent; border: none; padding: 6px 12px;
+            color: var(--color-text-muted); font-weight: 500; cursor: pointer;
+            transition: background 100ms, color 100ms; font-size: 0.82rem;
+            border-radius: var(--radius-md); font-family: inherit;
         }
-        .rt-tab:hover { color: var(--color-text); }
-        .rt-tab.active { color: var(--color-accent); font-weight: 600; }
-        .rt-tab.active::after {
-            content: ''; position: absolute; bottom: 4px; left: 50%;
-            transform: translateX(-50%); width: 5px; height: 5px;
-            border-radius: 50%; background: var(--color-accent);
-        }
+        .rt-tab:hover { background: var(--color-surface-hover); color: var(--color-text); }
+        .rt-tab.active { background: var(--color-accent); color: #fff; font-weight: 700; }
 
         /* List */
         .rt-list { display: flex; flex-direction: column; gap: 0; }
         .rt-card {
             background: transparent; border: none;
-            border-left: 3px solid transparent;
+            border-left: 4px solid var(--border-color);
             border-radius: 0; padding: 10px 12px;
             display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; transition: background 80ms, border-left-color 80ms;
-            box-shadow: none;
+            cursor: pointer; transition: background 100ms, border-left-color 100ms;
         }
-        .rt-card + .rt-card { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+        .rt-card + .rt-card { border-top: 1px solid var(--border-color); }
         .rt-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
         .rt-card.disabled { opacity: 0.5; }
         .rt-card.disabled:hover { opacity: 0.7; }
@@ -267,16 +262,15 @@ export default function RoutinesPage() {
             padding: 1px 6px; border-radius: var(--radius-sm);
         }
         .rt-card-meta { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-        .rt-tag { font-size: 0.6rem; font-weight: 600; padding: 1px 5px; border-radius: var(--radius-sm); color: #fff; }
-        .rt-meta-item { font-size: 0.7rem; color: var(--color-text-muted); }
+        .rt-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6rem; font-weight: 600; padding: 1px 5px; border-radius: var(--radius-sm); background: var(--color-surface-hover); color: var(--color-text-secondary); }
+        .rt-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .rt-meta-item { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
         .rt-end-date { color: var(--color-warning); }
 
         .rt-toolbar {
             display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-            margin-bottom: 10px; padding: 6px 0;
-            background: transparent; border: none;
-            border-bottom: 1px solid var(--border-color);
-            border-radius: 0; box-shadow: none;
+            margin-bottom: 14px; padding: 8px 14px;
+            background: var(--color-surface); border-radius: var(--radius-md);
         }
         .rt-project-badge {
             display: inline-flex; align-items: center; gap: 3px;
@@ -287,8 +281,8 @@ export default function RoutinesPage() {
 
         .rt-empty { text-align: left; padding: 1.5rem 0; color: var(--color-text-muted); display: flex; flex-direction: column; align-items: flex-start; }
         .rt-empty::before {
-            content: ''; display: block; width: 28px; height: 2px;
-            background: var(--color-accent); margin-bottom: 4px;
+            content: ''; display: block; width: 32px; height: 3px;
+            background: var(--color-accent); margin-bottom: 8px;
         }
         .rt-empty-icon { display: none; }
         .rt-empty-title { font-size: 0.88rem; font-weight: 500; color: var(--color-text-secondary); }
@@ -298,7 +292,7 @@ export default function RoutinesPage() {
         .rt-switch {
             position: relative; width: 40px; height: 24px;
             border-radius: 12px; border: none; cursor: pointer;
-            transition: background 0.3s; flex-shrink: 0;
+            transition: background 100ms; flex-shrink: 0;
             padding: 0;
         }
         .rt-switch.on { background: var(--color-accent); }
@@ -306,13 +300,12 @@ export default function RoutinesPage() {
         .rt-switch .rt-switch-knob {
             position: absolute; top: 2px; width: 20px; height: 20px;
             border-radius: 50%; background: #fff;
-            box-shadow: none;
-            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: left 100ms cubic-bezier(0.4, 0, 0.2, 1);
         }
         .rt-switch.on .rt-switch-knob { left: 18px; }
         .rt-switch.off .rt-switch-knob { left: 2px; }
 
-        .rt-toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.78rem; z-index: 3000; font-weight: 500; box-shadow: none; animation: slideUp 0.3s; }
+        .rt-toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.78rem; z-index: 3000; font-weight: 500; animation: slideUp 0.3s; }
         .rt-toast-ok { background: var(--toast-success-bg); color: var(--toast-success-text); border: 1px solid var(--toast-success-border); }
         .rt-toast-err { background: var(--toast-error-bg); color: var(--toast-error-text); border: 1px solid var(--toast-error-border); }
             `}</style>

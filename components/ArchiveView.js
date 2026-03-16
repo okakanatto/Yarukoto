@@ -321,8 +321,9 @@ export default function ArchiveView({
                 .av-search {
                     display: flex; align-items: center; gap: 8px;
                     padding: 6px 12px;
-                    border-bottom: 1px solid var(--border-color);
-                    transition: border-color 80ms;
+                    background: var(--color-surface); border-radius: var(--radius-md);
+                    border: 1px solid var(--border-color);
+                    transition: border-color 100ms;
                 }
                 .av-search:focus-within { border-color: var(--color-accent); }
                 .av-search-icon { color: var(--color-text-disabled); flex-shrink: 0; }
@@ -336,23 +337,24 @@ export default function ArchiveView({
                     color: var(--color-text-muted); font-size: .72rem;
                     width: 20px; height: 20px; display: flex; align-items: center;
                     justify-content: center; border-radius: var(--radius-sm);
-                    transition: color 80ms;
+                    transition: color 100ms;
                 }
                 .av-search-clear:hover { color: var(--color-text); }
 
                 .av-search-count, .av-total {
-                    font-size: .75rem; color: var(--color-text-muted);
-                    padding: 2px 0; font-weight: 500;
+                    font-size: 0.72rem; color: var(--color-text-muted);
+                    padding: 2px 0; font-weight: 700;
+                    text-transform: uppercase; letter-spacing: 0.05em;
                 }
 
                 .av-months { display: flex; flex-direction: column; gap: 0; }
 
                 .av-month-group {
-                    border-left: 3px solid transparent;
+                    border-left: 4px solid var(--border-color);
                     overflow: hidden;
-                    transition: border-left-color 80ms;
+                    transition: border-left-color 100ms;
                 }
-                .av-month-group + .av-month-group { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+                .av-month-group + .av-month-group { border-top: 1px solid var(--border-color); }
                 .av-month-group:hover { border-left-color: var(--color-accent); }
 
                 .av-month-header {
@@ -362,23 +364,23 @@ export default function ArchiveView({
                     border: none; cursor: pointer;
                     font-family: inherit; font-size: .82rem;
                     color: var(--color-text);
-                    transition: background 80ms;
+                    transition: background 100ms;
                 }
                 .av-month-header:hover { background: var(--color-surface-hover); }
                 .av-month-header.expanded { background: var(--color-surface-hover); }
 
                 .av-month-arrow {
                     font-size: .55rem; color: var(--color-text-muted);
-                    transition: transform 80ms ease;
+                    transition: transform 100ms;
                     flex-shrink: 0;
                 }
                 .av-month-arrow.open { transform: rotate(90deg); }
 
-                .av-month-label { font-weight: 600; flex: 1; text-align: left; }
+                .av-month-label { font-weight: 700; flex: 1; text-align: left; }
 
                 .av-month-count {
-                    font-size: .72rem; color: var(--color-text-muted);
-                    font-weight: 500;
+                    font-size: 0.72rem; color: var(--color-text-muted);
+                    font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
                 }
 
                 .av-month-content {
@@ -399,12 +401,12 @@ export default function ArchiveView({
                     color: var(--color-text-muted);
                 }
                 .av-empty::before {
-                    content: ''; display: block; width: 28px; height: 2px;
-                    background: var(--color-accent); margin-bottom: 4px;
+                    content: ''; display: block; width: 32px; height: 3px;
+                    background: var(--color-accent); margin-bottom: 8px;
                 }
                 .av-empty-icon { display: none; }
-                .av-empty-title { font-size: .92rem; font-weight: 500; color: var(--color-text-secondary); }
-                .av-empty-hint { font-size: .78rem; color: var(--color-text-disabled); }
+                .av-empty-title { font-size: 0.92rem; font-weight: 700; color: var(--color-text-secondary); }
+                .av-empty-hint { font-size: 0.72rem; color: var(--color-text-disabled); text-transform: uppercase; letter-spacing: 0.05em; }
                 .av-empty-sm { padding: 1rem 0; color: var(--color-text-muted); font-size: .82rem; }
 
                 .av-tasks { display: flex; flex-direction: column; gap: 0; }

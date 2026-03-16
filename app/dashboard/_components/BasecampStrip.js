@@ -36,11 +36,10 @@ export default function BasecampStrip({ task }) {
 
             <style jsx global>{`
                 .bc-strip {
-                    background: transparent; border: none;
-                    border-radius: 0; padding: 12px 0;
-                    box-shadow: none; margin-top: 10px;
+                    background: var(--color-surface); border-radius: var(--radius-md);
+                    padding: 16px; margin-top: 12px;
                     display: flex; align-items: center; justify-content: space-between;
-                    min-height: 48px; border-bottom: 1px solid var(--border-color);
+                    min-height: 48px;
                 }
                 .bc-left {
                     display: flex; align-items: center; gap: 8px;
@@ -65,7 +64,7 @@ export default function BasecampStrip({ task }) {
                 .bc-chip {
                     font-size: 0.68rem; padding: 0.3rem 0.75rem;
                     border-radius: 3px; cursor: pointer;
-                    transition: background 80ms, color 80ms, border-color 80ms; white-space: nowrap;
+                    transition: background 100ms, color 100ms, border-color 100ms; white-space: nowrap;
                     font-family: inherit; text-decoration: none;
                     display: inline-flex; align-items: center;
                     background: transparent; color: var(--color-text-muted);

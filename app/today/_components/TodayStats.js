@@ -48,9 +48,9 @@ export default function TodayStats({ stats }) {
             <style jsx global>{`
         .today-stats {
           display: flex; align-items: center; gap: 24px;
-          padding: 16px 0;
-          border-bottom: 1px solid var(--border-color);
-          margin-bottom: 12px;
+          padding: 14px;
+          background: var(--color-surface); border-radius: var(--radius-md);
+          margin-bottom: 14px;
         }
         .stat-ring-area { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
         .stat-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -61,10 +61,17 @@ export default function TodayStats({ stats }) {
           align-items: center; justify-content: center;
         }
         .ring-pct { font-size: 1.2rem; font-weight: 800; color: var(--color-text); line-height: 1; letter-spacing: -0.02em; }
-        .ring-sub { font-size: 0.6rem; color: var(--color-text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ring-sub {
+          font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.05em;
+        }
 
         .stat-details { display: flex; flex-direction: column; gap: 4px; }
-        .stat-row { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--color-text-secondary); }
+        .stat-row {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 0.72rem; color: var(--color-text-secondary);
+          text-transform: uppercase; letter-spacing: 0.05em;
+        }
         .stat-icon { color: var(--color-text-muted); display: flex; align-items: center; }
       `}</style>
         </div>

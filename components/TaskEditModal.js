@@ -302,48 +302,46 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
 
             <style jsx>{`
                 .te-backdrop {
-                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.3);
-                    z-index: 2000; animation: fadeIn 0.15s;
+                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
+                    z-index: 2000;
                 }
                 .te-modal {
                     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
                     width: 100%; max-width: 480px; max-height: 90vh;
                     background: var(--color-surface); border-radius: var(--radius-md);
                     border: 1px solid var(--border-color);
-                    box-shadow: 0 4px 24px rgba(0,0,0,0.12); z-index: 2001;
+                    box-shadow: var(--shadow-lg); z-index: 2001;
                     display: flex; flex-direction: column;
-                    animation: modalIn 0.2s ease;
-                }
-                @keyframes modalIn {
-                    from { opacity: 0; transform: translate(-50%, -47%); }
-                    to { opacity: 1; transform: translate(-50%, -50%); }
                 }
                 .te-header {
                     display: flex; justify-content: space-between; align-items: center;
                     padding: 12px 16px; border-bottom: 1px solid var(--border-color);
                 }
-                .te-header h3 { font-size: 0.88rem; font-weight: 700; color: var(--color-text); margin: 0; }
+                .te-header h3 { font-size: 0.92rem; font-weight: 700; color: var(--color-text); margin: 0; }
                 .te-close {
                     background: none; border: none; cursor: pointer;
                     color: var(--color-text-muted); width: 28px; height: 28px;
                     display: flex; align-items: center; justify-content: center;
-                    border-radius: var(--radius-sm); transition: color 80ms;
+                    border-radius: var(--radius-sm); transition: color 100ms;
                 }
                 .te-close:hover { color: var(--color-text); }
                 .te-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
                 .te-field { display: flex; flex-direction: column; gap: 4px; }
                 .te-row { display: flex; gap: 10px; }
-                .te-label { font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+                .te-label {
+                    font-size: 0.72rem; font-weight: 700; color: var(--color-text-muted);
+                    text-transform: uppercase; letter-spacing: 0.05em;
+                }
                 .te-input-title {
                     width: 100%; border: none; border-bottom: 1px solid var(--border-color);
-                    font-size: 0.95rem; padding: 6px 2px; background: transparent;
-                    color: var(--color-text); transition: border-color 80ms; font-family: inherit;
+                    font-size: 0.92rem; font-weight: 700; padding: 6px 2px; background: transparent;
+                    color: var(--color-text); transition: border-color 100ms; font-family: inherit;
                 }
                 .te-input-title:focus { outline: none; border-color: var(--color-accent); }
                 .te-input, .te-select, .te-textarea {
                     width: 100%; padding: 6px 8px; border: 1px solid var(--border-color);
                     border-radius: var(--radius-sm); background-color: var(--color-surface);
-                    color: var(--color-text); font-size: 0.82rem; transition: border-color 80ms;
+                    color: var(--color-text); font-size: 0.82rem; transition: border-color 100ms;
                     font-family: inherit;
                 }
                 .te-input:focus, .te-select:focus, .te-textarea:focus {
@@ -358,14 +356,15 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 .te-btn-cancel {
                     background: transparent; border: 1px solid var(--border-color);
                     padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.82rem;
-                    cursor: pointer; color: var(--color-text-muted); transition: color 80ms;
-                    font-family: inherit;
+                    cursor: pointer; color: var(--color-text-muted);
+                    transition: color 100ms, border-color 100ms;
+                    font-family: inherit; font-weight: 700;
                 }
                 .te-btn-cancel:hover { color: var(--color-text); border-color: var(--border-color-hover); }
                 .te-btn-save {
                     background: var(--color-accent); color: #fff; border: none;
                     padding: 6px 16px; border-radius: var(--radius-sm); font-size: 0.82rem;
-                    font-weight: 600; cursor: pointer; transition: background 80ms; font-family: inherit;
+                    font-weight: 700; cursor: pointer; transition: background 100ms; font-family: inherit;
                 }
                 .te-btn-save:hover:not(:disabled) { background: var(--color-accent-hover); }
                 .te-btn-save:disabled { opacity: 0.3; cursor: not-allowed; }

@@ -50,10 +50,10 @@ export default function DashboardPage() {
 
             <style jsx>{`
                 .db-root { max-width: 960px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-                .db-date { color: var(--color-text-muted); font-size: 0.78rem; margin-top: -1.25rem; margin-bottom: 1rem; }
+                .db-date { color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; margin-top: -1.25rem; margin-bottom: 1rem; }
                 .db-lower-grid {
                     display: grid; grid-template-columns: 260px 1fr;
-                    gap: 10px; margin-top: 10px;
+                    gap: 12px; margin-top: 12px;
                 }
                 @media (max-width: 700px) {
                     .db-lower-grid { grid-template-columns: 1fr; }

@@ -61,7 +61,7 @@ export default function ColorPalette({ value, onChange }) {
         .swatch {
           width: 100%; aspect-ratio: 1; min-width: 22px; max-width: 30px;
           border: 2px solid transparent; border-radius: var(--radius-sm);
-          cursor: pointer; transition: border-color 0.15s; padding: 0;
+          cursor: pointer; transition: border-color 100ms; padding: 0;
         }
         .swatch:hover { border-color: var(--color-text-muted); }
         .swatch.active {
@@ -71,21 +71,24 @@ export default function ColorPalette({ value, onChange }) {
         .toggle-custom {
           background: transparent; border: none;
           color: var(--color-text-muted); font-size: 0.72rem;
+          font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
           cursor: pointer; padding: 2px 0;
+          transition: color 100ms;
         }
         .toggle-custom:hover { color: var(--color-text); }
         .custom-picker {
           display: flex; align-items: center; gap: 6px;
-          animation: fadeIn 0.15s;
         }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .color-input {
           width: 26px; height: 26px;
           border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); cursor: pointer; padding: 1px;
           background: transparent;
         }
-        .color-hex { font-size: 0.72rem; color: var(--color-text-muted); font-family: monospace; }
+        .color-hex {
+          font-size: 0.72rem; color: var(--color-text-muted); font-family: monospace;
+          text-transform: uppercase; letter-spacing: 0.05em;
+        }
       `}</style>
         </div>
     );

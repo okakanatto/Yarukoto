@@ -46,14 +46,13 @@ export default function RhythmSection({ rhythm }) {
 
             <style jsx>{`
                 .rh-card {
-                    background: transparent; border: none;
-                    border-radius: 0; padding: 12px 0;
-                    box-shadow: none; border-bottom: 1px solid var(--border-color);
+                    background: var(--color-surface); border-radius: var(--radius-md);
+                    padding: 16px; margin-bottom: 12px;
                     display: flex; flex-direction: column;
                 }
                 .rh-label {
-                    font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
-                    letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 8px;
+                    font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+                    letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;
                 }
                 .rh-summary {
                     font-size: 0.88rem; font-weight: 600; color: var(--color-text);
@@ -84,8 +83,8 @@ export default function RhythmSection({ rhythm }) {
                     flex: 1; display: flex; flex-direction: column; align-items: flex-start;
                 }
                 .rh-empty::before {
-                    content: ''; display: block; width: 28px; height: 2px;
-                    background: var(--color-accent); margin-bottom: 4px;
+                    content: ''; display: block; width: 32px; height: 3px;
+                    background: var(--color-accent); margin-bottom: 8px;
                 }
             `}</style>
         </div>

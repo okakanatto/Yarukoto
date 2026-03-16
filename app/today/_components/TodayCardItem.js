@@ -4,7 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import StatusCheckbox from '@/components/StatusCheckbox';
 import { formatMin } from '@/lib/utils';
-import { Pin, RefreshCw, Archive, Calendar, Clock, GripVertical } from 'lucide-react';
+import { Pin, RefreshCw, Archive, Calendar, Clock, GripVertical, CheckSquare } from 'lucide-react';
 
 /**
  * Individual today-card with @dnd-kit draggable support.
@@ -66,9 +66,9 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
                 </div>
                 <div className="today-card-meta">
                     {task.tags && task.tags.map(t => (
-                        <span key={t.id} className="today-tag" style={{ backgroundColor: t.color }}>{t.name}</span>
+                        <span key={t.id} className="today-tag"><span className="today-tag-dot" style={{ backgroundColor: t.color }} />{t.name}</span>
                     ))}
-                    {isDone && task.completed_at && <span className="today-meta-item">☑ 完了: {task.completed_at.split(' ')[0]}</span>}
+                    {isDone && task.completed_at && <span className="today-meta-item"><CheckSquare size={12} /> 完了: {task.completed_at.split(' ')[0]}</span>}
                     {task.due_date && !isDone && <span className="today-meta-item"><Calendar size={12} /> {task.due_date}</span>}
                     {task.estimated_hours > 0 && (
                         <span className="today-meta-item"><Clock size={12} /> {formatMin(task.estimated_hours)}</span>
@@ -92,15 +92,15 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-card {
           display: flex; align-items: center; gap: 10px;
           background: transparent; border: none;
-          border-left: 3px solid transparent;
+          border-left: 4px solid var(--border-color);
           padding: 10px 12px;
-          transition: background 80ms, border-left-color 80ms;
+          transition: background 100ms, border-left-color 100ms;
           touch-action: none;
         }
-        .today-card + .today-card { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+        .today-card + .today-card { border-top: 1px solid var(--border-color); }
         .today-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
-        .today-card.done { opacity: 0.4; }
-        .today-card.done:hover { opacity: 0.6; }
+        .today-card.done { opacity: 0.35; }
+        .today-card.done:hover { opacity: 0.55; }
         .today-card.archived { opacity: 0.3; }
         .today-card.archived:hover { opacity: 0.45; }
         .today-card.routine { border-left-color: var(--color-accent); }
@@ -109,33 +109,38 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-card-info { flex: 1; min-width: 0; }
         .today-parent-label {
           display: flex; align-items: center; gap: 3px;
-          font-size: 0.68rem; font-weight: 500;
+          font-size: 0.72rem; font-weight: 700;
           color: var(--color-text-muted); margin-bottom: 1px;
-          letter-spacing: 0.02em; text-transform: uppercase;
+          letter-spacing: 0.05em; text-transform: uppercase;
         }
         .today-card-title-row { display: flex; align-items: center; gap: 5px; }
         .today-routine-badge { font-size: 0.78rem; flex-shrink: 0; color: var(--color-text-muted); }
         .today-archived-badge { font-size: 0.72rem; flex-shrink: 0; opacity: 0.5; }
         .today-picked-badge { font-size: 0.78rem; flex-shrink: 0; }
-        .today-card-title { font-weight: 600; font-size: 0.88rem; color: var(--color-text); display: block; }
+        .today-card-title { font-weight: 700; font-size: 0.92rem; color: var(--color-text); display: block; }
         .today-card-title.strike { text-decoration: line-through; color: var(--color-text-disabled); }
-        .today-card-title.clickable { cursor: pointer; transition: color .1s; }
+        .today-card-title.clickable { cursor: pointer; transition: color 100ms; }
         .today-card-title.clickable:hover { color: var(--color-accent); }
         .today-card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
         .today-project-badge {
-          display:inline-flex; align-items:center; gap:4px;
-          font-size:.65rem; font-weight:500; padding:1px 7px;
-          border-radius:var(--radius-sm); border:1px solid;
-          white-space:nowrap;
+          display: inline-flex; align-items: center; gap: 4px;
+          font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
+          border-radius: var(--radius-sm); border: 1px solid;
+          white-space: nowrap;
         }
-        .today-project-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-        .today-tag { font-size: 0.63rem; font-weight: 600; padding: 1px 7px; border-radius: var(--radius-sm); color: #fff; }
-        .today-meta-item { font-size: 0.72rem; color: var(--color-text-muted); display: flex; align-items: center; gap: 3px; }
+        .today-project-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .today-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--color-surface-hover); color: var(--color-text-secondary); }
+        .today-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .today-meta-item {
+          font-size: 0.72rem; color: var(--color-text-muted); display: flex;
+          align-items: center; gap: 3px;
+          text-transform: uppercase; letter-spacing: 0.05em;
+        }
 
-        .today-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity .12s; }
+        .today-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity 100ms; }
         .today-card:hover .today-card-actions { opacity: 1; }
         .today-status {
-          font-weight: 600; font-size: 0.75rem; padding: 3px 6px;
+          font-weight: 700; font-size: 0.72rem; padding: 3px 6px;
           border-radius: var(--radius-sm); cursor: pointer; border: 1px solid;
           background-color: transparent; font-family: inherit;
           opacity: 1 !important;
@@ -144,7 +149,7 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
           background: transparent; border: none; color: var(--color-text-disabled);
           cursor: pointer; font-size: 0.72rem; width: 22px; height: 22px;
           display: flex; align-items: center; justify-content: center;
-          border-radius: var(--radius-sm); transition: color .1s;
+          border-radius: var(--radius-sm); transition: color 100ms;
         }
         .today-remove:hover { color: var(--color-danger); }
 
@@ -177,14 +182,14 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-card.drop-settle-today { animation: dropSettleToday 0.3s ease; }
 
         .today-drag-handle {
-          cursor:grab; color:var(--color-text-disabled);
-          display:flex; align-items:center; justify-content:center;
-          width:16px; align-self:stretch; flex-shrink:0;
-          opacity:0; transition:opacity .12s; user-select:none;
+          cursor: grab; color: var(--color-text-disabled);
+          display: flex; align-items: center; justify-content: center;
+          width: 16px; align-self: stretch; flex-shrink: 0;
+          opacity: 0; transition: opacity 100ms; user-select: none;
         }
-        .today-card:hover .today-drag-handle, .today-ghost-header:hover .today-drag-handle { opacity:0.4; }
-        .today-drag-handle:hover { opacity:1 !important; color:var(--color-text-muted); }
-        .today-drag-handle:active { cursor:grabbing; }
+        .today-card:hover .today-drag-handle, .today-ghost-header:hover .today-drag-handle { opacity: 0.4; }
+        .today-drag-handle:hover { opacity: 1 !important; color: var(--color-text-muted); }
+        .today-drag-handle:active { cursor: grabbing; }
       `}</style>
         </div>
     );
