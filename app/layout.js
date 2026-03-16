@@ -196,7 +196,7 @@ function LayoutInner({ children }) {
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        transition: background 80ms;
+                        transition: background 100ms;
                         z-index: 1000;
                     }
                     .fab:hover {
@@ -236,7 +236,7 @@ function LayoutInner({ children }) {
                         overflow: hidden;
                         background: var(--color-surface);
                         border: 1px solid var(--border-color);
-                        border-radius: 0;
+                        border-radius: var(--radius-md);
                         box-shadow: 0 4px 24px rgba(0,0,0,0.12);
                         z-index: 1001;
                         animation: fabModalIn 0.15s ease;
@@ -255,10 +255,10 @@ function LayoutInner({ children }) {
                         border-bottom: 1px solid var(--border-color);
                     }
                     .fab-modal-title {
-                        font-size: 0.82rem;
+                        font-size: 0.72rem;
                         font-weight: 700;
                         color: var(--color-text-secondary);
-                        letter-spacing: 0.02em;
+                        letter-spacing: 0.05em;
                         text-transform: uppercase;
                     }
                     .fab-modal-close {
@@ -272,7 +272,7 @@ function LayoutInner({ children }) {
                         align-items: center;
                         justify-content: center;
                         border-radius: var(--radius-sm);
-                        transition: color 0.1s;
+                        transition: color 100ms;
                     }
                     .fab-modal-close:hover {
                         color: var(--color-text);
