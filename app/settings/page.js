@@ -93,9 +93,10 @@ export default function Settings() {
         .s-sub { color:var(--color-text-muted); font-size:.82rem; margin-top:-1rem; margin-bottom:1.25rem }
 
         .s-tabs { display:flex; gap:0; margin-bottom:1rem; border-bottom:1px solid var(--border-color); background:transparent }
-        .s-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:.3rem; padding:8px 6px; border:none; border-bottom:2px solid transparent; background:transparent; color:var(--color-text-muted); font-size:.78rem; font-weight:500; border-radius:0; cursor:pointer; transition:color .2s, border-color .2s; font-family:inherit }
+        .s-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:.3rem; padding:8px 6px; border:none; background:transparent; color:var(--color-text-muted); font-size:.78rem; font-weight:500; border-radius:0; cursor:pointer; transition:color 80ms; font-family:inherit; position:relative }
         .s-tab:hover { color:var(--color-text) }
-        .s-tab.on { color:var(--color-accent); font-weight:600; border-bottom-color:var(--color-accent) }
+        .s-tab.on { color:var(--color-accent); font-weight:600 }
+        .s-tab.on::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:var(--color-accent) }
 
         .s-panel { background:transparent; border:none; border-radius:0; padding:10px 0; min-height:200px }
         .s-center { display:flex; align-items:center; justify-content:center; gap:.5rem; padding:2rem; color:var(--color-text-muted) }
@@ -113,15 +114,16 @@ export default function Settings() {
         .s-row {
           display:flex; align-items:center; gap:6px;
           padding:6px 8px; background:transparent;
-          border-radius:0; border:none; border-bottom:1px solid var(--border-color); transition:background .18s;
+          border-radius:0; border:none; border-left:3px solid transparent; transition:background 80ms, border-left-color 80ms;
         }
-        .s-row:hover { background:var(--color-surface-hover) }
+        .s-row + .s-row { border-top:1px solid color-mix(in srgb, var(--border-color) 50%, transparent) }
+        .s-row:hover { background:var(--color-surface-hover); border-left-color:var(--color-accent) }
 
         .s-grip {
           color:var(--color-text-disabled); font-size:.88rem;
           cursor:grab; user-select:none; line-height:1;
           width:18px; text-align:center; flex-shrink:0;
-          transition:color .15s;
+          transition:color 80ms;
         }
         .s-row:hover .s-grip { color:var(--color-text-muted); }
 
@@ -134,7 +136,7 @@ export default function Settings() {
           width:20px; height:13px; border-radius:var(--radius-sm);
           display:flex; align-items:center; justify-content:center;
           font-size:.55rem; line-height:1; padding:0;
-          transition:color .15s; font-family:inherit;
+          transition:color 80ms; font-family:inherit;
         }
         .s-move-btn:hover:not(:disabled) {
           color:var(--color-accent);
@@ -145,7 +147,7 @@ export default function Settings() {
           width:28px; height:28px; min-width:28px;
           border-radius:var(--radius-sm); border:2px solid var(--border-color);
           cursor:pointer; padding:0;
-          transition:border-color .15s;
+          transition:border-color 80ms;
         }
         .s-swatch:hover { border-color:var(--border-color-hover) }
 
@@ -161,7 +163,7 @@ export default function Settings() {
         .s-input {
           flex:1; background:transparent; border:1px solid transparent;
           padding:4px 8px; color:var(--color-text); border-radius:var(--radius-sm);
-          font-size:.82rem; font-weight:500; outline:none; transition:border-color .18s; font-family:inherit;
+          font-size:.82rem; font-weight:500; outline:none; transition:border-color 80ms; font-family:inherit;
         }
         .s-input:focus { background:var(--color-surface-hover); border-color:var(--color-accent) }
         .s-input::placeholder { color:var(--color-text-disabled); font-weight:400 }
@@ -170,7 +172,7 @@ export default function Settings() {
         .s-btn-primary {
           background:var(--color-accent); border:none; color:#fff;
           padding:5px 10px; border-radius:var(--radius-sm); font-size:.78rem;
-          font-weight:600; cursor:pointer; white-space:nowrap; transition:filter .18s; font-family:inherit;
+          font-weight:600; cursor:pointer; white-space:nowrap; transition:filter 80ms; font-family:inherit;
         }
         .s-btn-primary:hover:not(:disabled) { filter:brightness(1.1) }
         .s-btn-primary:disabled { opacity:.4; cursor:not-allowed }
@@ -180,12 +182,13 @@ export default function Settings() {
           color:var(--color-text-disabled); cursor:pointer;
           width:26px; height:26px; min-width:26px; border-radius:var(--radius-sm);
           display:flex; align-items:center; justify-content:center;
-          font-size:.75rem; transition:color .18s; opacity:0;
+          font-size:.75rem; transition:color 80ms; opacity:0;
         }
         .s-row:hover .s-del { opacity:1 }
         .s-del:hover { color:var(--color-danger) }
 
-        .s-empty { color:var(--color-text-disabled); font-size:.8rem; padding:1.5rem; text-align:center }
+        .s-empty { color:var(--color-text-disabled); font-size:.8rem; padding:1.5rem; text-align:left; display:flex; flex-direction:column; align-items:flex-start }
+        .s-empty::before { content:''; display:block; width:28px; height:2px; background:var(--color-accent); margin-bottom:4px }
         .s-hint { color:var(--color-text-muted); font-size:.72rem; padding:6px 0 0; margin:0; font-style:italic; }
 
         .s-archive-btn {
@@ -193,7 +196,7 @@ export default function Settings() {
           color:var(--color-text-disabled); cursor:pointer;
           width:26px; height:26px; min-width:26px; border-radius:var(--radius-sm);
           display:flex; align-items:center; justify-content:center;
-          font-size:.75rem; transition:color .18s; opacity:0;
+          font-size:.75rem; transition:color 80ms; opacity:0;
         }
         .s-row:hover .s-archive-btn { opacity:1 }
         .s-archive-btn:hover { color:var(--color-accent) }
@@ -214,7 +217,7 @@ export default function Settings() {
           display:flex; align-items:center; gap:.3rem; font-family:inherit;
         }
         .s-archived-toggle:hover { color:var(--color-text-secondary); }
-        .s-archived-chev { display:inline-block; transition:transform .2s; font-size:.88rem; line-height:1; }
+        .s-archived-chev { display:inline-block; transition:transform 80ms; font-size:.88rem; line-height:1; }
         .s-archived-chev.open { transform:rotate(90deg); }
         .s-label-archived { flex:1; font-size:.8rem; color:var(--color-text-muted); padding:4px 8px; opacity:.7; }
         .s-list-archived { opacity:.75; }
@@ -234,7 +237,7 @@ export default function Settings() {
         .dm-divider { height:1px; background:var(--border-color); margin:4px 0 }
         .dm-danger { background:transparent; border-bottom-color:rgba(220,38,38,.2) }
         .dm-danger:hover { }
-        .s-btn-danger { background:var(--color-danger,#dc2626); border:none; color:#fff; padding:5px 10px; border-radius:var(--radius-sm); font-size:.78rem; font-weight:600; cursor:pointer; font-family:inherit; transition:filter .18s; white-space:nowrap }
+        .s-btn-danger { background:var(--color-danger,#dc2626); border:none; color:#fff; padding:5px 10px; border-radius:var(--radius-sm); font-size:.78rem; font-weight:600; cursor:pointer; font-family:inherit; transition:filter 80ms; white-space:nowrap }
         .s-btn-danger:hover { filter:brightness(1.1) }
 
         .opt-section { display:flex; flex-direction:column; gap:0 }
@@ -269,7 +272,7 @@ export default function Settings() {
           width:60px; padding:4px 6px; border:1px solid var(--border-color);
           border-radius:var(--radius-sm); background:var(--color-surface-hover);
           color:var(--color-text); font-size:.82rem; font-family:inherit;
-          text-align:center; transition:border-color .2s;
+          text-align:center; transition:border-color 80ms;
         }
         .opt-number-input:focus {
           outline:none; border-color:var(--color-accent);

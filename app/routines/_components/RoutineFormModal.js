@@ -382,7 +382,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-input-title {
             width: 100%; border: none; border-bottom: 2px solid var(--border-color);
             font-size: 1.3rem; padding: 4px 0; background: transparent;
-            color: var(--color-text); transition: border-color 0.2s;
+            color: var(--color-text); transition: border-color 80ms;
         }
         .rt-input-title:focus { outline: none; border-color: var(--color-accent); }
 
@@ -418,7 +418,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             width: 32px; height: 32px; border-radius: 50%;
             border: 1px solid var(--border-color); background: var(--color-surface);
             cursor: pointer; font-size: 0.75rem; color: var(--color-text-secondary);
-            transition: all 0.2s;
+            transition: background 80ms, color 80ms, border-color 80ms;
         }
         .rt-dow-btn.on { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
 
@@ -430,7 +430,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-select, .rt-input, .rt-textarea {
             width: 100%; padding: 5px; border: 1px solid var(--border-color);
             border-radius: var(--radius-sm); background-color: var(--color-surface);
-            color: var(--color-text); font-size: 0.82rem; transition: border-color 0.2s;
+            color: var(--color-text); font-size: 0.82rem; transition: border-color 80ms;
         }
         .rt-select:focus, .rt-input:focus, .rt-textarea:focus { outline: none; border-color: var(--color-accent); }
 
@@ -438,14 +438,14 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-btn-save {
             background: var(--color-accent); color: #fff; border: none;
             padding: 6px 14px; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
-            font-size: 0.82rem; transition: all 0.15s;
+            font-size: 0.82rem; transition: filter 80ms;
         }
         .rt-btn-save:hover { filter: brightness(1.1); }
         .rt-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
         .rt-btn-cancel {
             background: var(--color-surface-hover); color: var(--color-text-secondary); border: 1px solid var(--border-color);
             padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer;
-            font-size: 0.82rem; transition: all 0.15s;
+            font-size: 0.82rem; transition: background 80ms;
         }
         .rt-btn-cancel:hover { background: var(--color-surface-active); }
         .rt-btn-danger { background: transparent; color: var(--color-danger); border: none; font-size: 0.82rem; cursor: pointer; }

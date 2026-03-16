@@ -81,7 +81,11 @@ export default function RhythmSection({ rhythm }) {
                 }
                 .rh-empty {
                     font-size: 0.78rem; color: var(--color-text-muted);
-                    flex: 1; display: flex; align-items: flex-start;
+                    flex: 1; display: flex; flex-direction: column; align-items: flex-start;
+                }
+                .rh-empty::before {
+                    content: ''; display: block; width: 28px; height: 2px;
+                    background: var(--color-accent); margin-bottom: 4px;
                 }
             `}</style>
         </div>

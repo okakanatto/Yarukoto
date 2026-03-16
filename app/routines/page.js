@@ -226,7 +226,7 @@ export default function RoutinesPage() {
             background: var(--color-accent); color: #fff; border: none;
             padding: 6px 14px; border-radius: var(--radius-sm);
             font-size: 0.82rem; font-weight: 600; cursor: pointer;
-            box-shadow: none; transition: all 0.2s;
+            box-shadow: none; transition: filter 80ms;
         }
         .rt-btn-add:hover { filter: brightness(1.1); }
 
@@ -235,22 +235,28 @@ export default function RoutinesPage() {
         .rt-tab {
             background: none; border: none; padding: 6px 6px;
             color: var(--color-text-secondary); font-weight: 500; cursor: pointer;
-            border-bottom: 2px solid transparent; transition: all 0.2s; font-size: 0.82rem;
+            position: relative; transition: color 80ms; font-size: 0.82rem;
         }
         .rt-tab:hover { color: var(--color-text); }
-        .rt-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); font-weight: 600; }
+        .rt-tab.active { color: var(--color-accent); font-weight: 600; }
+        .rt-tab.active::after {
+            content: ''; position: absolute; bottom: 4px; left: 50%;
+            transform: translateX(-50%); width: 5px; height: 5px;
+            border-radius: 50%; background: var(--color-accent);
+        }
 
         /* List */
         .rt-list { display: flex; flex-direction: column; gap: 0; }
         .rt-card {
             background: transparent; border: none;
-            border-bottom: 1px solid var(--border-color);
+            border-left: 3px solid transparent;
             border-radius: 0; padding: 10px 12px;
             display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; transition: background 0.15s;
+            cursor: pointer; transition: background 80ms, border-left-color 80ms;
             box-shadow: none;
         }
-        .rt-card:hover { background: var(--color-surface-hover); }
+        .rt-card + .rt-card { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+        .rt-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
         .rt-card.disabled { opacity: 0.5; }
         .rt-card.disabled:hover { opacity: 0.7; }
         .rt-card-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
@@ -280,7 +286,11 @@ export default function RoutinesPage() {
         .rt-project-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
         .rt-empty { text-align: left; padding: 1.5rem 0; color: var(--color-text-muted); display: flex; flex-direction: column; align-items: flex-start; }
-        .rt-empty-icon { color: var(--color-text-disabled); margin-bottom: 4px; opacity: 0.5; }
+        .rt-empty::before {
+            content: ''; display: block; width: 28px; height: 2px;
+            background: var(--color-accent); margin-bottom: 4px;
+        }
+        .rt-empty-icon { display: none; }
         .rt-empty-title { font-size: 0.88rem; font-weight: 500; color: var(--color-text-secondary); }
         .rt-empty-hint { font-size: 0.78rem; color: var(--color-text-disabled); margin-top: 2px; }
 

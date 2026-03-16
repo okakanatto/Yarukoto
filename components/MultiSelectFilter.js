@@ -105,7 +105,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                     border-radius: var(--radius-sm); background: var(--color-surface);
                     color: var(--color-text-secondary); font-size: 0.78rem;
                     font-weight: 500; font-family: inherit; cursor: pointer;
-                    transition: background 0.15s, border-color 0.15s, color 0.15s; white-space: nowrap;
+                    transition: background 80ms, border-color 80ms, color 80ms; white-space: nowrap;
                 }
                 .msf-btn:hover {
                     border-color: var(--border-color-hover);
@@ -125,7 +125,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                 }
                 .msf-arrow {
                     font-size: 0.65rem; color: var(--color-text-muted);
-                    transition: transform 0.2s;
+                    transition: transform 80ms;
                 }
                 .msf-arrow.up { transform: rotate(180deg); }
                 .msf-panel {
@@ -143,7 +143,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                 .msf-item {
                     display: flex; align-items: center; gap: 5px;
                     padding: 5px 8px; cursor: pointer;
-                    transition: background 0.1s; font-size: 0.8rem;
+                    transition: background 80ms; font-size: 0.8rem;
                     color: var(--color-text); user-select: none;
                 }
                 .msf-item:hover { background: var(--color-surface-hover); }
@@ -152,7 +152,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                     width: 15px; height: 15px; border: 1.5px solid var(--border-color);
                     border-radius: var(--radius-sm); flex-shrink: 0;
                     display: flex; align-items: center; justify-content: center;
-                    transition: background 0.15s, border-color 0.15s; background: var(--color-surface);
+                    transition: background 80ms, border-color 80ms; background: var(--color-surface);
                 }
                 .msf-item input:checked + .msf-check {
                     background: var(--color-accent); border-color: var(--color-accent);

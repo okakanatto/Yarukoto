@@ -327,7 +327,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     background: none; border: none; cursor: pointer;
                     color: var(--color-text-muted); width: 28px; height: 28px;
                     display: flex; align-items: center; justify-content: center;
-                    border-radius: var(--radius-sm); transition: color 0.1s;
+                    border-radius: var(--radius-sm); transition: color 80ms;
                 }
                 .te-close:hover { color: var(--color-text); }
                 .te-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
@@ -337,13 +337,13 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 .te-input-title {
                     width: 100%; border: none; border-bottom: 1px solid var(--border-color);
                     font-size: 0.95rem; padding: 6px 2px; background: transparent;
-                    color: var(--color-text); transition: border-color 0.12s; font-family: inherit;
+                    color: var(--color-text); transition: border-color 80ms; font-family: inherit;
                 }
                 .te-input-title:focus { outline: none; border-color: var(--color-accent); }
                 .te-input, .te-select, .te-textarea {
                     width: 100%; padding: 6px 8px; border: 1px solid var(--border-color);
                     border-radius: var(--radius-sm); background-color: var(--color-surface);
-                    color: var(--color-text); font-size: 0.82rem; transition: border-color 0.12s;
+                    color: var(--color-text); font-size: 0.82rem; transition: border-color 80ms;
                     font-family: inherit;
                 }
                 .te-input:focus, .te-select:focus, .te-textarea:focus {
@@ -358,14 +358,14 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 .te-btn-cancel {
                     background: transparent; border: 1px solid var(--border-color);
                     padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.82rem;
-                    cursor: pointer; color: var(--color-text-muted); transition: color 0.1s;
+                    cursor: pointer; color: var(--color-text-muted); transition: color 80ms;
                     font-family: inherit;
                 }
                 .te-btn-cancel:hover { color: var(--color-text); border-color: var(--border-color-hover); }
                 .te-btn-save {
                     background: var(--color-accent); color: #fff; border: none;
                     padding: 6px 16px; border-radius: var(--radius-sm); font-size: 0.82rem;
-                    font-weight: 600; cursor: pointer; transition: background 0.12s; font-family: inherit;
+                    font-weight: 600; cursor: pointer; transition: background 80ms; font-family: inherit;
                 }
                 .te-btn-save:hover:not(:disabled) { background: var(--color-accent-hover); }
                 .te-btn-save:disabled { opacity: 0.3; cursor: not-allowed; }

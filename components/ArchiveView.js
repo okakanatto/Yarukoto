@@ -322,7 +322,7 @@ export default function ArchiveView({
                     display: flex; align-items: center; gap: 8px;
                     padding: 6px 12px;
                     border-bottom: 1px solid var(--border-color);
-                    transition: border-color .12s;
+                    transition: border-color 80ms;
                 }
                 .av-search:focus-within { border-color: var(--color-accent); }
                 .av-search-icon { color: var(--color-text-disabled); flex-shrink: 0; }
@@ -336,7 +336,7 @@ export default function ArchiveView({
                     color: var(--color-text-muted); font-size: .72rem;
                     width: 20px; height: 20px; display: flex; align-items: center;
                     justify-content: center; border-radius: var(--radius-sm);
-                    transition: color .1s;
+                    transition: color 80ms;
                 }
                 .av-search-clear:hover { color: var(--color-text); }
 
@@ -348,9 +348,12 @@ export default function ArchiveView({
                 .av-months { display: flex; flex-direction: column; gap: 0; }
 
                 .av-month-group {
-                    border-bottom: 1px solid var(--border-color);
+                    border-left: 3px solid transparent;
                     overflow: hidden;
+                    transition: border-left-color 80ms;
                 }
+                .av-month-group + .av-month-group { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+                .av-month-group:hover { border-left-color: var(--color-accent); }
 
                 .av-month-header {
                     display: flex; align-items: center; gap: 8px;
@@ -359,14 +362,14 @@ export default function ArchiveView({
                     border: none; cursor: pointer;
                     font-family: inherit; font-size: .82rem;
                     color: var(--color-text);
-                    transition: background .1s;
+                    transition: background 80ms;
                 }
                 .av-month-header:hover { background: var(--color-surface-hover); }
                 .av-month-header.expanded { background: var(--color-surface-hover); }
 
                 .av-month-arrow {
                     font-size: .55rem; color: var(--color-text-muted);
-                    transition: transform .15s ease;
+                    transition: transform 80ms ease;
                     flex-shrink: 0;
                 }
                 .av-month-arrow.open { transform: rotate(90deg); }
@@ -395,7 +398,11 @@ export default function ArchiveView({
                     gap: 6px; padding: 2.5rem 0;
                     color: var(--color-text-muted);
                 }
-                .av-empty-icon { opacity: .4; }
+                .av-empty::before {
+                    content: ''; display: block; width: 28px; height: 2px;
+                    background: var(--color-accent); margin-bottom: 4px;
+                }
+                .av-empty-icon { display: none; }
                 .av-empty-title { font-size: .92rem; font-weight: 500; color: var(--color-text-secondary); }
                 .av-empty-hint { font-size: .78rem; color: var(--color-text-disabled); }
                 .av-empty-sm { padding: 1rem 0; color: var(--color-text-muted); font-size: .82rem; }

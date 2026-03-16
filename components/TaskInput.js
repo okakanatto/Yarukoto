@@ -376,7 +376,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
           border: 1px solid var(--border-color);
           border-radius: var(--radius-md);
           padding: 14px 16px;
-          transition: border-color 0.15s;
+          transition: border-color 80ms;
         }
         .task-input-wrapper.expanded {
           border-color: var(--border-color-hover);
@@ -397,7 +397,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
           flex: 1; background: transparent; border: none;
           border-bottom: 1px solid var(--border-color); padding: 6px 2px;
           font-size: 0.95rem; color: var(--color-text); outline: none;
-          transition: border-color 0.15s; font-family: inherit;
+          transition: border-color 80ms; font-family: inherit;
         }
         .task-title-input::placeholder { color: var(--color-text-disabled); }
         .task-title-input:focus { border-bottom-color: var(--color-accent); }
@@ -405,7 +405,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
           width: 32px; height: 32px; border-radius: var(--radius-sm); border: none;
           background: var(--color-accent); color: white; font-size: 1.1rem;
           cursor: pointer; display: flex; align-items: center; justify-content: center;
-          transition: background 0.12s; flex-shrink: 0;
+          transition: background 80ms; flex-shrink: 0;
         }
         .btn-add:hover:not(:disabled) {
           background: var(--color-accent-hover);
@@ -439,7 +439,7 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
           background-color: var(--color-surface); border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 6px 8px;
           color: var(--color-text); font-family: inherit; font-size: 0.82rem;
-          transition: border-color 0.12s; outline: none; width: 100%;
+          transition: border-color 80ms; outline: none; width: 100%;
         }
         input:focus, select:focus, textarea:focus {
           border-color: var(--color-accent);
@@ -450,14 +450,14 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         .btn-collapse {
           background: transparent; border: 1px solid var(--border-color); color: var(--color-text-muted);
           cursor: pointer; font-size: 0.78rem; padding: 4px 10px;
-          border-radius: var(--radius-sm); transition: color 0.1s;
+          border-radius: var(--radius-sm); transition: color 80ms;
         }
         .btn-collapse:hover { color: var(--color-text); border-color: var(--border-color-hover); }
         .btn-submit {
           background: var(--color-accent); border: none; color: #fff;
           padding: 6px 16px; border-radius: var(--radius-sm);
           font-size: 0.82rem; font-weight: 600; cursor: pointer;
-          transition: background 0.12s; font-family: inherit;
+          transition: background 80ms; font-family: inherit;
         }
         .btn-submit:hover:not(:disabled) { background: var(--color-accent-hover); }
         .btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }

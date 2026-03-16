@@ -65,7 +65,7 @@ export default function BasecampStrip({ task }) {
                 .bc-chip {
                     font-size: 0.68rem; padding: 0.3rem 0.75rem;
                     border-radius: 3px; cursor: pointer;
-                    transition: all 0.15s; white-space: nowrap;
+                    transition: background 80ms, color 80ms, border-color 80ms; white-space: nowrap;
                     font-family: inherit; text-decoration: none;
                     display: inline-flex; align-items: center;
                     background: transparent; color: var(--color-text-muted);

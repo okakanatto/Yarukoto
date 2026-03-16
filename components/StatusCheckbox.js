@@ -84,7 +84,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     flex-shrink: 0;
                     font-size: 0.65rem;
                     color: transparent;
-                    transition: color 0.15s, background 0.15s, border-color 0.15s;
+                    transition: color 80ms, background 80ms, border-color 80ms;
                     position: relative;
                     overflow: visible;
                     padding: 0;
@@ -137,7 +137,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     align-items: center;
                     justify-content: center;
                     font-size: 0.45rem;
-                    transition: color 0.15s, background 0.15s;
+                    transition: color 80ms, background 80ms;
                     animation: statusCbFadeIn 0.15s ease;
                     flex-shrink: 0;
                     padding: 0;
@@ -158,7 +158,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     align-items: center;
                     justify-content: center;
                     font-size: 0.5rem;
-                    transition: color 0.15s, background 0.15s;
+                    transition: color 80ms, background 80ms;
                     animation: statusCbFadeIn 0.15s ease;
                     flex-shrink: 0;
                     padding: 0;

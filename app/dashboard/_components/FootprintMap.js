@@ -167,7 +167,7 @@ export default function FootprintMap({ heatmap }) {
                 }
                 .fm-cell {
                     width: 11px; height: 11px; border-radius: 2px;
-                    transition: transform 0.12s;
+                    transition: transform 80ms;
                 }
                 .fm-cell:not(.fm-cell-empty):not(.fm-cell-future):not(.fm-legend-cell):hover {
                     transform: scale(1.35);

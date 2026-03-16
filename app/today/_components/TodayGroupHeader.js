@@ -34,12 +34,13 @@ export default function TodayGroupHeader({ parentId, title, isManual }) {
           align-items: center;
           gap: 6px;
           padding: 6px 12px;
-          border-bottom: 1px solid var(--border-color);
+          border-left: 3px solid transparent;
           font-size: 0.78rem;
           touch-action: none;
-          animation: tcIn 0.2s ease both;
+          transition: background 80ms, border-left-color 80ms;
         }
-        .today-ghost-header:hover { background: var(--color-surface-hover); }
+        .today-ghost-header + .today-ghost-header { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+        .today-ghost-header:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
         .today-ghost-icon {
           flex-shrink: 0;
           color: var(--color-text-muted);
