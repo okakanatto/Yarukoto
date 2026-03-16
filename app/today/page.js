@@ -441,36 +441,44 @@ export default function TodayPage() {
         .today-date { font-size: 0.82rem; color: var(--color-text-muted); font-weight: 500; }
         .today-subtitle { color: var(--color-text-muted); font-size: 0.78rem; margin-top: -8px; }
 
-        /* Date Navigation Tabs */
+        /* Date Navigation Tabs — dot indicator */
         .date-tabs {
-          display: flex; gap: 0; margin-bottom: 16px;
-          border-bottom: 1px solid var(--border-color);
+          display: flex; gap: 0; margin-bottom: 20px;
           overflow-x: auto;
         }
         .date-tab {
           flex: 1; min-width: 0;
           display: flex; flex-direction: column; align-items: center;
-          gap: 1px; padding: 8px 4px;
+          gap: 2px; padding: 10px 4px 14px;
           border: none; background: transparent;
-          border-bottom: 2px solid transparent;
           cursor: pointer;
-          transition: all 0.12s; font-family: inherit;
-          margin-bottom: -1px;
+          transition: color 80ms; font-family: inherit;
+          position: relative;
         }
-        .date-tab:hover { background: var(--color-surface-hover); }
-        .date-tab.active {
-          border-bottom-color: var(--color-accent);
+        .date-tab:hover { color: var(--color-text); }
+        .date-tab.active::after {
+          content: '';
+          position: absolute;
+          bottom: 4px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: var(--color-accent);
         }
         .date-tab-label {
-          font-size: 0.78rem; font-weight: 600;
-          color: var(--color-text-secondary);
-        }
-        .date-tab.active .date-tab-label { color: var(--color-accent); font-weight: 700; }
-        .date-tab-wd {
-          font-size: 0.62rem; font-weight: 500;
+          font-size: 0.82rem; font-weight: 600;
           color: var(--color-text-muted);
         }
-        .date-tab.active .date-tab-wd { color: var(--color-accent); }
+        .date-tab.active .date-tab-label { color: var(--color-text); font-weight: 800; }
+        .date-tab-wd {
+          font-size: 0.62rem; font-weight: 500;
+          color: var(--color-text-disabled);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .date-tab.active .date-tab-wd { color: var(--color-text-secondary); }
         .date-tab.weekend .date-tab-wd { color: var(--color-danger); }
         .date-tab.weekend.active .date-tab-wd { color: var(--color-danger); }
 
@@ -498,12 +506,20 @@ export default function TodayPage() {
         .today-list { display: flex; flex-direction: column; gap: 0; }
         .today-placeholder { display: flex; align-items: center; gap: 6px; padding: 2rem 0; color: var(--color-text-muted); }
         .today-empty {
-          display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-          padding: 2.5rem 0; color: var(--color-text-muted);
+          display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+          padding: 3rem 0 2rem; color: var(--color-text-muted);
         }
-        .today-empty-icon { color: var(--color-text-disabled); opacity: 0.4; }
-        .today-empty-title { font-size: .92rem; font-weight: 500; color: var(--color-text-secondary); }
-        .today-empty-hint { font-size: 0.78rem; color: var(--color-text-disabled); }
+        .today-empty::before {
+          content: '';
+          display: block;
+          width: 28px;
+          height: 2px;
+          background: var(--color-accent);
+          margin-bottom: 4px;
+        }
+        .today-empty-icon { display: none; }
+        .today-empty-title { font-size: .88rem; font-weight: 600; color: var(--color-text-secondary); }
+        .today-empty-hint { font-size: 0.75rem; color: var(--color-text-disabled); }
 
         /* Sort mode toggle */
         .today-sort-toggle {

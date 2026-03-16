@@ -184,11 +184,11 @@ function LayoutInner({ children }) {
             <style jsx global>{`
                     .fab {
                         position: fixed;
-                        bottom: 24px;
-                        right: 24px;
-                        width: 44px;
-                        height: 44px;
-                        border-radius: var(--radius-md);
+                        bottom: 20px;
+                        right: 28px;
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 0;
                         border: none;
                         background: var(--color-accent);
                         color: #fff;
@@ -196,17 +196,15 @@ function LayoutInner({ children }) {
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        transition: background 0.15s, transform 0.15s;
+                        transition: background 80ms;
                         z-index: 1000;
                     }
                     .fab:hover {
                         background: var(--color-accent-hover);
-                        transform: translateY(-1px);
                     }
-                    .fab:active { transform: scale(0.95); }
+                    .fab:active { opacity: 0.85; }
                     .fab.fab-open {
-                        background: var(--color-text-secondary);
-                        transform: rotate(45deg);
+                        background: var(--color-text-muted);
                     }
                     .fab-icon {
                         line-height: 1;
@@ -229,19 +227,19 @@ function LayoutInner({ children }) {
 
                     .fab-modal {
                         position: fixed;
-                        bottom: calc(24px + 44px + 10px);
-                        right: 24px;
+                        bottom: calc(20px + 40px + 8px);
+                        right: 28px;
                         width: min(480px, calc(100vw - 48px));
-                        max-height: calc(100vh - 24px - 44px - 10px - 16px);
+                        max-height: calc(100vh - 20px - 40px - 8px - 16px);
                         display: flex;
                         flex-direction: column;
                         overflow: hidden;
                         background: var(--color-surface);
                         border: 1px solid var(--border-color);
-                        border-radius: var(--radius-md);
+                        border-radius: 0;
                         box-shadow: 0 4px 24px rgba(0,0,0,0.12);
                         z-index: 1001;
-                        animation: fabModalIn 0.2s ease;
+                        animation: fabModalIn 0.15s ease;
                         transform-origin: bottom right;
                     }
                     @keyframes fabModalIn {
@@ -300,8 +298,8 @@ function LayoutInner({ children }) {
 
                     .global-toast {
                         position: fixed;
-                        bottom: calc(24px + 44px + 10px);
-                        right: 24px;
+                        bottom: calc(20px + 40px + 8px);
+                        right: 28px;
                         padding: 8px 16px;
                         border-radius: var(--radius-sm);
                         font-size: 0.82rem;

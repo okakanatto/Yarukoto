@@ -393,10 +393,11 @@ export default function TaskList({ projectId = null }) {
             .tl-filter label { font-size:.75rem; color:var(--color-text-muted); font-weight:500; white-space:nowrap; }
             .tl-spin { display:inline-block; animation:spin .8s linear infinite; }
             .tl-items { display:flex; flex-direction:column; gap:0; }
-            .tl-placeholder { display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:2.5rem 0; color:var(--color-text-muted); }
-            .tl-empty-icon { color:var(--color-text-disabled); opacity:.4; }
-            .tl-empty-title { font-size:.92rem; font-weight:500; color:var(--color-text-secondary); }
-            .tl-empty-hint { font-size:.78rem; color:var(--color-text-disabled); }
+            .tl-placeholder { display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:3rem 0 2rem; color:var(--color-text-muted); }
+            .tl-placeholder.tl-empty::before { content:''; display:block; width:28px; height:2px; background:var(--color-accent); margin-bottom:4px; }
+            .tl-empty-icon { display:none; }
+            .tl-empty-title { font-size:.88rem; font-weight:600; color:var(--color-text-secondary); }
+            .tl-empty-hint { font-size:.75rem; color:var(--color-text-disabled); }
 
             .tl-unnest-gap {
                 position: relative;
@@ -435,24 +436,23 @@ export default function TaskList({ projectId = null }) {
             .tc-card {
               background: transparent;
               border: none;
-              border-bottom: 1px solid var(--border-color);
+              border-left: 3px solid transparent;
               border-radius: 0;
               overflow: hidden;
-              transition: background .12s;
-              animation: tcIn .2s ease both;
+              transition: background 80ms, border-left-color 80ms;
               position: relative; touch-action: none;
             }
+            .tc-card + .tc-card { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
             .tc-card.drag-over {
                 background: var(--color-accent-subtle);
-                border-left: 3px solid var(--color-accent);
+                border-left-color: var(--color-accent);
                 z-index: 10;
             }
-            @keyframes tcIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 
             .tc-card.dragging-source {
-                opacity: 0.2;
-                border-bottom-style: dashed;
-                border-bottom-color: var(--color-accent);
+                opacity: 0.15;
+                border-left-color: var(--color-accent);
+                border-left-style: dashed;
             }
             .tc-card.dragging-source > * { visibility: hidden; }
 
@@ -466,16 +466,16 @@ export default function TaskList({ projectId = null }) {
             }
 
             @keyframes dropSettle {
-                0% { background: var(--color-accent-subtle); }
-                100% { background: transparent; }
+                0% { background: var(--color-accent-subtle); border-left-color: var(--color-accent); }
+                100% { background: transparent; border-left-color: transparent; }
             }
-            .tc-card.drop-settle { animation: dropSettle 0.3s ease; }
+            .tc-card.drop-settle { animation: dropSettle 0.4s ease; }
 
-            .tc-card:hover { background: var(--color-surface-hover); }
-            .tc-card.done { opacity:.45; }
-            .tc-card.done:hover { opacity:.65; }
-            .tc-card.cancelled { opacity:.3; filter: grayscale(1); }
-            .tc-card.cancelled:hover { opacity:.5; filter: grayscale(0.7); }
+            .tc-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
+            .tc-card.done { opacity:.4; }
+            .tc-card.done:hover { opacity:.6; }
+            .tc-card.cancelled { opacity:.25; filter: grayscale(1); }
+            .tc-card.cancelled:hover { opacity:.45; filter: grayscale(0.7); }
 
             .tc-body { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; }
             .tc-handle {

@@ -92,19 +92,19 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-card {
           display: flex; align-items: center; gap: 10px;
           background: transparent; border: none;
-          border-bottom: 1px solid var(--border-color);
+          border-left: 3px solid transparent;
           padding: 10px 12px;
-          transition: background .12s;
-          animation: tcIn 0.2s ease both;
+          transition: background 80ms, border-left-color 80ms;
           touch-action: none;
         }
-        .today-card:hover { background: var(--color-surface-hover); }
-        .today-card.done { opacity: 0.45; }
-        .today-card.done:hover { opacity: 0.65; }
-        .today-card.archived { opacity: 0.35; }
-        .today-card.archived:hover { opacity: 0.5; }
-        .today-card.routine { border-left: 3px solid var(--color-accent); }
-        .today-card.picked { border-left: 3px solid var(--color-warning); }
+        .today-card + .today-card { border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
+        .today-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
+        .today-card.done { opacity: 0.4; }
+        .today-card.done:hover { opacity: 0.6; }
+        .today-card.archived { opacity: 0.3; }
+        .today-card.archived:hover { opacity: 0.45; }
+        .today-card.routine { border-left-color: var(--color-accent); }
+        .today-card.picked { border-left-color: var(--color-warning); }
 
         .today-card-info { flex: 1; min-width: 0; }
         .today-parent-label {
@@ -149,9 +149,9 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
         .today-remove:hover { color: var(--color-danger); }
 
         .today-card.dragging-source {
-          opacity: 0.2;
-          border-bottom-style: dashed;
-          border-bottom-color: var(--color-accent);
+          opacity: 0.15;
+          border-left-color: var(--color-accent);
+          border-left-style: dashed;
         }
         .today-card.dragging-source > * { visibility: hidden; }
         .today-ghost-header.dragging-source {
