@@ -60,10 +60,10 @@ export default function ColorPalette({ value, onChange }) {
         .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
         .swatch {
           width: 100%; aspect-ratio: 1; min-width: 22px; max-width: 30px;
-          border: 2px solid transparent; border-radius: var(--radius-sm);
-          cursor: pointer; transition: border-color 100ms; padding: 0;
+          border: 2px solid transparent; border-radius: var(--radius-pill);
+          cursor: pointer; transition: border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out); padding: 0;
         }
-        .swatch:hover { border-color: var(--color-text-muted); }
+        .swatch:hover { border-color: var(--color-text-muted); transform: scale(1.1); }
         .swatch.active {
           border-color: var(--color-text);
         }
@@ -71,9 +71,9 @@ export default function ColorPalette({ value, onChange }) {
         .toggle-custom {
           background: transparent; border: none;
           color: var(--color-text-muted); font-size: 0.72rem;
-          font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+          font-weight: 500;
           cursor: pointer; padding: 2px 0;
-          transition: color 100ms;
+          transition: color var(--duration-fast) var(--ease-out);
         }
         .toggle-custom:hover { color: var(--color-text); }
         .custom-picker {
@@ -82,12 +82,11 @@ export default function ColorPalette({ value, onChange }) {
         .color-input {
           width: 26px; height: 26px;
           border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); cursor: pointer; padding: 1px;
+          border-radius: var(--radius-pill); cursor: pointer; padding: 1px;
           background: transparent;
         }
         .color-hex {
-          font-size: 0.72rem; color: var(--color-text-muted); font-family: monospace;
-          text-transform: uppercase; letter-spacing: 0.05em;
+          font-size: 0.72rem; color: var(--color-text-secondary); font-family: monospace;
         }
       `}</style>
         </div>

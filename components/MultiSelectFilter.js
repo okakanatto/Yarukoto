@@ -101,11 +101,11 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                 .msf-wrap { position: relative; }
                 .msf-btn {
                     display: inline-flex; align-items: center; gap: 4px;
-                    padding: 5px 8px; border: 1px solid var(--border-color);
-                    border-radius: var(--radius-sm); background: var(--color-surface);
+                    padding: 5px 10px; border: 1px solid var(--border-color);
+                    border-radius: var(--radius-pill); background: var(--color-surface);
                     color: var(--color-text-secondary); font-size: 0.72rem;
-                    font-weight: 700; font-family: inherit; cursor: pointer;
-                    transition: background 100ms, border-color 100ms, color 100ms; white-space: nowrap;
+                    font-weight: 500; font-family: inherit; cursor: pointer;
+                    transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out); white-space: nowrap;
                 }
                 .msf-btn:hover {
                     border-color: var(--border-color-hover);
@@ -119,29 +119,29 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                 .msf-count {
                     display: inline-flex; align-items: center; justify-content: center;
                     min-width: 15px; height: 15px; padding: 0 3px;
-                    border-radius: var(--radius-sm); background: rgba(255,255,255,0.3);
-                    color: #fff; font-size: 0.62rem; font-weight: 700; line-height: 1;
+                    border-radius: var(--radius-pill); background: rgba(255,255,255,0.3);
+                    color: #fff; font-size: 0.62rem; font-weight: 500; line-height: 1;
                 }
                 .msf-btn:not(.filtered) .msf-count {
                     background: var(--color-accent); color: #fff;
                 }
                 .msf-arrow {
                     font-size: 0.65rem; color: var(--color-text-muted);
-                    transition: transform 100ms;
+                    transition: transform var(--duration-fast) var(--ease-out);
                 }
                 .msf-btn.filtered .msf-arrow { color: rgba(255,255,255,0.7); }
                 .msf-arrow.up { transform: rotate(180deg); }
                 .msf-panel {
                     position: absolute; top: calc(100% + 4px); left: 0;
                     min-width: 180px; max-height: 280px; overflow-y: auto;
-                    background: var(--color-surface); border: 1px solid var(--border-color);
-                    border-radius: var(--radius-md); box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    background: var(--color-surface); border: none;
+                    border-radius: var(--radius-md); box-shadow: var(--shadow-md);
                     z-index: 100; padding: 4px 0;
                 }
                 .msf-item {
                     display: flex; align-items: center; gap: 5px;
-                    padding: 5px 8px; cursor: pointer;
-                    transition: background 100ms; font-size: 0.8rem;
+                    padding: 6px 10px; cursor: pointer;
+                    transition: background var(--duration-fast) var(--ease-out); font-size: 0.8rem;
                     color: var(--color-text); user-select: none;
                 }
                 .msf-item:hover { background: var(--color-surface-hover); }
@@ -150,7 +150,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
                     width: 15px; height: 15px; border: 1.5px solid var(--border-color);
                     border-radius: var(--radius-sm); flex-shrink: 0;
                     display: flex; align-items: center; justify-content: center;
-                    transition: background 100ms, border-color 100ms; background: var(--color-surface);
+                    transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out); background: var(--color-surface);
                 }
                 .msf-item input:checked + .msf-check {
                     background: var(--color-accent); border-color: var(--color-accent);

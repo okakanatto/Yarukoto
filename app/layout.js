@@ -1,6 +1,6 @@
 'use client';
 
-import { Inter, Outfit } from 'next/font/google';
+import { DM_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -9,13 +9,13 @@ import Sidebar from '@/components/Sidebar';
 import { fetchDb } from '@/lib/utils';
 import { Plus, X, CircleCheck, XCircle } from 'lucide-react';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
+const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-sans-loaded' });
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-heading-loaded' });
 
 export default function RootLayout({ children }) {
     return (
         <html lang="ja" suppressHydrationWarning>
-            <body className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
+            <body className={`${dmSans.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
                 <Suspense fallback={null}>
                     <LayoutInner>{children}</LayoutInner>
                 </Suspense>
@@ -186,9 +186,9 @@ function LayoutInner({ children }) {
                         position: fixed;
                         bottom: 20px;
                         right: 28px;
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 0;
+                        width: 44px;
+                        height: 44px;
+                        border-radius: var(--radius-pill);
                         border: none;
                         background: var(--color-accent);
                         color: #fff;
@@ -196,11 +196,13 @@ function LayoutInner({ children }) {
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        transition: background 100ms;
+                        transition: background 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
                         z-index: 1000;
+                        box-shadow: var(--shadow-card);
                     }
                     .fab:hover {
                         background: var(--color-accent-hover);
+                        box-shadow: var(--shadow-card-hover);
                     }
                     .fab:active { opacity: 0.85; }
                     .fab.fab-open {
@@ -218,7 +220,7 @@ function LayoutInner({ children }) {
                         inset: 0;
                         background: rgba(0, 0, 0, 0.2);
                         z-index: 999;
-                        animation: fabBdIn 0.15s ease;
+                        animation: fabBdIn 0.15s var(--ease-out);
                     }
                     @keyframes fabBdIn {
                         from { opacity: 0; }
@@ -227,19 +229,19 @@ function LayoutInner({ children }) {
 
                     .fab-modal {
                         position: fixed;
-                        bottom: calc(20px + 40px + 8px);
+                        bottom: calc(20px + 44px + 8px);
                         right: 28px;
                         width: min(480px, calc(100vw - 48px));
-                        max-height: calc(100vh - 20px - 40px - 8px - 16px);
+                        max-height: calc(100vh - 20px - 44px - 8px - 16px);
                         display: flex;
                         flex-direction: column;
                         overflow: hidden;
                         background: var(--color-surface);
                         border: 1px solid var(--border-color);
-                        border-radius: var(--radius-md);
-                        box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+                        border-radius: var(--radius-lg);
+                        box-shadow: var(--shadow-lg);
                         z-index: 1001;
-                        animation: fabModalIn 0.15s ease;
+                        animation: fabModalIn 0.15s var(--ease-out);
                         transform-origin: bottom right;
                     }
                     @keyframes fabModalIn {
@@ -255,11 +257,9 @@ function LayoutInner({ children }) {
                         border-bottom: 1px solid var(--border-color);
                     }
                     .fab-modal-title {
-                        font-size: 0.72rem;
-                        font-weight: 700;
+                        font-size: 0.82rem;
+                        font-weight: 600;
                         color: var(--color-text-secondary);
-                        letter-spacing: 0.05em;
-                        text-transform: uppercase;
                     }
                     .fab-modal-close {
                         background: transparent;
@@ -272,7 +272,7 @@ function LayoutInner({ children }) {
                         align-items: center;
                         justify-content: center;
                         border-radius: var(--radius-sm);
-                        transition: color 100ms;
+                        transition: color 120ms var(--ease-out);
                     }
                     .fab-modal-close:hover {
                         color: var(--color-text);
@@ -280,7 +280,7 @@ function LayoutInner({ children }) {
 
                     .fab-modal .task-input-wrapper {
                         border: none;
-                        border-radius: 0 0 var(--radius-md) var(--radius-md);
+                        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
                         box-shadow: none;
                         padding: 12px 16px 16px;
                         background: transparent;
@@ -298,14 +298,14 @@ function LayoutInner({ children }) {
 
                     .global-toast {
                         position: fixed;
-                        bottom: calc(20px + 40px + 8px);
+                        bottom: calc(20px + 44px + 8px);
                         right: 28px;
                         padding: 8px 16px;
-                        border-radius: var(--radius-sm);
+                        border-radius: var(--radius-md);
                         font-size: 0.82rem;
                         font-weight: 500;
                         z-index: 10000;
-                        animation: gtIn 0.2s ease;
+                        animation: gtIn 0.2s var(--ease-out);
                         white-space: nowrap;
                         display: flex;
                         align-items: center;

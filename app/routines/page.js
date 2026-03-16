@@ -218,73 +218,73 @@ export default function RoutinesPage() {
             {toast && <div className={`rt-toast ${toast.type === 'ok' ? 'rt-toast-ok' : 'rt-toast-err'}`}>{toast.type === 'ok' ? <CircleCheck size={16} /> : <XCircle size={16} />} {toast.msg}</div>}
 
             <style jsx>{`
-        .rt-page { max-width: 800px; margin: 0 auto; animation: slideUp 0.4s ease; }
+        .rt-page { max-width: 800px; margin: 0 auto; animation: slideUp 0.4s var(--ease-out); }
         .rt-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .rt-sub { color: var(--color-text-muted); font-size: 0.78rem; margin-top: 0.15rem; }
 
         .rt-btn-add {
             background: var(--color-accent); color: #fff; border: none;
-            padding: 6px 14px; border-radius: var(--radius-sm);
+            padding: 6px 14px; border-radius: var(--radius-pill);
             font-size: 0.82rem; font-weight: 600; cursor: pointer;
-            transition: filter 100ms;
+            transition: filter 120ms var(--ease-out);
         }
         .rt-btn-add:hover { filter: brightness(1.1); }
 
-        /* Tabs — filled active */
-        .rt-tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+        /* Tabs — pill container */
+        .rt-tabs {
+            display: flex; gap: 2px; margin-bottom: 14px;
+            background: var(--color-surface-hover); border-radius: var(--radius-pill); padding: 3px;
+        }
         .rt-tab {
             background: transparent; border: none; padding: 6px 12px;
             color: var(--color-text-muted); font-weight: 500; cursor: pointer;
-            transition: background 100ms, color 100ms; font-size: 0.82rem;
-            border-radius: var(--radius-md); font-family: inherit;
+            transition: all 120ms var(--ease-out); font-size: 0.82rem;
+            border-radius: var(--radius-pill); font-family: inherit;
         }
-        .rt-tab:hover { background: var(--color-surface-hover); color: var(--color-text); }
-        .rt-tab.active { background: var(--color-accent); color: #fff; font-weight: 700; }
+        .rt-tab:hover { color: var(--color-text); }
+        .rt-tab.active { background: var(--color-surface); color: var(--color-text); font-weight: 600; box-shadow: var(--shadow-sm); }
 
         /* List */
-        .rt-list { display: flex; flex-direction: column; gap: 0; }
+        .rt-list { display: flex; flex-direction: column; gap: 6px; }
         .rt-card {
-            background: transparent; border: none;
-            border-left: 4px solid var(--border-color);
-            border-radius: 0; padding: 10px 12px;
+            background: var(--color-surface);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-card);
+            padding: 12px 16px;
             display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; transition: background 100ms, border-left-color 100ms;
+            cursor: pointer; transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
         }
-        .rt-card + .rt-card { border-top: 1px solid var(--border-color); }
-        .rt-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
-        .rt-card.disabled { opacity: 0.5; }
-        .rt-card.disabled:hover { opacity: 0.7; }
+        .rt-card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
+        .rt-card.disabled { opacity: 0.45; }
+        .rt-card.disabled:hover { opacity: 0.6; }
         .rt-card-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
         .rt-card-main { display: flex; align-items: center; gap: 6px; }
-        .rt-card-title { font-weight: 600; color: var(--color-text); font-size: 0.88rem; }
+        .rt-card-title { font-weight: 500; color: var(--color-text); font-size: 0.875rem; }
         .rt-freq-badge {
             font-size: 0.7rem; color: var(--color-text-secondary); background: var(--color-surface-hover);
-            padding: 1px 6px; border-radius: var(--radius-sm);
+            padding: 1px 6px; border-radius: var(--radius-pill); font-weight: 500;
         }
         .rt-card-meta { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-        .rt-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6rem; font-weight: 600; padding: 1px 5px; border-radius: var(--radius-sm); background: var(--color-surface-hover); color: var(--color-text-secondary); }
+        .rt-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.68rem; font-weight: 500; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--color-surface-hover); color: var(--color-text-secondary); }
         .rt-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-        .rt-meta-item { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+        .rt-meta-item { font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 500; }
         .rt-end-date { color: var(--color-warning); }
 
         .rt-toolbar {
             display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-            margin-bottom: 14px; padding: 8px 14px;
+            margin-bottom: 14px; padding: 12px 16px;
             background: var(--color-surface); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-card);
         }
         .rt-project-badge {
             display: inline-flex; align-items: center; gap: 3px;
-            font-size: .6rem; font-weight: 600; padding: 1px 5px;
-            border-radius: var(--radius-sm); border: 1px solid; white-space: nowrap;
+            font-size: .68rem; font-weight: 500; padding: 2px 8px;
+            border-radius: var(--radius-pill); border: 1px solid; white-space: nowrap;
         }
         .rt-project-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-        .rt-empty { text-align: left; padding: 1.5rem 0; color: var(--color-text-muted); display: flex; flex-direction: column; align-items: flex-start; }
-        .rt-empty::before {
-            content: ''; display: block; width: 32px; height: 3px;
-            background: var(--color-accent); margin-bottom: 8px;
-        }
-        .rt-empty-icon { display: none; }
+        .rt-empty { text-align: center; padding: 1.5rem 0; color: var(--color-text-muted); display: flex; flex-direction: column; align-items: center; }
+        .rt-empty-icon { color: var(--color-text-disabled); margin-bottom: 4px; }
         .rt-empty-title { font-size: 0.88rem; font-weight: 500; color: var(--color-text-secondary); }
         .rt-empty-hint { font-size: 0.78rem; color: var(--color-text-disabled); margin-top: 2px; }
 
@@ -292,7 +292,7 @@ export default function RoutinesPage() {
         .rt-switch {
             position: relative; width: 40px; height: 24px;
             border-radius: 12px; border: none; cursor: pointer;
-            transition: background 100ms; flex-shrink: 0;
+            transition: background 120ms var(--ease-out); flex-shrink: 0;
             padding: 0;
         }
         .rt-switch.on { background: var(--color-accent); }
@@ -300,12 +300,12 @@ export default function RoutinesPage() {
         .rt-switch .rt-switch-knob {
             position: absolute; top: 2px; width: 20px; height: 20px;
             border-radius: 50%; background: #fff;
-            transition: left 100ms cubic-bezier(0.4, 0, 0.2, 1);
+            transition: left 120ms cubic-bezier(0.4, 0, 0.2, 1);
         }
         .rt-switch.on .rt-switch-knob { left: 18px; }
         .rt-switch.off .rt-switch-knob { left: 2px; }
 
-        .rt-toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.78rem; z-index: 3000; font-weight: 500; animation: slideUp 0.3s; }
+        .rt-toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 6px 12px; border-radius: var(--radius-md); font-size: 0.78rem; z-index: 3000; font-weight: 500; animation: slideUp 0.3s; }
         .rt-toast-ok { background: var(--toast-success-bg); color: var(--toast-success-text); border: 1px solid var(--toast-success-border); }
         .rt-toast-err { background: var(--toast-error-bg); color: var(--toast-error-text); border: 1px solid var(--toast-error-border); }
             `}</style>

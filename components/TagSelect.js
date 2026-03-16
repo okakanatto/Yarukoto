@@ -122,22 +122,23 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           display: flex; align-items: center; gap: 6px;
           background: var(--color-surface); border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 5px 8px;
-          cursor: pointer; min-height: 34px; transition: border-color 100ms;
+          cursor: pointer; min-height: 34px; transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
         }
         .ts-trigger:hover { border-color: var(--border-color-hover); }
         .ts-trigger:focus {
           outline: none; border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px var(--color-accent-subtle);
         }
         .ts-pills { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
         .ts-placeholder { color: var(--color-text-disabled); font-size: 0.82rem; }
         .ts-pill {
           display: inline-flex; align-items: center; gap: 4px;
-          font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
-          border-radius: var(--radius-sm); color: white;
+          font-size: 0.68rem; font-weight: 500; padding: 2px 8px;
+          border-radius: var(--radius-pill); color: white;
         }
         .ts-pill-x {
           background: none; border: none; color: rgba(255,255,255,0.7);
-          cursor: pointer; font-size: 0.75rem; padding: 0; line-height: 1; transition: color 100ms;
+          cursor: pointer; font-size: 0.75rem; padding: 0; line-height: 1; transition: color var(--duration-fast) var(--ease-out);
         }
         .ts-pill-x:hover { color: white; }
         .ts-pill-archived { opacity: 0.6; }
@@ -146,9 +147,9 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
         .ts-dropdown {
           position: absolute; top: calc(100% + 4px); left: 0; right: 0;
           z-index: 100; background: var(--color-surface);
-          border: 1px solid var(--border-color);
+          border: none;
           border-radius: var(--radius-md);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          box-shadow: var(--shadow-md);
           overflow: hidden;
         }
 
@@ -158,9 +159,9 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
           border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 5px 8px;
           color: var(--color-text); font-size: 0.82rem; outline: none;
-          transition: border-color 100ms; font-family: inherit;
+          transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out); font-family: inherit;
         }
-        .ts-search:focus { border-color: var(--color-accent); }
+        .ts-search:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
         .ts-search::placeholder { color: var(--color-text-disabled); }
 
         .ts-options { max-height: 200px; overflow-y: auto; padding: 4px; }
@@ -170,18 +171,18 @@ export default function TagSelect({ allTags, selectedTagIds, onChange }) {
         .ts-option {
           display: flex; align-items: center; gap: 6px;
           width: 100%; background: transparent; border: none;
-          padding: 5px 8px; color: var(--color-text); cursor: pointer;
+          padding: 6px 8px; color: var(--color-text); cursor: pointer;
           border-radius: var(--radius-sm); font-size: 0.82rem; text-align: left;
-          transition: background 100ms; font-family: inherit;
+          transition: background var(--duration-fast) var(--ease-out); font-family: inherit;
         }
         .ts-option:hover { background: var(--color-surface-hover); }
         .ts-option.selected { background: var(--color-accent-subtle); }
         .ts-opt-color { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
         .ts-opt-name { flex: 1; font-weight: 500; }
-        .ts-check { color: var(--color-accent); font-weight: 700; font-size: 0.82rem; }
+        .ts-check { color: var(--color-accent); font-weight: 500; font-size: 0.82rem; }
 
         .ts-no-results {
-          padding: 10px; text-align: center; color: var(--color-text-muted); font-size: 0.82rem;
+          padding: 10px; text-align: center; color: var(--color-text-muted); font-size: 0.875rem;
         }
       `}</style>
         </div>

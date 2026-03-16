@@ -2,33 +2,30 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchDb } from '@/lib/utils';
-import { BarChart3, Sun, CircleCheckBig, ListTodo, Repeat, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BarChart3, Sun, CircleCheckBig, ListTodo, Repeat, Settings, ChevronDown } from 'lucide-react';
 
-const ICON_SIZE = 20;
+const ICON_SIZE = 17;
 const ICON_STROKE = 1.75;
 
-const navItemsTop = [
+const navItems = [
     { href: '/dashboard', label: 'ダッシュボード', icon: <BarChart3 size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
-    { href: '/today', label: '今日やるタスク', icon: <Sun size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+    { href: '/today', label: '今日やるタスク', icon: <Sun size={ICON_SIZE} strokeWidth={ICON_STROKE} />, showProgress: true },
     { href: '/done', label: 'やったタスク', icon: <CircleCheckBig size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
-    { href: '/tasks', label: 'タスク一覧', icon: <ListTodo size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
-];
-const navItemsBottom = [
+    { href: '/tasks', label: 'タスク一覧', icon: <ListTodo size={ICON_SIZE} strokeWidth={ICON_STROKE} />, hasProjects: true },
     { href: '/routines', label: 'ルーティン', icon: <Repeat size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
-    { href: '/settings', label: '設定', icon: <Settings size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
 ];
 
 export default function Sidebar({ mounted }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [isCollapsed, setIsCollapsed] = useState(false);
     const [todayProgress, setTodayProgress] = useState({ total: 0, completed: 0 });
     const [projects, setProjects] = useState([]);
-    const [projectsExpanded, setProjectsExpanded] = useState(true);
+    const [projectsOpen, setProjectsOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
-    // Fetch projects for sidebar
+    // Fetch projects
     const fetchProjects = useCallback(async () => {
         if (!mounted) return;
         try {
@@ -50,6 +47,7 @@ export default function Sidebar({ mounted }) {
         };
     }, [mounted, fetchProjects]);
 
+    // Fetch today progress
     const fetchTodayProgress = useCallback(async () => {
         if (!mounted) return;
         try {
@@ -99,7 +97,7 @@ export default function Sidebar({ mounted }) {
             });
 
             setTodayProgress({ total, completed });
-        } catch (e) { console.error("Tauri sidebar progress error:", e); }
+        } catch (e) { console.error("Tauri nav progress error:", e); }
     }, [mounted]);
 
     useEffect(() => {
@@ -109,94 +107,103 @@ export default function Sidebar({ mounted }) {
         return () => clearInterval(interval);
     }, [mounted, fetchTodayProgress, pathname]);
 
+    // Close projects dropdown on outside click
+    useEffect(() => {
+        if (!projectsOpen) return;
+        const handler = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setProjectsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [projectsOpen]);
+
+    // Close dropdown on navigation
+    useEffect(() => {
+        setProjectsOpen(false);
+    }, [pathname, searchParams]);
+
     return (
-        <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`} suppressHydrationWarning>
-            <div className="sidebar-header" suppressHydrationWarning>
-                <div className="logo" suppressHydrationWarning>
-                    <h1 suppressHydrationWarning>
-                        {isCollapsed ? 'Y' : 'Yarukoto'}
-                    </h1>
-                </div>
-                <button
-                    className="sidebar-toggle"
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    title={isCollapsed ? "サイドバーを開く" : "サイドバーをたたむ"}
-                    suppressHydrationWarning
-                >
-                    {isCollapsed
-                        ? <PanelLeftOpen size={18} strokeWidth={ICON_STROKE} />
-                        : <PanelLeftClose size={18} strokeWidth={ICON_STROKE} />
-                    }
-                </button>
+        <nav className="topnav" suppressHydrationWarning>
+            <div className="topnav-brand" suppressHydrationWarning>
+                <span className="topnav-logo" suppressHydrationWarning>Yarukoto</span>
             </div>
-            <ul className="nav-links" suppressHydrationWarning>
-                {navItemsTop.map(item => {
-                    const isTasksItem = item.href === '/tasks';
-                    const showProjects = isTasksItem && mounted && projects.length > 0 && !isCollapsed;
-                    const isTasksActive = pathname === item.href || (isTasksItem && pathname === '/projects');
+
+            <div className="topnav-items" suppressHydrationWarning>
+                {navItems.map(item => {
+                    const isTasksItem = item.hasProjects;
+                    const isActive = pathname === item.href || (isTasksItem && pathname === '/projects');
+                    const showProjectsTrigger = isTasksItem && mounted && projects.length > 0;
+
                     return (
-                        <li key={item.href} suppressHydrationWarning>
-                            <div className="nav-link-row" suppressHydrationWarning>
-                                <Link href={item.href} className={isTasksActive ? 'active' : ''} suppressHydrationWarning>
-                                    <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
-                                    <span className="nav-label" suppressHydrationWarning>{item.label}</span>
-                                </Link>
-                                {showProjects && (
-                                    <button
-                                        className="sidebar-projects-toggle"
-                                        onClick={() => setProjectsExpanded(!projectsExpanded)}
-                                        suppressHydrationWarning
-                                    >
-                                        <span className={`sidebar-projects-chev ${projectsExpanded ? 'open' : ''}`}>›</span>
-                                    </button>
+                        <div
+                            key={item.href}
+                            className="topnav-item-group"
+                            ref={isTasksItem ? dropdownRef : null}
+                            suppressHydrationWarning
+                        >
+                            <Link
+                                href={item.href}
+                                className={`topnav-item ${isActive ? 'active' : ''}`}
+                                suppressHydrationWarning
+                            >
+                                <span className="topnav-icon" suppressHydrationWarning>{item.icon}</span>
+                                <span className="topnav-label" suppressHydrationWarning>{item.label}</span>
+                                {item.showProgress && mounted && todayProgress.total > 0 && (
+                                    <span className="topnav-badge" suppressHydrationWarning>
+                                        {todayProgress.completed}/{todayProgress.total}
+                                    </span>
                                 )}
-                            </div>
-                            {showProjects && projectsExpanded && (
-                                <ul className="sidebar-projects-list" suppressHydrationWarning>
-                                    {projects.map(p => (
-                                        <li key={p.id} suppressHydrationWarning>
-                                            <Link
-                                                href={`/projects?id=${p.id}`}
-                                                className={pathname === '/projects' && searchParams.get('id') === String(p.id) ? 'active' : ''}
-                                                suppressHydrationWarning
-                                            >
-                                                <span className="sidebar-project-dot" style={{ backgroundColor: p.color }} suppressHydrationWarning />
-                                                <span className="nav-label" suppressHydrationWarning>{p.name}</span>
-                                            </Link>
-                                        </li>
-                                    ))}
-                                </ul>
+                            </Link>
+
+                            {showProjectsTrigger && (
+                                <button
+                                    className="topnav-dropdown-trigger"
+                                    onClick={() => setProjectsOpen(!projectsOpen)}
+                                    suppressHydrationWarning
+                                >
+                                    <ChevronDown size={12} style={{
+                                        transform: projectsOpen ? 'rotate(180deg)' : 'none',
+                                        transition: 'transform 150ms'
+                                    }} />
+                                </button>
                             )}
-                        </li>
+
+                            {isTasksItem && projectsOpen && projects.length > 0 && (
+                                <div className="topnav-dropdown" suppressHydrationWarning>
+                                    {projects.map(p => (
+                                        <Link
+                                            key={p.id}
+                                            href={`/projects?id=${p.id}`}
+                                            className={`topnav-dropdown-item ${pathname === '/projects' && searchParams.get('id') === String(p.id) ? 'active' : ''}`}
+                                            onClick={() => setProjectsOpen(false)}
+                                            suppressHydrationWarning
+                                        >
+                                            <span
+                                                className="topnav-project-dot"
+                                                style={{ backgroundColor: p.color }}
+                                                suppressHydrationWarning
+                                            />
+                                            {p.name}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     );
                 })}
-                {navItemsBottom.map(item => (
-                    <li key={item.href} suppressHydrationWarning>
-                        <Link href={item.href} className={pathname === item.href ? 'active' : ''} suppressHydrationWarning>
-                            <span className="nav-icon" suppressHydrationWarning>{item.icon}</span>
-                            <span className="nav-label" suppressHydrationWarning>{item.label}</span>
-                        </Link>
-                    </li>
-                ))}
-            </ul>
-            {mounted && todayProgress.total > 0 && (
-                <div className="sidebar-progress" suppressHydrationWarning>
-                    <div className="sidebar-progress-label" suppressHydrationWarning>
-                        <span>今日 {todayProgress.completed}/{todayProgress.total}</span>
-                        <span>{todayProgress.total > 0 ? Math.round((todayProgress.completed / todayProgress.total) * 100) : 0}%</span>
-                    </div>
-                    <div className="sidebar-progress-track" suppressHydrationWarning>
-                        <div
-                            className="sidebar-progress-fill"
-                            style={{
-                                width: `${todayProgress.total > 0 ? (todayProgress.completed / todayProgress.total) * 100 : 0}%`,
-                                background: todayProgress.completed === todayProgress.total ? 'var(--color-success)' : 'var(--color-accent)'
-                            }}
-                            suppressHydrationWarning
-                        />
-                    </div>
-                </div>
-            )}
+            </div>
+
+            <div className="topnav-right" suppressHydrationWarning>
+                <Link
+                    href="/settings"
+                    className={`topnav-item topnav-settings ${pathname === '/settings' ? 'active' : ''}`}
+                    suppressHydrationWarning
+                >
+                    <Settings size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+                </Link>
+            </div>
         </nav>
     );
 }

@@ -91,57 +91,53 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
             <style jsx global>{`
         .today-card {
           display: flex; align-items: center; gap: 10px;
-          background: transparent; border: none;
-          border-left: 4px solid var(--border-color);
-          padding: 10px 12px;
-          transition: background 100ms, border-left-color 100ms;
+          background: var(--color-surface); border-radius: var(--radius-md);
+          box-shadow: var(--shadow-card);
+          padding: 12px 16px;
+          transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
           touch-action: none;
         }
-        .today-card + .today-card { border-top: 1px solid var(--border-color); }
-        .today-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
-        .today-card.done { opacity: 0.35; }
-        .today-card.done:hover { opacity: 0.55; }
+        .today-card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
+        .today-card.done { opacity: 0.45; }
+        .today-card.done:hover { opacity: 0.6; }
         .today-card.archived { opacity: 0.3; }
         .today-card.archived:hover { opacity: 0.45; }
-        .today-card.routine { border-left-color: var(--color-accent); }
-        .today-card.picked { border-left-color: var(--color-warning); }
 
         .today-card-info { flex: 1; min-width: 0; }
         .today-parent-label {
           display: flex; align-items: center; gap: 3px;
-          font-size: 0.72rem; font-weight: 700;
-          color: var(--color-text-muted); margin-bottom: 1px;
-          letter-spacing: 0.05em; text-transform: uppercase;
+          font-size: 0.72rem; font-weight: 500;
+          color: var(--color-text-secondary); margin-bottom: 1px;
         }
         .today-card-title-row { display: flex; align-items: center; gap: 5px; }
         .today-routine-badge { font-size: 0.78rem; flex-shrink: 0; color: var(--color-text-muted); }
         .today-archived-badge { font-size: 0.72rem; flex-shrink: 0; opacity: 0.5; }
         .today-picked-badge { font-size: 0.78rem; flex-shrink: 0; }
-        .today-card-title { font-weight: 700; font-size: 0.92rem; color: var(--color-text); display: block; }
+        .today-card-title { font-weight: 500; font-size: 0.875rem; color: var(--color-text); display: block; }
         .today-card-title.strike { text-decoration: line-through; color: var(--color-text-disabled); }
-        .today-card-title.clickable { cursor: pointer; transition: color 100ms; }
+        .today-card-title.clickable { cursor: pointer; transition: color 120ms var(--ease-out); }
         .today-card-title.clickable:hover { color: var(--color-accent); }
         .today-card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
         .today-project-badge {
           display: inline-flex; align-items: center; gap: 4px;
-          font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
-          border-radius: var(--radius-sm); border: 1px solid;
+          font-size: 0.65rem; font-weight: 500; padding: 2px 8px;
+          border-radius: var(--radius-pill); border: 1px solid;
           white-space: nowrap;
         }
         .today-project-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-        .today-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--color-surface-hover); color: var(--color-text-secondary); }
+        .today-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.68rem; font-weight: 500; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--color-surface-hover); color: var(--color-text-secondary); }
         .today-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
         .today-meta-item {
-          font-size: 0.72rem; color: var(--color-text-muted); display: flex;
+          font-size: 0.72rem; color: var(--color-text-secondary); display: flex;
           align-items: center; gap: 3px;
-          text-transform: uppercase; letter-spacing: 0.05em;
+          font-weight: 500;
         }
 
-        .today-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity 100ms; }
+        .today-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity 120ms var(--ease-out); }
         .today-card:hover .today-card-actions { opacity: 1; }
         .today-status {
-          font-weight: 700; font-size: 0.72rem; padding: 3px 6px;
-          border-radius: var(--radius-sm); cursor: pointer; border: 1px solid;
+          font-weight: 600; font-size: 0.72rem; padding: 3px 6px;
+          border-radius: var(--radius-pill); cursor: pointer; border: 1px solid;
           background-color: transparent; font-family: inherit;
           opacity: 1 !important;
         }
@@ -149,20 +145,17 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
           background: transparent; border: none; color: var(--color-text-disabled);
           cursor: pointer; font-size: 0.72rem; width: 22px; height: 22px;
           display: flex; align-items: center; justify-content: center;
-          border-radius: var(--radius-sm); transition: color 100ms;
+          border-radius: var(--radius-sm); transition: color 120ms var(--ease-out);
         }
         .today-remove:hover { color: var(--color-danger); }
 
         .today-card.dragging-source {
           opacity: 0.15;
-          border-left-color: var(--color-accent);
-          border-left-style: dashed;
+          box-shadow: none;
         }
         .today-card.dragging-source > * { visibility: hidden; }
         .today-ghost-header.dragging-source {
           opacity: 0.2;
-          border-bottom-style: dashed;
-          border-bottom-color: var(--color-accent);
         }
         .today-ghost-header.dragging-source > * { visibility: hidden; }
 
@@ -170,22 +163,22 @@ export default function TodayCardItem({ task, isManual, isChild = false, statuse
           cursor: grabbing;
           background: var(--color-surface);
           border: 1px solid var(--color-accent);
-          border-radius: var(--radius-sm);
+          border-radius: var(--radius-md);
           opacity: 0.95;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+          box-shadow: var(--shadow-lg);
         }
 
         @keyframes dropSettleToday {
           0% { background: var(--color-accent-subtle); }
-          100% { background: transparent; }
+          100% { background: var(--color-surface); }
         }
-        .today-card.drop-settle-today { animation: dropSettleToday 0.3s ease; }
+        .today-card.drop-settle-today { animation: dropSettleToday 0.3s var(--ease-out); }
 
         .today-drag-handle {
           cursor: grab; color: var(--color-text-disabled);
           display: flex; align-items: center; justify-content: center;
           width: 16px; align-self: stretch; flex-shrink: 0;
-          opacity: 0; transition: opacity 100ms; user-select: none;
+          opacity: 0; transition: opacity 120ms var(--ease-out); user-select: none;
         }
         .today-card:hover .today-drag-handle, .today-ghost-header:hover .today-drag-handle { opacity: 0.4; }
         .today-drag-handle:hover { opacity: 1 !important; color: var(--color-text-muted); }

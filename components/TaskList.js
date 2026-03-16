@@ -361,12 +361,12 @@ export default function TaskList({ projectId = null }) {
 
             .tl-search {
               display: flex; align-items: center; gap: 8px;
-              padding: 6px 12px; margin-bottom: 10px;
-              background: var(--color-surface); border-radius: var(--radius-md);
+              padding: 8px 14px; margin-bottom: 10px;
+              background: var(--color-surface); border-radius: var(--radius-pill);
               border: 1px solid var(--border-color);
-              transition: border-color 100ms;
+              transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
             }
-            .tl-search:focus-within { border-color: var(--color-accent); }
+            .tl-search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
             .tl-search-icon { color: var(--color-text-disabled); flex-shrink: 0; }
             .tl-search-input {
               flex: 1; border: none; outline: none; background: transparent;
@@ -377,49 +377,47 @@ export default function TaskList({ projectId = null }) {
               background: none; border: none; cursor: pointer;
               color: var(--color-text-muted); font-size: .72rem;
               width: 20px; height: 20px; display: flex; align-items: center;
-              justify-content: center; border-radius: var(--radius-sm);
-              transition: color 100ms;
+              justify-content: center; border-radius: var(--radius-pill);
+              transition: color var(--duration-fast) var(--ease-out);
             }
             .tl-search-clear:hover { color: var(--color-text); }
             .tl-search-count {
-              font-size: 0.72rem; color: var(--color-text-muted);
-              padding: 2px 0; font-weight: 700;
-              text-transform: uppercase; letter-spacing: 0.05em;
+              font-size: 0.72rem; color: var(--color-text-secondary);
+              padding: 2px 0; font-weight: 500;
             }
             .tl-toolbar {
               display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
               margin-bottom: 14px; padding: 8px 14px;
               background: var(--color-surface); border-radius: var(--radius-md);
+              box-shadow: var(--shadow-card);
             }
             .tl-filter { display: flex; align-items: center; gap: 4px; }
             .tl-filter label {
-              font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700;
-              white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em;
+              font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 500;
+              white-space: nowrap;
             }
             .tl-spin { display: inline-block; animation: spin .8s linear infinite; }
-            .tl-items { display: flex; flex-direction: column; gap: 0; }
+            .tl-items { display: flex; flex-direction: column; gap: 6px; }
             .tl-placeholder {
-              display: flex; flex-direction: column; align-items: flex-start;
+              display: flex; flex-direction: column; align-items: center;
               gap: 8px; padding: 3rem 0 2rem; color: var(--color-text-muted);
             }
-            .tl-placeholder.tl-empty::before {
-              content: ''; display: block; width: 32px; height: 3px;
-              background: var(--color-accent); margin-bottom: 8px;
-            }
+            .tl-placeholder.tl-empty::before { display: none; }
             .tl-empty-icon { display: none; }
-            .tl-empty-title { font-size: 0.92rem; font-weight: 700; color: var(--color-text-secondary); }
-            .tl-empty-hint { font-size: 0.72rem; color: var(--color-text-disabled); text-transform: uppercase; letter-spacing: 0.05em; }
+            .tl-empty-title { font-size: 0.875rem; color: var(--color-text-muted); }
+            .tl-empty-hint { font-size: 0.875rem; color: var(--color-text-muted); }
 
             .tl-unnest-gap {
                 position: relative;
                 padding: 4px 0;
-                transition: padding 100ms;
+                transition: padding var(--duration-fast) var(--ease-out);
             }
             .tl-unnest-gap-line {
                 height: 2px;
                 background: var(--color-accent);
                 opacity: 0.2;
-                transition: opacity 100ms;
+                border-radius: var(--radius-pill);
+                transition: opacity var(--duration-fast) var(--ease-out);
             }
             .tl-unnest-gap.drag-over {
                 padding: 6px 0;
@@ -434,67 +432,65 @@ export default function TaskList({ projectId = null }) {
                 top: 50%;
                 transform: translate(-50%, -50%);
                 font-size: 0.65rem;
-                font-weight: 700;
+                font-weight: 500;
                 color: var(--color-accent);
                 background: var(--color-background);
                 padding: 1px 8px;
-                border-radius: var(--radius-sm);
+                border-radius: var(--radius-pill);
                 border: 1px solid var(--color-accent);
                 white-space: nowrap;
-                text-transform: uppercase; letter-spacing: 0.05em;
             }
 
             /* ---- Task Card ---- */
             .tc-card {
-              background: transparent;
+              background: var(--color-surface);
               border: none;
-              border-left: 4px solid var(--border-color);
-              border-radius: 0;
+              border-radius: var(--radius-md);
+              box-shadow: var(--shadow-card);
               overflow: hidden;
-              transition: background 100ms, border-left-color 100ms;
+              transition: box-shadow var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
               position: relative; touch-action: none;
+              padding: 0;
             }
-            .tc-card + .tc-card { border-top: 1px solid var(--border-color); }
+            .tc-card + .tc-card { border-top: none; }
             .tc-card.drag-over {
-                background: var(--color-accent-subtle);
-                border-left-color: var(--color-accent);
+                box-shadow: 0 0 0 2px var(--color-accent), var(--shadow-card);
                 z-index: 10;
             }
 
             .tc-card.dragging-source {
                 opacity: 0.15;
-                border-left-color: var(--color-accent);
-                border-left-style: dashed;
+                box-shadow: none;
             }
             .tc-card.dragging-source > * { visibility: hidden; }
 
             .tc-card.dnd-overlay {
                 cursor: grabbing;
                 background: var(--color-surface);
-                border: 1px solid var(--color-accent);
-                border-radius: var(--radius-sm);
+                border: none;
+                border-radius: var(--radius-md);
                 opacity: 0.95;
-                box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+                box-shadow: var(--shadow-lg);
             }
 
             @keyframes dropSettle {
-                0% { background: var(--color-accent-subtle); border-left-color: var(--color-accent); }
-                100% { background: transparent; border-left-color: var(--border-color); }
+                0% { box-shadow: 0 0 0 2px var(--color-accent), var(--shadow-card); }
+                100% { box-shadow: var(--shadow-card); }
             }
             .tc-card.drop-settle { animation: dropSettle 0.4s ease; }
 
-            .tc-card:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
+            .tc-card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
             .tc-card.done { opacity: 0.35; }
             .tc-card.done:hover { opacity: 0.55; }
             .tc-card.cancelled { opacity: 0.2; filter: grayscale(1); }
             .tc-card.cancelled:hover { opacity: 0.4; filter: grayscale(0.7); }
 
-            .tc-body { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; }
+            .tc-body { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; }
             .tc-handle {
                 cursor: grab; color: var(--color-text-disabled);
                 display: flex; align-items: center; justify-content: center;
                 width: 16px; align-self: stretch;
-                opacity: 0; transition: opacity 100ms;
+                opacity: 0; transition: opacity var(--duration-fast) var(--ease-out);
                 user-select: none; flex-shrink: 0;
             }
             .tc-card:hover .tc-handle { opacity: 0.4; }
@@ -505,33 +501,32 @@ export default function TaskList({ projectId = null }) {
               background: none; border: none; color: var(--color-text-muted); cursor: pointer;
               width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center;
               justify-content: center; border-radius: var(--radius-sm); margin-top: 1px;
-              transition: color 100ms;
+              transition: color var(--duration-fast) var(--ease-out);
             }
             .tc-toggle:hover { color: var(--color-text); }
-            .tc-chev-icon { transition: transform 100ms; }
+            .tc-chev-icon { transition: transform var(--duration-fast) var(--ease-out); }
             .tc-chev-icon.open { transform: rotate(90deg); }
 
-            .tc-info { flex: 1; min-width: 0; cursor: pointer; padding: 1px 4px; border-radius: var(--radius-sm); transition: background 100ms; }
+            .tc-info { flex: 1; min-width: 0; cursor: pointer; padding: 1px 4px; border-radius: var(--radius-sm); transition: background var(--duration-fast) var(--ease-out); }
             .tc-info:hover { background: transparent; }
             .tc-parent-label {
-              display: block; font-size: 0.72rem; font-weight: 700;
-              color: var(--color-text-muted); margin-bottom: 1px;
-              letter-spacing: 0.05em; text-transform: uppercase;
+              display: block; font-size: 0.72rem; font-weight: 500;
+              color: var(--color-text-secondary); margin-bottom: 1px;
             }
             .tc-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
-            .tc-title { font-weight: 700; font-size: 0.92rem; color: var(--color-text); line-height: 1.4; }
+            .tc-title { font-weight: 500; font-size: 0.875rem; color: var(--color-text); line-height: 1.4; }
             .tc-title.strike { text-decoration: line-through; color: var(--color-text-disabled); }
             .tc-project-badge {
               display: inline-flex; align-items: center; gap: 4px;
-              font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
-              border-radius: var(--radius-sm);
+              font-size: 0.68rem; font-weight: 500; padding: 2px 8px;
+              border-radius: var(--radius-pill);
               background: var(--color-surface-hover); color: var(--color-text-secondary);
               border: none; white-space: nowrap;
             }
             .tc-project-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
             .tc-tag {
-              font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
-              border-radius: var(--radius-sm);
+              font-size: 0.68rem; font-weight: 500; padding: 2px 8px;
+              border-radius: var(--radius-pill);
               background: var(--color-surface-hover); color: var(--color-text-secondary);
               display: inline-flex; align-items: center; gap: 4px;
             }
@@ -539,28 +534,28 @@ export default function TaskList({ projectId = null }) {
 
             .tc-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1px; }
             .tc-meta-item {
-              font-size: 0.72rem; color: var(--color-text-muted); display: flex;
-              align-items: center; gap: 3px; white-space: nowrap;
+              font-size: 0.72rem; color: var(--color-text-secondary); display: flex;
+              align-items: center; gap: 3px; white-space: nowrap; font-weight: 500;
             }
             .tc-meta-item svg { flex-shrink: 0; }
-            .tc-badge { font-size: 0.6rem; font-weight: 700; padding: 0 5px; border-radius: var(--radius-sm); margin-left: 2px; }
+            .tc-badge { font-size: 0.6rem; font-weight: 500; padding: 0 5px; border-radius: var(--radius-pill); margin-left: 2px; }
             .tc-badge-danger  { background: var(--color-danger-bg); color: var(--color-danger); }
             .tc-badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
             .tc-badge-info    { background: var(--color-accent-subtle); color: var(--color-accent); }
 
-            .tc-actions { display: flex; gap: 2px; flex-shrink: 0; align-items: center; margin-top: 1px; opacity: 0; transition: opacity 100ms; }
+            .tc-actions { display: flex; gap: 2px; flex-shrink: 0; align-items: center; margin-top: 1px; opacity: 0; transition: opacity var(--duration-fast) var(--ease-out); }
             .tc-card:hover .tc-actions { opacity: 1; }
             .tc-status-select {
-              font-weight: 700; font-size: 0.72rem;
+              font-weight: 500; font-size: 0.72rem;
               padding: 3px 6px;
-              border-radius: var(--radius-sm); cursor: pointer;
+              border-radius: var(--radius-pill); cursor: pointer;
               opacity: 1 !important;
             }
             .tc-act-btn {
               background: transparent; border: none;
               color: var(--color-text-disabled); cursor: pointer;
               width: 26px; height: 26px; display: flex; align-items: center;
-              justify-content: center; border-radius: var(--radius-sm); transition: color 100ms;
+              justify-content: center; border-radius: var(--radius-pill); transition: color var(--duration-fast) var(--ease-out);
             }
             .tc-act-btn:hover { color: var(--color-text); }
             .tc-act-btn.danger:hover { color: var(--color-danger); }
@@ -569,36 +564,38 @@ export default function TaskList({ projectId = null }) {
             .tc-archive-btn:hover { color: #b45309; }
             .tc-restore-btn { opacity: 1 !important; }
             .tc-restore-btn:hover { color: var(--color-accent); }
-            .tc-status-label { font-size: 0.72rem; font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
+            .tc-status-label { font-size: 0.72rem; font-weight: 500; white-space: nowrap; }
 
             .tc-act-btn:disabled { opacity: 0.3; cursor: not-allowed; }
             .tc-status-select:disabled { opacity: 0.3; cursor: not-allowed; }
 
             /* Archive Tabs */
             .tl-archive-tabs {
-              display: flex; gap: 4px; margin-bottom: 12px;
-              padding: 0;
+              display: inline-flex; gap: 0; margin-bottom: 12px;
+              padding: 3px; background: var(--color-surface-hover);
+              border-radius: var(--radius-pill);
             }
             .tl-archive-tab {
               padding: 6px 14px; border: none;
               background: transparent; color: var(--color-text-muted);
               font-size: 0.82rem; font-weight: 500;
-              cursor: pointer; transition: background 100ms, color 100ms;
+              cursor: pointer; transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
               font-family: inherit;
               display: flex; align-items: center; gap: 5px;
-              border-radius: var(--radius-md);
+              border-radius: var(--radius-pill);
             }
-            .tl-archive-tab:hover { color: var(--color-text); background: var(--color-surface-hover); }
+            .tl-archive-tab:hover { color: var(--color-text); }
             .tl-archive-tab.active {
-              background: var(--color-accent); color: #fff; font-weight: 700;
-              border-radius: var(--radius-md);
+              background: var(--color-surface); color: var(--color-text); font-weight: 500;
+              box-shadow: var(--shadow-sm);
+              border-radius: var(--radius-pill);
             }
 
             /* Sort mode toggle */
             .tl-sort-toggle {
               padding: 4px 10px; border: 1px solid var(--border-color);
-              border-radius: var(--radius-sm); font-size: 0.72rem; font-weight: 700;
-              cursor: pointer; transition: background 100ms, color 100ms, border-color 100ms;
+              border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 500;
+              cursor: pointer; transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
               font-family: inherit;
               background: transparent; color: var(--color-text-muted);
               white-space: nowrap;
@@ -609,7 +606,7 @@ export default function TaskList({ projectId = null }) {
             }
             .tl-sort-toggle.active:hover { background: var(--color-accent-hover); }
 
-            .tc-sub-input { padding: 0 12px 10px 36px; }
+            .tc-sub-input { padding: 0 16px 12px 36px; }
             .tc-children { margin-left: 28px; padding: 2px 0 6px 0; border-left: 2px solid var(--border-color); }
           `}</style>
             </div>

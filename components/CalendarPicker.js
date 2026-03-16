@@ -213,19 +213,20 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
           display: flex; align-items: center; gap: 6px;
           background: var(--color-surface); border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 6px 8px;
-          cursor: pointer; transition: border-color 100ms;
+          cursor: pointer; transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
           font-size: 0.82rem; color: var(--color-text);
         }
         .cal-trigger:hover { border-color: var(--border-color-hover); }
         .cal-trigger:focus {
           outline: none; border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px var(--color-accent-subtle);
         }
         .cal-icon { font-size: 0.85rem; }
         .cal-value { flex: 1; }
         .cal-value.placeholder { color: var(--color-text-disabled); }
         .cal-clear {
           background: none; border: none; color: var(--color-text-muted); cursor: pointer;
-          font-size: 0.65rem; padding: 2px 4px; border-radius: var(--radius-sm); transition: color 100ms;
+          font-size: 0.65rem; padding: 2px 4px; border-radius: var(--radius-pill); transition: color var(--duration-fast) var(--ease-out);
         }
         .cal-clear:hover { color: var(--color-text); }
 
@@ -233,10 +234,10 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
           position: absolute; top: calc(100% + 4px); left: 0;
           z-index: 1050; min-width: 270px;
           background: var(--color-surface);
-          border: 1px solid var(--border-color);
+          border: none;
           border-radius: var(--radius-md);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          padding: 8px;
+          box-shadow: var(--shadow-md);
+          padding: 10px;
           outline: none;
         }
         .cal-dropdown.align-right { left: auto; right: 0; }
@@ -247,20 +248,22 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         }
         .cal-nav {
           background: none; border: none; color: var(--color-text-muted);
-          font-size: 1.1rem; cursor: pointer; width: 26px; height: 26px;
+          font-size: 1.1rem; cursor: pointer; width: 28px; height: 28px;
           display: flex; align-items: center; justify-content: center;
-          border-radius: var(--radius-sm); transition: background 100ms, color 100ms;
+          border-radius: var(--radius-pill); transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
         }
         .cal-nav:hover { background: var(--color-surface-hover); color: var(--color-text); }
-        .cal-title { font-size: 0.85rem; font-weight: 700; color: var(--color-text); }
+        .cal-title {
+          font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700;
+          letter-spacing: -0.03em; color: var(--color-text);
+        }
 
         .cal-weekdays {
           display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 2px;
         }
         .cal-wd {
-          text-align: center; font-size: 0.72rem; font-weight: 700;
-          color: var(--color-text-muted); padding: 3px 0;
-          text-transform: uppercase; letter-spacing: 0.05em;
+          text-align: center; font-size: 0.72rem; font-weight: 500;
+          color: var(--color-text-secondary); padding: 3px 0;
         }
         .cal-wd.sun { color: var(--color-danger); }
         .cal-wd.sat { color: var(--color-saturday); }
@@ -268,8 +271,8 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
         .cal-cell {
           aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-          font-size: 0.78rem; border-radius: var(--radius-sm); border: none; cursor: pointer;
-          background: transparent; color: var(--color-text); transition: background 100ms, color 100ms;
+          font-size: 0.78rem; border-radius: var(--radius-pill); border: none; cursor: pointer;
+          background: transparent; color: var(--color-text); transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
         }
         .cal-cell.empty { cursor: default; }
         .cal-cell:not(.empty):hover { background: var(--color-surface-hover); }
@@ -297,9 +300,9 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         }
         .cal-today-btn {
           background: transparent; border: 1px solid var(--border-color);
-          color: var(--color-accent); font-size: 0.72rem; font-weight: 700;
-          padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer;
-          transition: background 100ms;
+          color: var(--color-accent); font-size: 0.72rem; font-weight: 500;
+          padding: 4px 12px; border-radius: var(--radius-pill); cursor: pointer;
+          transition: background var(--duration-fast) var(--ease-out);
         }
         .cal-today-btn:hover { background: var(--color-accent-subtle); }
       `}</style>

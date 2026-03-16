@@ -84,7 +84,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     flex-shrink: 0;
                     font-size: 0.65rem;
                     color: transparent;
-                    transition: color 100ms, background 100ms, border-color 100ms;
+                    transition: color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
                     position: relative;
                     overflow: visible;
                     padding: 0;
@@ -137,7 +137,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     align-items: center;
                     justify-content: center;
                     font-size: 0.45rem;
-                    transition: color 100ms, background 100ms;
+                    transition: color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
                     flex-shrink: 0;
                     padding: 0;
                 }
@@ -157,7 +157,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     align-items: center;
                     justify-content: center;
                     font-size: 0.5rem;
-                    transition: color 100ms, background 100ms;
+                    transition: color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
                     flex-shrink: 0;
                     padding: 0;
                 }

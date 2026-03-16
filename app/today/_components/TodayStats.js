@@ -50,6 +50,7 @@ export default function TodayStats({ stats }) {
           display: flex; align-items: center; gap: 24px;
           padding: 14px;
           background: var(--color-surface); border-radius: var(--radius-md);
+          box-shadow: var(--shadow-card);
           margin-bottom: 14px;
         }
         .stat-ring-area { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
@@ -62,15 +63,14 @@ export default function TodayStats({ stats }) {
         }
         .ring-pct { font-size: 1.2rem; font-weight: 800; color: var(--color-text); line-height: 1; letter-spacing: -0.02em; }
         .ring-sub {
-          font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700;
-          text-transform: uppercase; letter-spacing: 0.05em;
+          font-size: 0.72rem; color: var(--color-text-muted); font-weight: 500;
         }
 
         .stat-details { display: flex; flex-direction: column; gap: 4px; }
         .stat-row {
           display: flex; align-items: center; gap: 6px;
           font-size: 0.72rem; color: var(--color-text-secondary);
-          text-transform: uppercase; letter-spacing: 0.05em;
+          font-weight: 500;
         }
         .stat-icon { color: var(--color-text-muted); display: flex; align-items: center; }
       `}</style>

@@ -33,23 +33,22 @@ export default function TodayGroupHeader({ parentId, title, isManual }) {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 6px 12px;
-          border-left: 4px solid var(--border-color);
+          padding: 8px 16px;
+          background: var(--color-surface);
+          border-radius: var(--radius-md);
+          box-shadow: var(--shadow-card);
           font-size: 0.78rem;
           touch-action: none;
-          transition: background 100ms, border-left-color 100ms;
+          transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
         }
-        .today-ghost-header + .today-ghost-header { border-top: 1px solid var(--border-color); }
-        .today-ghost-header:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
+        .today-ghost-header:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
         .today-ghost-icon {
           flex-shrink: 0;
           color: var(--color-text-muted);
         }
         .today-ghost-title {
-          font-weight: 700;
+          font-weight: 600;
           color: var(--color-text-secondary);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
           font-size: 0.72rem;
         }
       `}</style>

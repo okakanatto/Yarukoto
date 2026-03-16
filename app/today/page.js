@@ -435,16 +435,17 @@ export default function TodayPage() {
                 </DragOverlay>
 
                 <style jsx global>{`
-        .today-root { max-width: 780px; animation: slideUp 0.3s ease; }
+        .today-root { max-width: 780px; animation: slideUp 0.3s var(--ease-out); }
         .today-header { margin-bottom: 10px; }
         .today-title-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-        .today-date { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); font-weight: 500; }
+        .today-date { font-size: 0.72rem; color: var(--color-text-muted); font-weight: 500; }
         .today-subtitle { color: var(--color-text-muted); font-size: 0.78rem; margin-top: -8px; }
 
-        /* Date Navigation Tabs — filled active */
+        /* Date Navigation Tabs — pill container */
         .date-tabs {
-          display: flex; gap: 4px; margin-bottom: 20px;
+          display: flex; gap: 2px; margin-bottom: 20px;
           overflow-x: auto;
+          background: var(--color-surface-hover); border-radius: var(--radius-pill); padding: 3px;
         }
         .date-tab {
           flex: 1; min-width: 0;
@@ -452,36 +453,36 @@ export default function TodayPage() {
           gap: 2px; padding: 8px 4px;
           border: none; background: transparent;
           cursor: pointer;
-          transition: background 100ms, color 100ms; font-family: inherit;
-          border-radius: var(--radius-md);
+          transition: all 120ms var(--ease-out); font-family: inherit;
+          border-radius: var(--radius-pill);
         }
-        .date-tab:hover { background: var(--color-surface-hover); }
+        .date-tab:hover { background: var(--color-surface); }
         .date-tab.active {
-          background: var(--color-accent); color: #fff;
+          background: var(--color-surface); color: var(--color-text);
+          box-shadow: var(--shadow-sm);
         }
         .date-tab-label {
-          font-size: 0.82rem; font-weight: 600;
+          font-size: 0.82rem; font-weight: 500;
           color: var(--color-text-muted);
         }
-        .date-tab.active .date-tab-label { color: #fff; font-weight: 700; }
+        .date-tab.active .date-tab-label { color: var(--color-text); font-weight: 600; }
         .date-tab-wd {
           font-size: 0.62rem; font-weight: 500;
           color: var(--color-text-disabled);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
         }
-        .date-tab.active .date-tab-wd { color: rgba(255,255,255,0.8); }
+        .date-tab.active .date-tab-wd { color: var(--color-text-secondary); }
         .date-tab.weekend .date-tab-wd { color: var(--color-danger); }
-        .date-tab.weekend.active .date-tab-wd { color: rgba(255,200,200,0.9); }
+        .date-tab.weekend.active .date-tab-wd { color: var(--color-danger); }
 
         /* Toolbar */
         .today-toolbar {
           display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-          margin-bottom: 14px; padding: 8px 14px;
+          margin-bottom: 14px; padding: 12px 16px;
           background: var(--color-surface); border-radius: var(--radius-md);
+          box-shadow: var(--shadow-card);
         }
         .today-filter { display: flex; align-items: center; gap: 4px; }
-        .today-filter label { font-size: 0.72rem; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
+        .today-filter label { font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 500; white-space: nowrap; }
 
         /* Parent-child grouping */
         .today-parent-group { }
@@ -491,33 +492,26 @@ export default function TodayPage() {
           border-left: 2px solid var(--border-color);
           display: flex;
           flex-direction: column;
-          gap: 0;
+          gap: 6px;
         }
 
         /* Task List */
-        .today-list { display: flex; flex-direction: column; gap: 0; }
+        .today-list { display: flex; flex-direction: column; gap: 6px; }
         .today-placeholder { display: flex; align-items: center; gap: 6px; padding: 2rem 0; color: var(--color-text-muted); }
         .today-empty {
-          display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+          display: flex; flex-direction: column; align-items: center; gap: 8px;
           padding: 3rem 0 2rem; color: var(--color-text-muted);
+          text-align: center;
         }
-        .today-empty::before {
-          content: '';
-          display: block;
-          width: 32px;
-          height: 3px;
-          background: var(--color-accent);
-          margin-bottom: 8px;
-        }
-        .today-empty-icon { display: none; }
+        .today-empty-icon { color: var(--color-text-disabled); margin-bottom: 4px; }
         .today-empty-title { font-size: .88rem; font-weight: 600; color: var(--color-text-secondary); }
         .today-empty-hint { font-size: 0.75rem; color: var(--color-text-disabled); }
 
         /* Sort mode toggle */
         .today-sort-toggle {
           padding: 4px 10px; border: 1px solid var(--border-color);
-          border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600;
-          cursor: pointer; transition: background 100ms, color 100ms, border-color 100ms; font-family: inherit;
+          border-radius: var(--radius-pill); font-size: .75rem; font-weight: 600;
+          cursor: pointer; transition: all 120ms var(--ease-out); font-family: inherit;
           background: transparent; color: var(--color-text-muted);
           white-space: nowrap;
         }
@@ -527,12 +521,13 @@ export default function TodayPage() {
         }
         .today-sort-toggle.active:hover { background: var(--color-accent-hover); }
 
-        /* Milestone banners — full accent background */
+        /* Milestone banners */
         .today-milestone-banner {
           margin-top: 12px; padding: 12px 16px;
           border-radius: var(--radius-md);
           font-size: 0.85rem; font-weight: 600;
-          animation: celebIn 0.3s ease;
+          box-shadow: var(--shadow-card);
+          animation: celebIn 0.3s var(--ease-out);
         }
         .milestone-start {
           background: var(--color-accent);
@@ -546,10 +541,11 @@ export default function TodayPage() {
           margin-top: 16px; padding: 12px 16px;
           background: var(--color-success);
           border-radius: var(--radius-md);
+          box-shadow: var(--shadow-card);
           display: flex; align-items: center; gap: 10px;
           font-size: 1rem; font-weight: 600;
           color: #fff;
-          animation: celebIn 0.4s ease;
+          animation: celebIn 0.4s var(--ease-out);
         }
         .today-complete-icon {
           display: flex; align-items: center;

@@ -366,7 +366,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 100%; max-width: 500px;
-            background: var(--color-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);
+            background: var(--color-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
             box-shadow: var(--shadow-lg); z-index: 2001;
             display: flex; flex-direction: column;
             animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
@@ -374,15 +374,15 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         }
         @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -45%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 
-        .rt-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
-        .rt-close-btn { background: none; border: none; font-size: 1rem; cursor: pointer; color: var(--color-text-secondary); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .rt-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+        .rt-close-btn { background: none; border: none; font-size: 1rem; cursor: pointer; color: var(--color-text-secondary); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); transition: color 120ms var(--ease-out); }
         .rt-close-btn:hover { color: var(--color-text); }
 
-        .rt-modal-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .rt-modal-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
         .rt-input-title {
             width: 100%; border: none; border-bottom: 2px solid var(--border-color);
             font-size: 1.3rem; padding: 4px 0; background: transparent;
-            color: var(--color-text); transition: border-color 100ms;
+            color: var(--color-text); transition: border-color 120ms var(--ease-out);
         }
         .rt-input-title:focus { outline: none; border-color: var(--color-accent); }
 
@@ -390,7 +390,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-section-row { display: flex; gap: 6px; align-items: flex-start; }
         .rt-icon { font-size: 1rem; margin-top: 2px; width: 20px; text-align: center; }
         .rt-control-group { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-        .rt-field-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); font-weight: 500; }
+        .rt-field-label { font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 500; }
 
         .rt-select-clean {
             background-color: var(--color-surface-hover); border: 1px solid transparent;
@@ -418,34 +418,34 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
             width: 32px; height: 32px; border-radius: 50%;
             border: 1px solid var(--border-color); background: var(--color-surface);
             cursor: pointer; font-size: 0.75rem; color: var(--color-text-secondary);
-            transition: background 100ms, color 100ms, border-color 100ms;
+            transition: all 120ms var(--ease-out);
         }
         .rt-dow-btn.on { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
 
-        .rt-divider { height: 2px; background: var(--border-color); margin: 4px 0; }
-        .rt-section-title { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+        .rt-divider { height: 1px; background: var(--border-color); margin: 4px 0; }
+        .rt-section-title { font-size: 0.72rem; font-weight: 600; color: var(--color-text-secondary); }
         .rt-details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 
         .rt-field label { display: block; font-size: 0.7rem; color: var(--color-text-secondary); margin-bottom: 2px; font-weight: 500; }
         .rt-select, .rt-input, .rt-textarea {
             width: 100%; padding: 5px; border: 1px solid var(--border-color);
             border-radius: var(--radius-sm); background-color: var(--color-surface);
-            color: var(--color-text); font-size: 0.82rem; transition: border-color 100ms;
+            color: var(--color-text); font-size: 0.82rem; transition: border-color 120ms var(--ease-out);
         }
         .rt-select:focus, .rt-input:focus, .rt-textarea:focus { outline: none; border-color: var(--color-accent); }
 
         .rt-modal-footer { display: flex; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border-color); }
         .rt-btn-save {
             background: var(--color-accent); color: #fff; border: none;
-            padding: 6px 14px; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;
-            font-size: 0.82rem; transition: filter 100ms;
+            padding: 6px 14px; border-radius: var(--radius-pill); font-weight: 600; cursor: pointer;
+            font-size: 0.82rem; transition: filter 120ms var(--ease-out);
         }
         .rt-btn-save:hover { filter: brightness(1.1); }
         .rt-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
         .rt-btn-cancel {
             background: var(--color-surface-hover); color: var(--color-text-secondary); border: 1px solid var(--border-color);
-            padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer;
-            font-size: 0.82rem; transition: background 100ms;
+            padding: 6px 10px; border-radius: var(--radius-pill); cursor: pointer;
+            font-size: 0.82rem; transition: background 120ms var(--ease-out);
         }
         .rt-btn-cancel:hover { background: var(--color-surface-active); }
         .rt-btn-danger { background: transparent; color: var(--color-danger); border: none; font-size: 0.82rem; cursor: pointer; }
@@ -455,7 +455,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-switch-lg {
             position: relative; width: 48px; height: 28px;
             border-radius: 14px; border: none; cursor: pointer;
-            transition: background 100ms; flex-shrink: 0;
+            transition: background 120ms var(--ease-out); flex-shrink: 0;
             padding: 0;
         }
         .rt-switch-lg.on { background: var(--color-accent); }
@@ -463,7 +463,7 @@ export default function RoutineFormModal({ routine, onClose, onSaved, flash }) {
         .rt-switch-lg .rt-switch-knob {
             position: absolute; top: 2px; width: 24px; height: 24px;
             border-radius: 50%; background: #fff;
-            transition: left 100ms cubic-bezier(0.4, 0, 0.2, 1);
+            transition: left 120ms cubic-bezier(0.4, 0, 0.2, 1);
         }
         .rt-switch-lg.on .rt-switch-knob { left: 22px; }
         .rt-switch-lg.off .rt-switch-knob { left: 2px; }

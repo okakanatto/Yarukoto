@@ -108,55 +108,58 @@ export default function DonePage() {
             )}
 
             <style jsx global>{`
-                .done-root { max-width: 800px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+                .done-root { max-width: 800px; animation: slideUp 0.4s var(--ease-out); }
                 .done-header { margin-bottom: 6px; }
                 .done-subtitle { color: var(--color-text-muted); font-size: 0.78rem; margin-top: -1rem; }
 
                 /* Toolbar */
                 .done-toolbar {
                     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-                    margin-bottom: 14px; padding: 8px 14px;
+                    margin-bottom: 14px; padding: 12px 16px;
                     background: var(--color-surface); border-radius: var(--radius-md);
+                    box-shadow: var(--shadow-card);
                 }
                 .done-view-modes {
-                    display: flex; gap: 4px; background: transparent;
-                    padding: 0;
+                    display: flex; gap: 2px;
+                    background: var(--color-surface-hover); border-radius: var(--radius-pill); padding: 3px;
                 }
                 .done-view-btn {
                     padding: 4px 10px; border: none; background: transparent;
-                    border-radius: var(--radius-md); font-size: 0.78rem; font-weight: 600;
+                    border-radius: var(--radius-pill); font-size: 0.78rem; font-weight: 500;
                     color: var(--color-text-muted); cursor: pointer;
-                    transition: background 100ms, color 100ms; font-family: inherit;
+                    transition: all 120ms var(--ease-out); font-family: inherit;
                 }
-                .done-view-btn:hover { background: var(--color-surface-hover); color: var(--color-text); }
+                .done-view-btn:hover { color: var(--color-text); }
                 .done-view-btn.active {
-                    background: var(--color-accent); color: #fff; font-weight: 700;
+                    background: var(--color-surface); color: var(--color-text); font-weight: 600;
+                    box-shadow: var(--shadow-sm);
                 }
                 .done-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
                 .done-nav-btn {
                     background: transparent; border: 1px solid var(--border-color);
-                    border-radius: 3px; width: 28px; height: 28px;
+                    border-radius: var(--radius-sm); width: 28px; height: 28px;
                     display: flex; align-items: center; justify-content: center;
                     font-size: 1.1rem; color: var(--color-text-muted);
-                    cursor: pointer; transition: border-color 100ms, color 100ms, background 100ms; font-family: inherit;
+                    cursor: pointer; transition: all 120ms var(--ease-out); font-family: inherit;
                 }
                 .done-nav-btn:hover { border-color: var(--border-color-hover); color: var(--color-text); background: var(--color-surface-hover); }
                 .done-period { font-size: 0.82rem; font-weight: 600; color: var(--color-text); min-width: 120px; text-align: center; }
                 .done-today-btn {
                     padding: 4px 10px; border: 1px solid var(--border-color);
-                    border-radius: 3px; font-size: 0.78rem; font-weight: 500;
+                    border-radius: var(--radius-pill); font-size: 0.78rem; font-weight: 500;
                     color: var(--color-accent); background: transparent;
-                    cursor: pointer; transition: background 100ms; font-family: inherit;
+                    cursor: pointer; transition: background 120ms var(--ease-out); font-family: inherit;
                 }
                 .done-today-btn:hover { background: var(--color-accent-subtle); }
 
                 /* Summary */
                 .done-summary {
                     display: flex; align-items: center; gap: 10px;
-                    margin-bottom: 14px; padding: 8px 14px;
+                    margin-bottom: 14px; padding: 12px 16px;
                     background: var(--color-surface); border-radius: var(--radius-md);
+                    box-shadow: var(--shadow-card);
                 }
-                .done-summary-item { font-size: 0.78rem; color: var(--color-text-secondary); }
+                .done-summary-item { font-size: 0.78rem; color: var(--color-text-secondary); font-weight: 500; }
                 .done-summary-total { margin-left: auto; font-size: 0.78rem; color: var(--color-success); font-weight: 500; }
 
                 /* Loading */
@@ -168,6 +171,7 @@ export default function DonePage() {
                 /* Monthly Calendar */
                 .done-calendar {
                     background: var(--color-surface); border-radius: var(--radius-md);
+                    box-shadow: var(--shadow-card);
                     padding: 16px; margin-bottom: 12px;
                 }
                 .done-cal-weekdays {
@@ -184,15 +188,15 @@ export default function DonePage() {
                 .done-cal-cell {
                     display: flex; flex-direction: column; align-items: center;
                     justify-content: center; gap: 1px;
-                    aspect-ratio: 1; border: none; border-radius: 4px;
-                    cursor: pointer; transition: box-shadow 100ms; font-family: inherit;
+                    aspect-ratio: 1; border: none; border-radius: var(--radius-sm);
+                    cursor: pointer; transition: box-shadow 120ms var(--ease-out); font-family: inherit;
                 }
                 .done-cal-cell.empty { cursor: default; }
                 .done-cal-cell:not(.empty):hover { box-shadow: 0 0 0 1px var(--border-color-hover); }
                 .done-cal-cell.today { box-shadow: inset 0 0 0 2px var(--color-accent); }
                 .done-cal-cell.selected {
                     background: var(--color-accent) !important; color: #fff;
-                    box-shadow: none;
+                    box-shadow: none; border-radius: var(--radius-sm);
                 }
                 .done-cal-cell.weekend .done-cal-day { color: var(--color-text-muted); }
                 .done-cal-day { font-size: 0.78rem; font-weight: 500; color: var(--color-text); line-height: 1; }
@@ -205,22 +209,23 @@ export default function DonePage() {
 
                 /* Weekly View */
                 .done-weekly {
-                    display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+                    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
                     margin-bottom: 12px;
                 }
                 .done-week-item {
                     display: flex; flex-direction: column; align-items: center;
                     gap: 2px; padding: 6px 4px;
-                    background: transparent; border: 1px solid var(--border-color);
-                    border-radius: 3px; cursor: pointer;
-                    transition: border-color 100ms, background 100ms; font-family: inherit;
+                    background: var(--color-surface); border: none;
+                    border-radius: var(--radius-md); cursor: pointer;
+                    box-shadow: var(--shadow-card);
+                    transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out); font-family: inherit;
                 }
-                .done-week-item:hover { border-color: var(--border-color-hover); }
+                .done-week-item:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
                 .done-week-item.selected {
-                    background: var(--color-accent); border-color: var(--color-accent);
+                    background: var(--color-accent);
                     color: #fff;
                 }
-                .done-week-item.is-today:not(.selected) { box-shadow: inset 0 0 0 2px var(--color-accent); }
+                .done-week-item.is-today:not(.selected) { box-shadow: inset 0 0 0 2px var(--color-accent), var(--shadow-card); }
                 .done-week-wd { font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted); }
                 .done-week-item.selected .done-week-wd { color: rgba(255,255,255,0.8); }
                 .done-week-wd.weekend { color: var(--color-danger); }
@@ -230,7 +235,7 @@ export default function DonePage() {
                 .done-week-badge {
                     font-size: 0.65rem; font-weight: 700; color: var(--color-success);
                     background: var(--color-success-bg); padding: 1px 5px;
-                    border-radius: var(--radius-sm);
+                    border-radius: var(--radius-pill);
                 }
                 .done-week-item.selected .done-week-badge { background: rgba(255,255,255,0.2); color: #fff; }
                 .done-week-none { font-size: 0.72rem; color: var(--color-text-disabled); }
@@ -248,33 +253,28 @@ export default function DonePage() {
                 .done-detail-count {
                     font-size: 0.68rem; font-weight: 700; color: var(--color-success);
                     background: var(--color-success-bg); padding: 1px 6px;
-                    border-radius: var(--radius-sm);
+                    border-radius: var(--radius-pill);
                 }
 
                 /* Empty state */
                 .done-empty {
-                    display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+                    display: flex; flex-direction: column; align-items: center; gap: 4px;
                     padding: 12px 0; color: var(--color-text-muted); font-size: 0.82rem;
+                    text-align: center;
                 }
-                .done-empty::before {
-                    content: ''; display: block; width: 32px; height: 3px;
-                    background: var(--color-accent); margin-bottom: 8px;
-                }
-                .done-empty-icon { display: none; }
+                .done-empty-icon { color: var(--color-text-disabled); margin-bottom: 4px; }
 
                 /* Task list */
-                .done-task-list { display: flex; flex-direction: column; gap: 0; }
+                .done-task-list { display: flex; flex-direction: column; gap: 6px; }
                 .done-task {
                     display: flex; align-items: center; gap: 6px;
-                    padding: 6px 8px; border-radius: 0;
-                    background: transparent;
-                    border-left: 4px solid var(--border-color);
-                    transition: background 100ms, border-left-color 100ms;
+                    padding: 12px 16px; border-radius: var(--radius-md);
+                    background: var(--color-surface);
+                    box-shadow: var(--shadow-card);
+                    transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
                 }
-                .done-task + .done-task { border-top: 1px solid var(--border-color); }
-                .done-task:hover { background: var(--color-surface-hover); border-left-color: var(--color-accent); }
-                .done-task.archived { opacity: 0.5; }
-                .done-task.routine { border-left-color: var(--color-accent); }
+                .done-task:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
+                .done-task.archived { opacity: 0.45; }
                 .done-check {
                     color: var(--color-success); font-weight: 700; font-size: 0.72rem;
                     width: 20px; height: 20px; display: flex; align-items: center;
@@ -285,24 +285,24 @@ export default function DonePage() {
                 .done-task-title-row { display: flex; align-items: center; gap: 3px; }
                 .done-badge-icon { font-size: 0.72rem; flex-shrink: 0; }
                 .done-task-title {
-                    font-size: 0.82rem; font-weight: 500; color: var(--color-text);
+                    font-size: 0.875rem; font-weight: 500; color: var(--color-text);
                     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
                 }
                 .done-parent {
-                    display: block; font-size: 0.68rem; color: var(--color-text-muted);
-                    margin-top: 1px;
+                    display: block; font-size: 0.72rem; color: var(--color-text-secondary);
+                    margin-top: 1px; font-weight: 500;
                 }
                 .done-task-meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
                 .done-tag {
                     display: inline-flex; align-items: center; gap: 4px;
-                    font-size: 0.6rem; font-weight: 600; padding: 1px 5px;
-                    border-radius: var(--radius-sm); background: var(--color-surface-hover); color: var(--color-text-secondary);
+                    font-size: 0.68rem; font-weight: 500; padding: 2px 8px;
+                    border-radius: var(--radius-pill); background: var(--color-surface-hover); color: var(--color-text-secondary);
                 }
                 .done-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-                .done-meta-text { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+                .done-meta-text { font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 500; }
                 .done-time {
                     font-size: 0.72rem; color: var(--color-text-muted); white-space: nowrap;
-                    flex-shrink: 0; opacity: 0; transition: opacity 100ms;
+                    flex-shrink: 0; opacity: 0; transition: opacity 120ms var(--ease-out);
                 }
                 .done-task:hover .done-time { opacity: 1; }
             `}</style>

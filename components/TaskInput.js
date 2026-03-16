@@ -375,8 +375,9 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
           background: var(--color-surface);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-md);
+          box-shadow: var(--shadow-card);
           padding: 14px 16px;
-          transition: border-color 100ms;
+          transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
         }
         .task-input-wrapper.expanded {
           border-color: var(--color-accent);
@@ -391,16 +392,16 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         .task-title-input {
           flex: 1; background: transparent; border: none;
           border-bottom: 1px solid var(--border-color); padding: 6px 2px;
-          font-size: 0.92rem; font-weight: 700; color: var(--color-text); outline: none;
-          transition: border-color 100ms; font-family: inherit;
+          font-size: 0.875rem; font-weight: 500; color: var(--color-text); outline: none;
+          transition: border-color var(--duration-fast) var(--ease-out); font-family: inherit;
         }
         .task-title-input::placeholder { color: var(--color-text-disabled); font-weight: 400; }
         .task-title-input:focus { border-bottom-color: var(--color-accent); }
         .btn-add {
-          width: 32px; height: 32px; border-radius: var(--radius-sm); border: none;
+          width: 32px; height: 32px; border-radius: var(--radius-pill); border: none;
           background: var(--color-accent); color: white; font-size: 1.1rem;
           cursor: pointer; display: flex; align-items: center; justify-content: center;
-          transition: background 100ms; flex-shrink: 0;
+          transition: background var(--duration-fast) var(--ease-out); flex-shrink: 0;
         }
         .btn-add:hover:not(:disabled) {
           background: var(--color-accent-hover);
@@ -422,32 +423,31 @@ export default function TaskInput({ onTaskAdded, predefinedParentId = null, defa
         .form-field { display: flex; flex-direction: column; gap: 4px; }
         .form-field--narrow { max-width: 130px; flex: 0 0 auto !important; }
         label {
-          font-size: 0.72rem; font-weight: 700; color: var(--color-text-muted);
-          text-transform: uppercase; letter-spacing: 0.05em;
+          font-size: 0.72rem; font-weight: 500; color: var(--color-text-secondary);
         }
         input[type="number"], select, textarea {
           background-color: var(--color-surface); border: 1px solid var(--border-color);
           border-radius: var(--radius-sm); padding: 6px 8px;
           color: var(--color-text); font-family: inherit; font-size: 0.82rem;
-          transition: border-color 100ms; outline: none; width: 100%;
+          transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out); outline: none; width: 100%;
         }
         input:focus, select:focus, textarea:focus {
           border-color: var(--color-accent);
-          box-shadow: 0 0 0 2px var(--color-accent-subtle);
+          box-shadow: 0 0 0 3px var(--color-accent-subtle);
         }
         textarea { resize: vertical; min-height: 50px; }
         .panel-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 4px; }
         .btn-collapse {
           background: transparent; border: 1px solid var(--border-color); color: var(--color-text-muted);
-          cursor: pointer; font-size: 0.72rem; font-weight: 700; padding: 4px 10px;
-          border-radius: var(--radius-sm); transition: color 100ms, border-color 100ms;
+          cursor: pointer; font-size: 0.72rem; font-weight: 500; padding: 4px 10px;
+          border-radius: var(--radius-pill); transition: color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
         }
         .btn-collapse:hover { color: var(--color-text); border-color: var(--border-color-hover); }
         .btn-submit {
           background: var(--color-accent); border: none; color: #fff;
-          padding: 6px 16px; border-radius: var(--radius-sm);
-          font-size: 0.82rem; font-weight: 700; cursor: pointer;
-          transition: background 100ms; font-family: inherit;
+          padding: 6px 16px; border-radius: var(--radius-pill);
+          font-size: 0.82rem; font-weight: 500; cursor: pointer;
+          transition: background var(--duration-fast) var(--ease-out); font-family: inherit;
         }
         .btn-submit:hover:not(:disabled) { background: var(--color-accent-hover); }
         .btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
