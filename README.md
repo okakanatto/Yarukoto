@@ -32,6 +32,9 @@
 
 ### インストール
 
+ReleasesページからDL可能です。
+とりあえず使いたい場合は、インストール不要の「Yarukoto_x.x.x-portable.exe」がおすすめです。
+
 ```bash
 git clone https://github.com/okakanatto/Yarukoto.git
 cd Yarukoto
