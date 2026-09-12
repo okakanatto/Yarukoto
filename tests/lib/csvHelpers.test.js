@@ -1,39 +1,6 @@
-/**
- * escCSV / parseCSVLine のユニットテスト
- * DataPanel.js に定義されているが非エクスポートのため、仕様として定義・検証する。
- */
 import { describe, it, expect } from 'vitest';
-
-// DataPanel.js の escCSV / parseCSVLine と同一実装をここに写す
-const escCSV = (v) => {
-    if (v == null || v === '') return '';
-    const s = String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-        return `"${s.replace(/"/g, '""')}"`;
-    }
-    return s;
-};
-
-const parseCSVLine = (line) => {
-    const cols = [];
-    let cur = '', inQ = false, i = 0;
-    while (i < line.length) {
-        const ch = line[i];
-        if (inQ) {
-            if (ch === '"') {
-                if (i + 1 < line.length && line[i + 1] === '"') {
-                    cur += '"'; i += 2;
-                } else { inQ = false; i++; }
-            } else { cur += ch; i++; }
-        } else {
-            if (ch === '"') { inQ = true; i++; }
-            else if (ch === ',') { cols.push(cur); cur = ''; i++; }
-            else { cur += ch; i++; }
-        }
-    }
-    cols.push(cur);
-    return cols;
-};
+import { escapeCSV as escCSV, parseCSV } from '@/lib/csv';
+const parseCSVLine = line => parseCSV(line)[0] || [''];
 
 describe('escCSV', () => {
     it('null / undefined / 空文字は空文字を返す', () => {

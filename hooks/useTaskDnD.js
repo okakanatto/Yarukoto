@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useDbOperation } from '@/hooks/useDbOperation';
+import { descendantIds, reparentTask, notifyTasksChanged } from '@/lib/taskHierarchy';
 
 /**
  * Custom hook that manages Drag & Drop logic for TaskList.
@@ -29,7 +30,7 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
 
     /**
      * Pure DB helper to persist sort_order for a list of task IDs.
-     * Must be called within an existing transaction (no own error handling).
+     * Uses independent auto-committed writes; no pooled BEGIN/COMMIT.
      */
     const persistSortOrderInTx = async (db, orderedIds, parentId = null) => {
         const query = parentId != null
@@ -83,6 +84,9 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
             return;
         }
 
+        // Child gaps reorder only siblings. Moving a subtree uses the task drop target.
+        if (!isRoot && activeTask.parent_id !== parentId) return;
+
         // Check if this is an unnest (child task dropped at root level)
         const isUnnest = activeTask.parent_id && isRoot;
 
@@ -115,9 +119,10 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         try {
             await dbOp(async (db) => {
                 if (isUnnest) {
-                    await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [activeTaskId]);
+                    await reparentTask(db, activeTaskId, null, activeTask.project_id);
                 }
                 await persistSortOrderInTx(db, currentOrder, isRoot ? null : parentId);
+                notifyTasksChanged();
             }, { error: '並び替えの保存に失敗しました' });
         } catch {
             fetchTasks();
@@ -139,13 +144,14 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
             setTasks(prev => prev.map(t => t.id === active.id ? { ...t, parent_id: null } : t));
             try {
                 await dbOp(async (db) => {
-                    await db.execute('UPDATE tasks SET parent_id = NULL WHERE id = $1', [active.id]);
+                    await reparentTask(db, active.id, null, activeTask.project_id);
                     // In manual mode, assign sort_order at the end of root tasks
                     if (sortMode === 'manual') {
                         const maxSort = await db.select('SELECT MAX(sort_order) as ms FROM tasks WHERE parent_id IS NULL AND archived_at IS NULL');
                         const newOrder = (maxSort[0]?.ms || 0) + 1;
                         await db.execute('UPDATE tasks SET sort_order = $1 WHERE id = $2', [newOrder, active.id]);
                     }
+                    notifyTasksChanged();
                 }, { error: '並び替えの保存に失敗しました' });
                 if (sortMode === 'manual') fetchTasks();
             } catch {
@@ -196,21 +202,19 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
         const parentTask = tasks.find(t => t.id === over.id);
         if (!parentTask) return;
 
-        // If child is dropped on another child, ignore
-        if (parentTask.parent_id) return;
-        // Validation: Task with children cannot become child
-        const activeChildren = tasks.filter(t => t.parent_id === active.id);
-        if (activeChildren.length > 0) {
+        // The DB check below repeats this against all tasks (including filtered ones).
+        const movingIds = descendantIds(tasks, active.id);
+        if (movingIds.has(parentTask.id)) {
             window.dispatchEvent(new CustomEvent('yarukoto:toast', {
-                detail: { message: '子タスクを持つタスクには親タスクを設定できません', type: 'error' }
+                detail: { message: '自分自身や子孫を親タスクにはできません', type: 'error' }
             }));
             return;
         }
 
         // Optimistic update (IMP-39: also sync project_id with parent)
-        setTasks(prev => prev.map(t => t.id === active.id ? {
+        setTasks(prev => prev.map(t => movingIds.has(t.id) ? {
             ...t,
-            parent_id: parentTask.id,
+            parent_id: t.id === active.id ? parentTask.id : t.parent_id,
             project_id: parentTask.project_id,
             project_name: parentTask.project_name,
             project_color: parentTask.project_color,
@@ -218,10 +222,7 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
 
         try {
             await dbOp(async (db) => {
-                await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [parentTask.id, active.id]);
-
-                // IMP-39: Sync project_id with parent
-                await db.execute('UPDATE tasks SET project_id = $1 WHERE id = $2', [parentTask.project_id, active.id]);
+                await reparentTask(db, active.id, parentTask.id, parentTask.project_id);
 
                 // In manual mode, assign sort_order at end of new parent's children
                 if (sortMode === 'manual') {
@@ -249,12 +250,13 @@ export function useTaskDnD({ tasks, setTasks, fetchTasks, sortMode, getSortedPar
                         );
                     }
                 }
+                notifyTasksChanged();
             }, { error: '並び替えの保存に失敗しました' });
             fetchTasks();
         } catch {
             fetchTasks();
         }
-    }, [tasks, setTasks, fetchTasks, sortMode, handleReorder, dbOp]);
+    }, [tasks, setTasks, fetchTasks, sortMode, handleReorder, getSortedParentTasks, dbOp]);
 
     return {
         activeId,

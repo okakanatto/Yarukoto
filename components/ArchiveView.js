@@ -6,6 +6,7 @@ import { fetchDb, parseTags } from '@/lib/utils';
 import { buildTaskListQuery, buildArchiveMonthlySummaryQuery } from '@/lib/taskListQueries';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { Archive, Search } from 'lucide-react';
+import { ancestorPath, restoreTaskTree, notifyTasksChanged } from '@/lib/taskHierarchy';
 
 const noop = () => {};
 
@@ -76,7 +77,8 @@ export default function ArchiveView({
                 ...filterDeps,
             });
             const rows = await db.select(sql, params);
-            setMonthTasks(prev => ({ ...prev, [month]: rows.map(t => ({ ...t, tags: parseTags(t) })) }));
+            const graph = await db.select('SELECT id, title, parent_id FROM tasks');
+            setMonthTasks(prev => ({ ...prev, [month]: rows.map(t => ({ ...t, ancestors: ancestorPath(graph, t.id), tags: parseTags(t) })) }));
         } catch (e) {
             console.error(`Failed to fetch archive for ${month}:`, e);
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブデータの読み込みに失敗しました', type: 'error' } }));
@@ -116,7 +118,8 @@ export default function ArchiveView({
                 ...filterDeps,
             });
             const rows = await db.select(sql, params);
-            setSearchResults(rows.map(t => ({ ...t, tags: parseTags(t) })));
+            const graph = await db.select('SELECT id, title, parent_id FROM tasks');
+            setSearchResults(rows.map(t => ({ ...t, ancestors: ancestorPath(graph, t.id), tags: parseTags(t) })));
         } catch (e) {
             console.error('Archive search failed:', e);
             window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'アーカイブの検索に失敗しました', type: 'error' } }));
@@ -164,11 +167,8 @@ export default function ArchiveView({
 
         try {
             await dbOp(async (db) => {
-                if (!task.parent_id) {
-                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR parent_id = $1', [taskId]);
-                } else {
-                    await db.execute('UPDATE tasks SET archived_at = NULL WHERE id = $1 OR id = $2', [taskId, task.parent_id]);
-                }
+                await restoreTaskTree(db, taskId);
+                notifyTasksChanged();
 
                 // Descriptive toast for parent-child restore
                 const allTasks = [...searchResults, ...Object.values(monthTasks).flat()];
@@ -213,6 +213,7 @@ export default function ArchiveView({
                         key={task.id}
                         task={task}
                         childTasks={getChildren(task.id)}
+                        getChildren={getChildren}
                         onStatusChange={noop}
                         onDelete={noop}
                         onTaskAdded={noop}

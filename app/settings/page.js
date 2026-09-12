@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { fetchDb } from '@/lib/utils';
 import { Tag, BarChart3, FolderOpen, Wrench, Database, Palette, CircleCheck, XCircle } from 'lucide-react';
 import TagsPanel from './_components/TagsPanel';
@@ -23,7 +24,15 @@ const TABS = [
 ];
 
 export default function Settings() {
-    const [tab, setTab] = useState('tags');
+    return <Suspense fallback={<p>読み込み中…</p>}><SettingsContent /></Suspense>;
+}
+
+function SettingsContent() {
+    const searchParams = useSearchParams();
+    const requestedTab = searchParams.get('tab');
+    const defaultTab = TABS.some(t => t.key === requestedTab) ? requestedTab : 'tags';
+    const [selection, setSelection] = useState({ requestedTab: null, key: null });
+    const tab = selection.requestedTab === requestedTab && selection.key ? selection.key : defaultTab;
     const [data, setData] = useState({ tags: [], importance: [], urgency: [], status: [], projects: [] });
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
@@ -60,7 +69,7 @@ export default function Settings() {
             <div className="s-tabs">
                 {TABS.map(t => (
                     <button key={t.key} className={`s-tab ${tab === t.key ? 'on' : ''}`}
-                        onClick={() => setTab(t.key)}>
+                        onClick={() => setSelection({ requestedTab, key: t.key })}>
                         <span>{t.icon}</span><span>{t.label}</span>
                     </button>
                 ))}

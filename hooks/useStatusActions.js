@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useDbOperation } from '@/hooks/useDbOperation';
+import { autoCompleteAncestors, clearInvalidNextTasks, notifyTasksChanged } from '@/lib/taskHierarchy';
 
 /**
  * ステータス変更・削除・today切替・ルーティン完了に関するアクションを提供するフック。
@@ -42,31 +43,16 @@ export function useStatusActions({ setTasks, fetchTasks, refresh }) {
                     await db.execute('UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2', [newStatusCode, taskId]);
                 }
 
-                // ENH-5: Auto-complete parent when all children are complete
+                // Preserve the opt-in setting; every descendant must be complete.
                 if (code === 3) {
-                    const settingRows = await db.select("SELECT value FROM app_settings WHERE key = 'auto_complete_parent'");
-                    const enabled = settingRows[0]?.value === '1';
-                    if (enabled) {
-                        const taskRows = await db.select('SELECT parent_id FROM tasks WHERE id = $1', [taskId]);
-                        const parentId = taskRows[0]?.parent_id;
-                        if (parentId) {
-                            const siblings = await db.select('SELECT id, status_code FROM tasks WHERE parent_id = $1', [parentId]);
-                            const allComplete = siblings.every(s => s.id === taskId ? true : s.status_code === 3);
-                            if (allComplete) {
-                                const parentRows = await db.select('SELECT status_code FROM tasks WHERE id = $1', [parentId]);
-                                if (parentRows[0] && parentRows[0].status_code !== 3 && parentRows[0].status_code !== 5) {
-                                    await db.execute("UPDATE tasks SET status_code = 3, completed_at = datetime('now', 'localtime') WHERE id = $1", [parentId]);
-                                    setTasks(prev => prev.map(t => t.id === parentId ? {
-                                        ...t,
-                                        status_code: 3,
-                                        completed_at: completedNow
-                                    } : t));
-                                    window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '子タスクがすべて完了したため、親タスクも完了にしました', type: 'success' } }));
-                                }
-                            }
-                        }
+                    const completed = new Set(await autoCompleteAncestors(db, taskId));
+                    if (completed.size) {
+                        setTasks(prev => prev.map(t => completed.has(t.id) ? { ...t, status_code: 3, completed_at: completedNow } : t));
+                        window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: '子孫タスクがすべて完了したため、親タスクも完了にしました', type: 'success' } }));
                     }
                 }
+                await clearInvalidNextTasks(db);
+                notifyTasksChanged();
             }, { error: 'ステータスの変更に失敗しました' });
         } catch {
             fetchTasks();
@@ -81,6 +67,8 @@ export function useStatusActions({ setTasks, fetchTasks, refresh }) {
             await dbOp(async (db) => {
                 await db.execute('UPDATE tasks SET parent_id = NULL WHERE parent_id = $1', [taskId]);
                 await db.execute('DELETE FROM tasks WHERE id = $1', [taskId]);
+                await clearInvalidNextTasks(db);
+                notifyTasksChanged();
             }, { success: 'タスクを削除しました', error: '削除に失敗しました' });
             refresh();
         } catch { /* handled by dbOp */ }
@@ -93,6 +81,7 @@ export function useStatusActions({ setTasks, fetchTasks, refresh }) {
         try {
             await dbOp(async (db) => {
                 await db.execute('UPDATE tasks SET today_date = $1 WHERE id = $2', [newVal, taskId]);
+                notifyTasksChanged();
             }, { error: '今日やるタスクの変更に失敗しました' });
         } catch {
             fetchTasks();
@@ -127,6 +116,7 @@ export function useStatusActions({ setTasks, fetchTasks, refresh }) {
                 } else {
                     await db.execute('DELETE FROM routine_completions WHERE routine_id = $1 AND completion_date = $2', [routineId, completionDate]);
                 }
+                notifyTasksChanged();
             }, { error: 'ステータスの変更に失敗しました' });
         } catch {
             fetchTasks();

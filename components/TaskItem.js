@@ -13,7 +13,7 @@ import { formatMin } from '@/lib/utils';
  * Individual task card component with DnD support, status controls, and child task rendering.
  * Extracted from TaskList.js (Phase 1-1).
  */
-export default function TaskItem({ task, childTasks, onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false, processingIds = new Set(), justCompletedId = null, justDroppedId = null }) {
+export default function TaskItem({ task, childTasks, getChildren = () => [], ancestry = [], onStatusChange, onDelete, onTaskAdded, onEdit, onTodayToggle, onArchive, onRestore, index = 0, isChild = false, statusMap = {}, allStatuses = [], isDraggable = true, isArchived = false, sortMode = 'auto', activeId = null, activeDragParentId = undefined, isProcessing = false, processingIds = new Set(), justCompletedId = null, justDroppedId = null }) {
     const [expanded, setExpanded] = useState(true);
     const [showSub, setShowSub] = useState(false);
 
@@ -26,7 +26,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
     // Droppable Hook (Target for nesting)
     const { setNodeRef: setDropRef, isOver } = useDroppable({
         id: task.id,
-        disabled: isChild
+        disabled: isArchived
     });
 
     // Merge refs
@@ -84,7 +84,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
 
                 <div className="tc-info" onClick={() => onEdit(task)} title="クリックして編集">
                     {!isChild && task.parent_id && task.parent_title && (
-                        <span className="tc-parent-label">{task.parent_title} ›</span>
+                        <span className="tc-parent-label">{task.ancestors?.map(p => p.title).join(' › ') || task.parent_title} ›</span>
                     )}
                     <div className="tc-title-row">
                         <span className={`tc-title ${isDone || isCancelled ? 'strike' : ''}`}>{task.title}</span>
@@ -140,7 +140,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                             {(task.status_code === 3 || task.status_code === 5) && onArchive && (
                                 <button className="tc-act-btn tc-archive-btn" onClick={() => onArchive(task.id)} title="アーカイブ" disabled={isProcessing}><Archive size={14} strokeWidth={1.75} /></button>
                             )}
-                            {!isChild && <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加"><Plus size={14} strokeWidth={1.75} /></button>}
+                            <button className="tc-act-btn" onClick={() => setShowSub(!showSub)} title="子タスク追加"><Plus size={14} strokeWidth={1.75} /></button>
                             <button className="tc-act-btn danger" onClick={() => onDelete(task.id)} title="削除"><Trash2 size={14} strokeWidth={1.75} /></button>
                         </>
                     )}
@@ -151,14 +151,14 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
 
             {expanded && childTasks.length > 0 && (
                 <div className="tc-children">
-                    {childTasks.map((c, i) => (
+                    {childTasks.filter(c => c.id !== task.id && !ancestry.includes(c.id)).map((c, i) => (
                         <React.Fragment key={c.id}>
                             {/* ReorderGap between children in manual mode */}
                             {sortMode === 'manual' && activeId && activeDragParentId === task.id && i === 0 && (
                                 <ReorderGap id={`reorder-child-${task.id}-0`} />
                             )}
-                            <TaskItem task={c} childTasks={[]} onStatusChange={onStatusChange}
-                                onDelete={onDelete} onTaskAdded={() => { }} onEdit={onEdit}
+                            <TaskItem task={c} childTasks={getChildren(c.id)} getChildren={getChildren} ancestry={[...ancestry, task.id]} onStatusChange={onStatusChange}
+                                onDelete={onDelete} onTaskAdded={onTaskAdded} onEdit={onEdit}
                                 onTodayToggle={onTodayToggle}
                                 onArchive={onArchive} onRestore={onRestore}
                                 index={i} isChild statusMap={statusMap} allStatuses={allStatuses}
@@ -166,6 +166,7 @@ export default function TaskItem({ task, childTasks, onStatusChange, onDelete, o
                                 isArchived={isArchived}
                                 sortMode={sortMode}
                                 activeId={activeId}
+                                activeDragParentId={activeDragParentId}
                                 isProcessing={isProcessing || processingIds.has(c.id)}
                                 processingIds={processingIds}
                                 justCompletedId={justCompletedId}

@@ -3,6 +3,7 @@
  * DataPanel.js の handleImport が行う3パス処理を直接 DB に対して再現・検証する。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
+import { importTasksCSV, readTaskCSV } from '@/lib/csv';
 import { createTestDb, seedTags } from '../__helpers__/testDb.js';
 
 let db;
@@ -11,167 +12,13 @@ beforeEach(async () => {
     db = await createTestDb();
 });
 
-// parseCSVLine の実装（DataPanel.js と同一）
-const parseCSVLine = (line) => {
-    const cols = [];
-    let cur = '', inQ = false, i = 0;
-    while (i < line.length) {
-        const ch = line[i];
-        if (inQ) {
-            if (ch === '"') {
-                if (i + 1 < line.length && line[i + 1] === '"') {
-                    cur += '"'; i += 2;
-                } else { inQ = false; i++; }
-            } else { cur += ch; i++; }
-        } else {
-            if (ch === '"') { inQ = true; i++; }
-            else if (ch === ',') { cols.push(cur); cur = ''; i++; }
-            else { cur += ch; i++; }
-        }
-    }
-    cols.push(cur);
-    return cols;
-};
-
-/**
- * handleImport の3パス処理を DB に対して再現するヘルパー。
- * @param {object} db - テスト用 DB インスタンス
- * @param {string} csvText - BOM なし CSV テキスト
- * @returns {Promise<{count: number, idMap: object}>}
- */
+// Exercise the production importer; inspect assigned IDs for relationship assertions.
 async function runImport(db, csvText) {
-    const lines = csvText.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
-    if (lines.length < 2) throw new Error('CSVにデータ行がありません');
-
-    const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
-    const titleIdx = headers.indexOf('title');
-    if (titleIdx === -1) throw new Error('title列が見つかりません');
-
-    const col = (name) => headers.indexOf(name);
-    const getVal = (cols, name) => {
-        const idx = col(name);
-        if (idx < 0 || idx >= cols.length) return null;
-        const v = cols[idx].trim();
-        return v || null;
-    };
-
-    // Load master data for label→code lookups
-    const statusMap = {};
-    const importanceMap = {};
-    const urgencyMap = {};
-    const projectMap = {};
-
-    if (col('status') >= 0 && col('status_code') < 0) {
-        (await db.select('SELECT code, label FROM status_master')).forEach(s => { statusMap[s.label] = s.code; });
-    }
-    if (col('importance') >= 0 && col('importance_level') < 0) {
-        (await db.select('SELECT level, label FROM importance_master')).forEach(r => { importanceMap[r.label] = r.level; });
-    }
-    if (col('urgency') >= 0 && col('urgency_level') < 0) {
-        (await db.select('SELECT level, label FROM urgency_master')).forEach(r => { urgencyMap[r.label] = r.level; });
-    }
-    if (col('project') >= 0 && col('project_id') < 0) {
-        (await db.select('SELECT id, name FROM projects WHERE archived_at IS NULL')).forEach(p => { projectMap[p.name] = p.id; });
-    }
-
-    // Parse all data rows
-    const parsed = [];
-    for (let i = 1; i < lines.length; i++) {
-        const cols = parseCSVLine(lines[i]);
-        const title = cols[titleIdx]?.trim();
-        if (!title) continue;
-        parsed.push({ cols, title, csvId: getVal(cols, 'id') });
-    }
-
-    // Pass 1: Insert tasks, build old→new id mapping
+    const before = (await db.select('SELECT COALESCE(MAX(id), 0) AS id FROM tasks'))[0].id;
+    const count = await importTasksCSV(db, csvText);
+    const inserted = await db.select('SELECT id FROM tasks WHERE id > $1 ORDER BY id', [before]);
     const idMap = {};
-    let count = 0;
-
-    for (const row of parsed) {
-        const { cols, title, csvId } = row;
-
-        let statusCode = getVal(cols, 'status_code');
-        if (!statusCode) {
-            const label = getVal(cols, 'status');
-            statusCode = label ? statusMap[label] : null;
-        }
-        statusCode = statusCode ? parseInt(statusCode) : 1;
-
-        let impLevel = getVal(cols, 'importance_level');
-        if (!impLevel) {
-            const label = getVal(cols, 'importance');
-            impLevel = label ? importanceMap[label] : null;
-        }
-        impLevel = impLevel ? parseInt(impLevel) : null;
-
-        let urgLevel = getVal(cols, 'urgency_level');
-        if (!urgLevel) {
-            const label = getVal(cols, 'urgency');
-            urgLevel = label ? urgencyMap[label] : null;
-        }
-        urgLevel = urgLevel ? parseInt(urgLevel) : null;
-
-        let projectId = getVal(cols, 'project_id');
-        if (!projectId) {
-            const name = getVal(cols, 'project');
-            projectId = name ? projectMap[name] : null;
-        }
-        projectId = projectId ? parseInt(projectId) : null;
-
-        const estMin = getVal(cols, 'estimated_minutes');
-        const sortOrder = getVal(cols, 'sort_order');
-
-        const result = await db.execute(
-            `INSERT INTO tasks (title, status_code, importance_level, urgency_level,
-             start_date, due_date, estimated_hours, today_date, notes,
-             project_id, sort_order, created_at, updated_at, completed_at, archived_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-            [title, statusCode, impLevel, urgLevel,
-             getVal(cols, 'start_date'), getVal(cols, 'due_date'),
-             estMin ? parseInt(estMin) : null, getVal(cols, 'today_date'), getVal(cols, 'notes'),
-             projectId, sortOrder ? parseInt(sortOrder) : null,
-             getVal(cols, 'created_at'), getVal(cols, 'updated_at'),
-             getVal(cols, 'completed_at'), getVal(cols, 'archived_at')]
-        );
-
-        const newId = result.lastInsertId;
-        if (csvId) idMap[csvId] = newId;
-        row.newId = newId;
-        count++;
-    }
-
-    // Pass 2: Update parent_id references
-    if (col('parent_id') >= 0) {
-        for (const row of parsed) {
-            const parentCsvId = getVal(row.cols, 'parent_id');
-            if (parentCsvId && idMap[parentCsvId] && row.newId) {
-                await db.execute('UPDATE tasks SET parent_id = $1 WHERE id = $2', [idMap[parentCsvId], row.newId]);
-            }
-        }
-    }
-
-    // Pass 3: Insert tags
-    if (col('tags') >= 0) {
-        const existingTags = await db.select('SELECT id, name FROM tags');
-        const tagNameToId = {};
-        existingTags.forEach(t => { tagNameToId[t.name] = t.id; });
-
-        for (const row of parsed) {
-            const tagStr = getVal(row.cols, 'tags');
-            if (!tagStr || !row.newId) continue;
-            const tagNames = tagStr.split('|').map(t => t.trim()).filter(Boolean);
-            for (const tagName of tagNames) {
-                let tagId = tagNameToId[tagName];
-                if (!tagId) {
-                    const r = await db.execute('INSERT INTO tags (name) VALUES ($1)', [tagName]);
-                    tagId = r.lastInsertId;
-                    tagNameToId[tagName] = tagId;
-                }
-                await db.execute('INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [row.newId, tagId]);
-            }
-        }
-    }
-
+    readTaskCSV(csvText).forEach((row, i) => { if (row.id) idMap[row.id] = inserted[i].id; });
     return { count, idMap };
 }
 
@@ -249,12 +96,9 @@ describe('CSVインポート — parent_id リマップ（Pass 2）', () => {
         expect(rows[0].parent_id).toBeNull();
     });
 
-    it('存在しない parent_id の参照は無視される', async () => {
-        // id=99 は CSV に存在しない
-        const csv = 'id,title,parent_id\n2,子タスク,99';
-        await runImport(db, csv);
-        const rows = await db.select("SELECT parent_id FROM tasks WHERE title = '子タスク'");
-        expect(rows[0].parent_id).toBeNull();
+    it('存在しない parent_id は書き込み前に拒否する', async () => {
+        await expect(runImport(db, 'id,title,parent_id\n1,子,99')).rejects.toThrow('親タスク');
+        expect(await db.select('SELECT id FROM tasks')).toEqual([]);
     });
 });
 

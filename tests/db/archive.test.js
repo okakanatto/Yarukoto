@@ -179,7 +179,7 @@ describe('runAutoArchive（自動アーカイブ）', () => {
     expect(row[0].archived_at).toBeNull();
   });
 
-  it('親が自動アーカイブされると子もまとめてアーカイブされる（STEP B NG#1 再発防止）', async () => {
+  it('未完了の子が残る親を自動アーカイブしない', async () => {
     await db.execute("UPDATE app_settings SET value = '7' WHERE key = 'auto_archive_days'");
     const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
     const childIds = await seedTasks(db, [
@@ -194,10 +194,37 @@ describe('runAutoArchive（自動アーカイブ）', () => {
     await runAutoArchive(db);
 
     const parent = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [parentId]);
-    expect(parent[0].archived_at).not.toBeNull();
+    expect(parent[0].archived_at).toBeNull();
     for (const id of childIds) {
       const child = await db.select('SELECT archived_at FROM tasks WHERE id = $1', [id]);
-      expect(child[0].archived_at).not.toBeNull();
+      expect(child[0].archived_at).toBeNull();
     }
+  });
+
+  it('完了した子のさらに下に未完了の孫が残る場合も親を保護する', async () => {
+    await db.execute("UPDATE app_settings SET value = '7' WHERE key = 'auto_archive_days'");
+    const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
+    const [childId] = await seedTasks(db, [{ title: '子', parent_id: parentId, status_code: 3 }]);
+    const [grandchildId] = await seedTasks(db, [{ title: '未完了の孫', parent_id: childId, status_code: 2 }]);
+    await db.execute("UPDATE tasks SET completed_at = datetime('now', 'localtime', '-10 days') WHERE status_code = 3");
+
+    await runAutoArchive(db);
+
+    const rows = await db.select('SELECT id, archived_at FROM tasks ORDER BY id');
+    expect(rows).toEqual([parentId, childId, grandchildId].map(id => ({ id, archived_at: null })));
+  });
+
+  it('すべて完了またはキャンセル済みなら孫までまとめてアーカイブする', async () => {
+    await db.execute("UPDATE app_settings SET value = '7' WHERE key = 'auto_archive_days'");
+    const [parentId] = await seedTasks(db, [{ title: '親', status_code: 3 }]);
+    const [childId] = await seedTasks(db, [{ title: '子', parent_id: parentId, status_code: 3 }]);
+    await seedTasks(db, [{ title: '孫', parent_id: childId, status_code: 5 }]);
+    await db.execute("UPDATE tasks SET completed_at = datetime('now', 'localtime', '-10 days') WHERE id = $1", [parentId]);
+
+    await runAutoArchive(db);
+
+    const rows = await db.select('SELECT archived_at FROM tasks');
+    expect(rows).toHaveLength(3);
+    expect(rows.every(row => row.archived_at !== null)).toBe(true);
   });
 });

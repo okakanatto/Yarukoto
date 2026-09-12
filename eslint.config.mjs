@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
         "next-env.d.ts",
         // Tauri (Rust build artifacts / auto-generated files)
         "src-tauri/**",
+        // Local design studies and release verification artifacts are not app source.
+        "design-ref/**",
+        "releases/**",
     ]),
 ]);
 

@@ -6,6 +6,7 @@ import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
 import { useDbOperation } from '../hooks/useDbOperation';
 import { fetchDb } from '@/lib/utils';
+import { descendantIds, ancestorPath, validateParent, reparentTask, autoCompleteAncestors, clearInvalidNextTasks, restoreTaskTree, notifyTasksChanged } from '@/lib/taskHierarchy';
 
 export default function TaskEditModal({ task, onClose, onSaved }) {
     const [title, setTitle] = useState(task.title || '');
@@ -20,7 +21,6 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
     const [saving, setSaving] = useState(false);
     const [parentId, setParentId] = useState(task.parent_id || '');
     const [parentOptions, setParentOptions] = useState([]);
-    const [hasChildren, setHasChildren] = useState(false);
     const [projectId, setProjectId] = useState(task.project_id != null ? String(task.project_id) : '');
 
     const { masters, tags: allTags, projects } = useMasterData();
@@ -42,22 +42,12 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
             try {
                 const db = await fetchDb();
 
-                // BUG-6: Check if this task has children
-                const childRows = await db.select(
-                    'SELECT COUNT(*) as cnt FROM tasks WHERE parent_id = $1',
-                    [task.id]
-                );
-                const taskHasChildren = childRows[0]?.cnt > 0;
-                if (!cancelled) setHasChildren(taskHasChildren);
-
-                // Exclude itself, archived tasks, and tasks with parents (BUG-6: prevent 3+ levels)
-                const rows = await db.select(
-                    task.parent_id
-                        ? 'SELECT id, title FROM tasks WHERE archived_at IS NULL AND ((parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5) OR id = $2) ORDER BY title'
-                        : 'SELECT id, title FROM tasks WHERE archived_at IS NULL AND parent_id IS NULL AND id != $1 AND status_code != 3 AND status_code != 5 ORDER BY title',
-                    task.parent_id ? [task.id, task.parent_id] : [task.id]
-                );
-                if (!cancelled) setParentOptions(rows);
+                const rows = await db.select('SELECT id, title, parent_id, status_code, archived_at FROM tasks ORDER BY title');
+                const excluded = descendantIds(rows, task.id);
+                if (!cancelled) setParentOptions(rows.filter(t => !excluded.has(t.id) &&
+                    ((!t.archived_at && ![3, 5].includes(t.status_code)) || t.id === task.parent_id)).map(t => ({
+                    ...t, label: [...ancestorPath(rows, t.id).map(p => p.title), t.title].join(' › ')
+                })));
             } catch (e) { console.error('Failed to fetch parents:', e); }
         })();
         return () => { cancelled = true; };
@@ -75,25 +65,21 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
         setSaving(true);
         try {
             const saved = await dbOp(async (db) => {
-                // BUG-6: DB側バリデーション — 子タスクを持つタスクに親を設定させない
-                if (parentId) {
-                    const childCheck = await db.select(
-                        'SELECT COUNT(*) as cnt FROM tasks WHERE parent_id = $1',
-                        [task.id]
-                    );
-                    if (childCheck[0]?.cnt > 0) {
-                        window.dispatchEvent(new CustomEvent('yarukoto:toast', {
-                            detail: { message: '子タスクを持つタスクには親タスクを設定できません', type: 'error' }
-                        }));
-                        return false;
-                    }
-                }
+                const unchangedArchivedParent = task.archived_at && Number(parentId) === task.parent_id;
+                const parent = unchangedArchivedParent
+                    ? (await db.select('SELECT * FROM tasks WHERE id = $1', [task.parent_id]))[0]
+                    : await validateParent(db, task.id, parentId);
 
                 // Resolve project_id: use selected, or default project
                 let resolvedProjectId = projectId ? parseInt(projectId) : null;
                 if (!resolvedProjectId) {
                     const defaultProj = await db.select('SELECT id FROM projects WHERE is_default = 1 LIMIT 1');
                     resolvedProjectId = defaultProj[0]?.id || null;
+                }
+                if (parent) resolvedProjectId = parent.project_id;
+                const relationshipChanged = (Number(parentId) || null) !== (task.parent_id || null);
+                if (!unchangedArchivedParent && (relationshipChanged || resolvedProjectId !== task.project_id)) {
+                    await reparentTask(db, task.id, parentId, resolvedProjectId);
                 }
 
                 // Update the main task record
@@ -105,11 +91,11 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     parent_id = $9, project_id = $10,
                     updated_at = datetime('now', 'localtime'),
                     completed_at = CASE
-                            WHEN CAST($8 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
-                            WHEN CAST($8 AS INTEGER) != 3 THEN NULL
+                            WHEN CAST($11 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
+                            WHEN CAST($12 AS INTEGER) != 3 THEN NULL
                             ELSE completed_at
                         END
-                    WHERE id = $11
+                    WHERE id = $13
                     `, [
                     title,
                     startDate || null,
@@ -121,16 +107,14 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     parseInt(statusCode),
                     parentId || null,
                     resolvedProjectId,
+                    parseInt(statusCode),
+                    parseInt(statusCode),
                     task.id
                 ]);
 
-                // IMP-39: Cascade project_id to child tasks when parent's project changes
-                if (resolvedProjectId !== task.project_id) {
-                    await db.execute(
-                        'UPDATE tasks SET project_id = $1 WHERE parent_id = $2',
-                        [resolvedProjectId, task.id]
-                    );
-                }
+                if (parseInt(statusCode) === 3) await autoCompleteAncestors(db, task.id);
+                if (task.archived_at && ![3, 5].includes(parseInt(statusCode))) await restoreTaskTree(db, task.id);
+                await clearInvalidNextTasks(db);
 
                 // Update tags (delete existing, insert new ones)
                 await db.execute('DELETE FROM task_tags WHERE task_id = $1', [task.id]);
@@ -140,7 +124,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         await db.execute('INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [task.id, tagId]);
                     }
                 }
-
+                notifyTasksChanged();
                 return true;
             }, { error: '保存に失敗しました' });
 
@@ -199,11 +183,12 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     {projects.length > 1 && (
                         <div className="te-field">
                             <label className="te-label">プロジェクト</label>
-                            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="te-select">
+                            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="te-select" disabled={!!parentId}>
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
                             </select>
+                            {parentId && <small>親タスクと同じプロジェクトに保存されます</small>}
                         </div>
                     )}
 
@@ -220,15 +205,13 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     <div className="te-field">
                         <label className="te-label">親タスク</label>
                         <select
-                            value={hasChildren ? '' : parentId}
+                            value={parentId}
                             onChange={(e) => setParentId(e.target.value)}
                             className="te-select"
-                            disabled={hasChildren || parentOptions.length === 0}
-                            title={hasChildren ? '子タスクを持つタスクには親タスクを設定できません' : ''}
                         >
-                            <option value="">{hasChildren ? '設定不可（子タスクあり）' : 'なし（ルートタスク）'}</option>
-                            {!hasChildren && parentOptions.map(p => (
-                                <option key={p.id} value={p.id}>{p.title}</option>
+                            <option value="">なし（ルートタスク）</option>
+                            {parentOptions.map(p => (
+                                <option key={p.id} value={p.id}>{p.label}</option>
                             ))}
                         </select>
                     </div>

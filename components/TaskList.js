@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable, closestCorners } from '@dnd-kit/core';
-import TaskEditModal from './TaskEditModal';
+import WorkDetailPanel from './WorkDetailPanel';
 import TaskItem from './TaskItem';
 import { UnnestGap, ReorderGap } from './DndGaps';
 import MultiSelectFilter from './MultiSelectFilter';
@@ -16,6 +16,7 @@ import { useDbOperation } from '@/hooks/useDbOperation';
 import { ClipboardList, Archive, Hand, ArrowUpDown, Search, GripVertical } from 'lucide-react';
 import { buildTaskListQuery } from '@/lib/taskListQueries';
 import ArchiveView from './ArchiveView';
+import { ancestorPath } from '@/lib/taskHierarchy';
 
 export default function TaskList({ projectId = null }) {
     const [tasks, setTasks] = useState([]);
@@ -81,10 +82,12 @@ export default function TaskList({ projectId = null }) {
             });
 
             const rawTasks = await db.select(sql, params);
+            const graph = await db.select('SELECT id, title, parent_id FROM tasks');
 
             // Parse SQLite json_group_array results back into JS arrays
             const parsedTasks = rawTasks.map(task => ({
                 ...task,
+                ancestors: ancestorPath(graph, task.id),
                 tags: parseTags(task)
             }));
 
@@ -100,6 +103,10 @@ export default function TaskList({ projectId = null }) {
     }, [filterStatuses, filterTags, filterImportance, filterUrgency, filterProjects, showArchived, projectId, debouncedSearch]);
 
     useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
+    useEffect(() => {
+        window.addEventListener('yarukoto:tasksChanged', fetchTasks);
+        return () => window.removeEventListener('yarukoto:tasksChanged', fetchTasks);
+    }, [fetchTasks]);
 
     // Load sort mode setting on mount
     useEffect(() => {
@@ -308,13 +315,13 @@ export default function TaskList({ projectId = null }) {
                                     {sortMode === 'auto' && isDraggingChild && i === 0 && (
                                         <UnnestGap id={`unnest-gap-top`} />
                                     )}
-                                    <TaskItem task={task} childTasks={getChildTasks(task.id)}
+                                    <TaskItem task={task} childTasks={getChildTasks(task.id)} getChildren={getChildTasks}
                                         onStatusChange={handleStatusChange} onDelete={handleDelete}
                                         onTaskAdded={handleTaskAdded} onEdit={setEditingTask}
                                         onTodayToggle={handleTodayToggle}
                                         onArchive={handleArchive} onRestore={handleRestore}
                                         index={i} statusMap={statusMap} allStatuses={allStatuses}
-                                        isDraggable={sortMode === 'manual' || getChildTasks(task.id).length === 0}
+                                        isDraggable
                                         sortMode={sortMode}
                                         activeId={activeId}
                                         activeDragParentId={activeTaskData?.parent_id}
@@ -354,7 +361,7 @@ export default function TaskList({ projectId = null }) {
                     </>
                 )}
 
-                {editingTask && <TaskEditModal task={editingTask} onClose={() => setEditingTask(null)} onSaved={handleTaskEdited} />}
+                {editingTask && <WorkDetailPanel taskId={editingTask.id} onClose={() => setEditingTask(null)} onChanged={handleTaskEdited} onOpenTask={id => setEditingTask({ id })} />}
 
                 <style jsx global>{`
             .tl-root { min-height: 100px; }

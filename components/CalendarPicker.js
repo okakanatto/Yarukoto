@@ -148,6 +148,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
         ref={triggerRef}
         tabIndex={0}
         role="button"
+        aria-label={`${label || '日付'} ${value || '未設定'}`}
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => { if (open) { closeCalendar(); } else { openCalendar(); } }}
@@ -155,7 +156,7 @@ export default function CalendarPicker({ value, onChange, label, alignRight = fa
       >
         <span className="cal-icon"><Calendar size={14} /></span>
         <span className={`cal-value ${!value ? 'placeholder' : ''}`}>
-          {value || '日付を選択'}
+          {value || label || '日付を選択'}
         </span>
         {value && <button type="button" className="cal-clear" tabIndex={-1} onClick={handleClear}>✕</button>}
       </div>

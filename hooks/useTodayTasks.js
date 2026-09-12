@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { fetchDb, parseTags } from '@/lib/utils';
 import { taskComparator } from '@/lib/taskSorter';
+import { ancestorPath } from '@/lib/taskHierarchy';
 
 /**
  * Custom hook that manages today-page task data:
@@ -150,9 +151,11 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
               GROUP BY t.id
             `;
             const rawTasks = await db.select(tasksSql, [date, date, date, date]);
+            const graph = await db.select('SELECT id, title, parent_id FROM tasks');
 
             const standardTasks = rawTasks.map(t => ({
                 ...t,
+                ancestors: ancestorPath(graph, t.id),
                 is_archived: !!t.archived_at,
                 tags: parseTags(t)
             }));
@@ -178,7 +181,11 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
         loadTasks(selectedDate);
         const handleTaskAdded = () => loadTasks(selectedDate);
         window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
-        return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
+        window.addEventListener('yarukoto:tasksChanged', handleTaskAdded);
+        return () => {
+            window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
+            window.removeEventListener('yarukoto:tasksChanged', handleTaskAdded);
+        };
     }, [selectedDate, loadTasks]);
 
     // BUG-12 fix: Apply filters + sort in useMemo (reactive to filter/sort changes).

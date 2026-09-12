@@ -2,10 +2,13 @@
 
 import { DM_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
+import './workspace.css';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import TaskInput from '@/components/TaskInput';
 import Sidebar from '@/components/Sidebar';
+import WorkDetailPanel from '@/components/WorkDetailPanel';
+import GlobalWorkSignals from '@/components/GlobalWorkSignals';
 import { fetchDb } from '@/lib/utils';
 import { Plus, X, CircleCheck, XCircle } from 'lucide-react';
 
@@ -29,6 +32,7 @@ function LayoutInner({ children }) {
     const searchParams = useSearchParams();
     const [mounted, setMounted] = useState(false);
     const [fabOpen, setFabOpen] = useState(false);
+    const [openTaskId, setOpenTaskId] = useState(null);
     const [toast, setToast] = useState(null); // { message, type }
     const [dbError, setDbError] = useState(null);
     const [themeMode, setThemeMode] = useState('light');
@@ -86,8 +90,6 @@ function LayoutInner({ children }) {
         return () => window.removeEventListener('yarukoto:dberror', hd);
     }, [mounted]);
 
-    if (dbError) throw dbError; // Throws during render so Next.js error.js catches it
-
     // Global Toast Listener
     useEffect(() => {
         if (!mounted) return;
@@ -123,14 +125,35 @@ function LayoutInner({ children }) {
         return () => clearTimeout(timer);
     }, [pathname]);
 
+    useEffect(() => {
+        const open = e => { if (Number(e.detail?.id)) setOpenTaskId(Number(e.detail.id)); };
+        const shortcut = e => {
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                // Keep keyboard input in the visible editor instead of focusing
+                // a capture form behind an existing modal's backdrop.
+                if (document.querySelector('[role="dialog"][aria-modal="true"]:not(.fab-modal)')) return;
+                setFabOpen(true);
+            }
+        };
+        window.addEventListener('yarukoto:openTask', open);
+        window.addEventListener('keydown', shortcut);
+        return () => { window.removeEventListener('yarukoto:openTask', open); window.removeEventListener('keydown', shortcut); };
+    }, []);
+
+    if (dbError) throw dbError;
+
     return (
         <>
             <div className="layout-container" suppressHydrationWarning>
                 <Sidebar mounted={mounted} />
                 <main className="content" suppressHydrationWarning>
+                    {mounted && pathname !== '/work' && <GlobalWorkSignals />}
                     {mounted && children}
                 </main>
             </div>
+
+            {openTaskId && <WorkDetailPanel taskId={openTaskId} onClose={() => setOpenTaskId(null)} onOpenTask={setOpenTaskId} onChanged={() => window.dispatchEvent(new CustomEvent('yarukoto:tasksChanged'))} />}
 
             {/* Floating Action Button */}
             {mounted && (
@@ -152,14 +175,15 @@ function LayoutInner({ children }) {
                     {fabOpen && (
                         <>
                             <div className="fab-backdrop" onClick={() => setFabOpen(false)} />
-                            <div className="fab-modal" ref={modalRef}>
+                            <div className="fab-modal" ref={modalRef} role="dialog" aria-modal="true" aria-label="仕事を記録する">
                                 <div className="fab-modal-header">
-                                    <span className="fab-modal-title">新しいタスク</span>
-                                    <button className="fab-modal-close" onClick={() => setFabOpen(false)}>
+                                    <span className="fab-modal-title">仕事を記録する</span>
+                                    <button className="fab-modal-close" aria-label="記録欄を閉じる" onClick={() => setFabOpen(false)}>
                                         <X size={14} strokeWidth={2} />
                                     </button>
                                 </div>
                                 <TaskInput
+                                    draftKey="global"
                                     autoFocus
                                     defaultProjectId={pathname === '/projects' ? (parseInt(searchParams.get('id')) || null) : null}
                                     onTaskAdded={() => {

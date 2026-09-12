@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
-import TaskEditModal from '@/components/TaskEditModal';
+import WorkDetailPanel from '@/components/WorkDetailPanel';
 import MultiSelectFilter from '@/components/MultiSelectFilter';
 import { ReorderGap } from '@/components/DndGaps';
 import { addDays, toDateStr } from '@/lib/dateUtils';
@@ -10,14 +10,15 @@ import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useTodayTasks } from '@/hooks/useTodayTasks';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
-import { useTodayGrouping } from '@/hooks/useTodayGrouping';
+import { useTodayGrouping, flattenTodayGroups } from '@/hooks/useTodayGrouping';
+import { notifyTasksChanged } from '@/lib/taskHierarchy';
 import { Sun, CalendarDays, PartyPopper, Hand, ArrowUpDown, Pin, RefreshCw, GripVertical } from 'lucide-react';
 import TodayCardItem from './_components/TodayCardItem';
 import TodayGroupHeader from './_components/TodayGroupHeader';
 import TodayStats from './_components/TodayStats';
 
-function buildDateTabs() {
-    const now = new Date();
+function buildDateTabs(today) {
+    const now = new Date(`${today}T12:00:00`);
     const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     const tabs = [];
@@ -38,8 +39,20 @@ function buildDateTabs() {
 
 export default function TodayPage() {
     const dbOp = useDbOperation();
-    const dateTabs = useMemo(() => buildDateTabs(), []);
+    const [calendarToday, setCalendarToday] = useState(() => new Date().toLocaleDateString('sv-SE'));
+    const dateTabs = useMemo(() => buildDateTabs(calendarToday), [calendarToday]);
     const [selectedDate, setSelectedDate] = useState(() => dateTabs[0].date);
+    useEffect(() => {
+        const updateDate = () => {
+            const next = new Date().toLocaleDateString('sv-SE');
+            if (next === calendarToday) return;
+            setSelectedDate(selected => selected === calendarToday ? next : selected);
+            setCalendarToday(next);
+        };
+        const timer = setInterval(updateDate, 60000);
+        window.addEventListener('focus', updateDate);
+        return () => { clearInterval(timer); window.removeEventListener('focus', updateDate); };
+    }, [calendarToday]);
     const [justCompletedId, setJustCompletedId] = useState(null);
     const [editingTask, setEditingTask] = useState(null);
     const [activeId, setActiveId] = useState(null);
@@ -87,22 +100,14 @@ export default function TodayPage() {
                 const currentChildren = childOverrides || childrenByParentRef.current;
                 let orderIdx = 1;
 
-                for (const item of newRootItems) {
-                    const pid = item.is_ghost_parent ? item.real_id : item.id;
-
-                    if (!item.is_ghost_parent) {
-                        if (item.is_routine) {
-                            await db.execute('UPDATE routines SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.routine_id]);
-                        } else {
-                            await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.id]);
-                        }
-                    }
-
-                    const children = currentChildren[pid] || [];
-                    for (const child of children) {
-                        await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, child.id]);
+                for (const item of flattenTodayGroups(newRootItems, currentChildren)) {
+                    if (item.is_routine) {
+                        await db.execute('UPDATE routines SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.routine_id]);
+                    } else {
+                        await db.execute('UPDATE tasks SET today_sort_order = $1 WHERE id = $2', [orderIdx++, item.id]);
                     }
                 }
+                notifyTasksChanged();
             }, { error: '並び替えの保存に失敗しました' });
         } catch {
             reloadTasks();
@@ -146,16 +151,7 @@ export default function TodayPage() {
             const currentRoots = rootItemsRef.current;
             const orderMap = new Map();
             let orderIdx = 1;
-            for (const item of currentRoots) {
-                const pid = item.is_ghost_parent ? item.real_id : item.id;
-                if (!item.is_ghost_parent) {
-                    orderMap.set(item.id, orderIdx++);
-                }
-                const children = newChildrenMap[pid] || [];
-                for (const child of children) {
-                    orderMap.set(child.id, orderIdx++);
-                }
-            }
+            flattenTodayGroups(currentRoots, newChildrenMap).forEach(item => orderMap.set(item.id, orderIdx++));
             setTasks(prev => prev.map(t => orderMap.has(t.id) ? { ...t, today_sort_order: orderMap.get(t.id) } : t));
 
             await persistTodaySortOrder(currentRoots, newChildrenMap);
@@ -189,16 +185,7 @@ export default function TodayPage() {
         // Update today_sort_order values in allTasks (preserves filtered-out items for BUG-12)
         const orderMap = new Map();
         let orderIdx = 1;
-        for (const item of reorderedRoots) {
-            const pid = item.is_ghost_parent ? item.real_id : item.id;
-            if (!item.is_ghost_parent) {
-                orderMap.set(item.id, orderIdx++);
-            }
-            const children = currentChildren[pid] || [];
-            for (const child of children) {
-                orderMap.set(child.id, orderIdx++);
-            }
-        }
+        flattenTodayGroups(reorderedRoots, currentChildren).forEach(item => orderMap.set(item.id, orderIdx++));
         setTasks(prev => prev.map(t => orderMap.has(t.id) ? { ...t, today_sort_order: orderMap.get(t.id) } : t));
 
         await persistTodaySortOrder(reorderedRoots);
@@ -226,6 +213,7 @@ export default function TodayPage() {
         try {
             await dbOp(async (db) => {
                 await db.execute('UPDATE tasks SET today_date = NULL WHERE id = $1', [taskId]);
+                notifyTasksChanged();
             }, { error: '今日やるタスクの変更に失敗しました' });
         } catch {
             reloadTasks();
@@ -335,24 +323,25 @@ export default function TodayPage() {
                         const parentId = item.is_ghost_parent ? item.real_id : item.id;
                         const children = childrenByParent[parentId] || [];
                         const isGhost = !!item.is_ghost_parent;
-                        const showChildGaps = isManual && draggingChildInfo && draggingChildInfo.parentId === parentId;
 
                         // Helper: render children with optional ReorderGaps for child reorder (IMP-38)
-                        const renderChildren = (childList) => (
+                        const renderChildren = (childList, ownerId = parentId, path = [parentId]) => (
                             <div className="today-children">
-                                {childList.map((child, ci) => (
+                                {childList.filter(child => !path.includes(child.real_id || child.id)).map((child, ci) => (
                                     <React.Fragment key={child.id}>
-                                        {showChildGaps && ci === 0 && (
-                                            <ReorderGap id={`reorder-today-child-${parentId}-0`} />
+                                        {isManual && draggingChildInfo?.parentId === ownerId && ci === 0 && (
+                                            <ReorderGap id={`reorder-today-child-${ownerId}-0`} />
                                         )}
+                                        {child.is_ghost_parent ? <TodayGroupHeader parentId={child.real_id} title={child.title} isManual={false} /> :
                                         <TodayCardItem task={child} isManual={isManual} isChild
                                             statuses={statuses} statusMap={statusMap} selectedDate={selectedDate}
                                             onStatusChange={handleStatusChange} onRemove={handleRemove}
                                             onEdit={setEditingTask} justCompletedId={justCompletedId}
                                             justDroppedId={justDroppedId}
-                                            index={ci} isProcessing={actions.processingIds.has(child.id)} />
-                                        {showChildGaps && (
-                                            <ReorderGap id={`reorder-today-child-${parentId}-${ci + 1}`} />
+                                            index={ci} isProcessing={actions.processingIds.has(child.id)} />}
+                                        {(childrenByParent[child.real_id || child.id] || []).length > 0 && renderChildren(childrenByParent[child.real_id || child.id], child.real_id || child.id, [...path, child.real_id || child.id])}
+                                        {isManual && draggingChildInfo?.parentId === ownerId && (
+                                            <ReorderGap id={`reorder-today-child-${ownerId}-${ci + 1}`} />
                                         )}
                                     </React.Fragment>
                                 ))}
@@ -558,13 +547,11 @@ export default function TodayPage() {
       `}</style>
 
                 {editingTask && (
-                    <TaskEditModal
-                        task={editingTask}
+                    <WorkDetailPanel
+                        taskId={editingTask.id}
                         onClose={() => setEditingTask(null)}
-                        onSaved={() => {
-                            setEditingTask(null);
-                            loadTasks(selectedDate);
-                        }}
+                        onChanged={() => loadTasks(selectedDate)}
+                        onOpenTask={id => setEditingTask({ id })}
                     />
                 )}
             </div>
