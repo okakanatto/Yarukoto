@@ -1,6 +1,5 @@
 'use client';
 
-import { DM_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import './workspace.css';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -12,13 +11,10 @@ import GlobalWorkSignals from '@/components/GlobalWorkSignals';
 import { fetchDb } from '@/lib/utils';
 import { Plus, X, CircleCheck, XCircle } from 'lucide-react';
 
-const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-sans-loaded' });
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-heading-loaded' });
-
 export default function RootLayout({ children }) {
     return (
         <html lang="ja" suppressHydrationWarning>
-            <body className={`${dmSans.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
+            <body suppressHydrationWarning>
                 <Suspense fallback={null}>
                     <LayoutInner>{children}</LayoutInner>
                 </Suspense>
@@ -106,10 +102,10 @@ function LayoutInner({ children }) {
     // Listen for FAB open request (from Basecamp strip etc.)
     useEffect(() => {
         if (!mounted) return;
-        const handler = () => setFabOpen(true);
+        const handler = () => { if (pathname !== '/work') setFabOpen(true); };
         window.addEventListener('yarukoto:openFab', handler);
         return () => window.removeEventListener('yarukoto:openFab', handler);
-    }, [mounted]);
+    }, [mounted, pathname]);
 
     // Close FAB modal on Escape key
     useEffect(() => {
@@ -126,20 +122,20 @@ function LayoutInner({ children }) {
     }, [pathname]);
 
     useEffect(() => {
-        const open = e => { if (Number(e.detail?.id)) setOpenTaskId(Number(e.detail.id)); };
+        const open = e => { if (pathname !== '/work' && Number(e.detail?.id)) setOpenTaskId(Number(e.detail.id)); };
         const shortcut = e => {
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 // Keep keyboard input in the visible editor instead of focusing
                 // a capture form behind an existing modal's backdrop.
                 if (document.querySelector('[role="dialog"][aria-modal="true"]:not(.fab-modal)')) return;
-                setFabOpen(true);
+                window.dispatchEvent(new CustomEvent('yarukoto:openFab'));
             }
         };
         window.addEventListener('yarukoto:openTask', open);
         window.addEventListener('keydown', shortcut);
         return () => { window.removeEventListener('yarukoto:openTask', open); window.removeEventListener('keydown', shortcut); };
-    }, []);
+    }, [pathname]);
 
     if (dbError) throw dbError;
 
@@ -147,19 +143,20 @@ function LayoutInner({ children }) {
         <>
             <div className="layout-container" suppressHydrationWarning>
                 <Sidebar mounted={mounted} />
-                <main className="content" suppressHydrationWarning>
+                <main className={`content ${pathname === '/work' ? 'content-desk' : ''}`} suppressHydrationWarning>
                     {mounted && pathname !== '/work' && <GlobalWorkSignals />}
                     {mounted && children}
                 </main>
             </div>
 
-            {openTaskId && <WorkDetailPanel taskId={openTaskId} onClose={() => setOpenTaskId(null)} onOpenTask={setOpenTaskId} onChanged={() => window.dispatchEvent(new CustomEvent('yarukoto:tasksChanged'))} />}
+            {openTaskId && pathname !== '/work' && <WorkDetailPanel taskId={openTaskId} onClose={() => setOpenTaskId(null)} onOpenTask={setOpenTaskId} onChanged={() => window.dispatchEvent(new CustomEvent('yarukoto:tasksChanged'))} />}
 
             {/* Floating Action Button */}
             {mounted && (
                 <>
                     <button
                         className={`fab ${fabOpen ? 'fab-open' : ''}`}
+                        hidden={pathname === '/work'}
                         onClick={() => setFabOpen(v => !v)}
                         title="新しいタスクを追加"
                         aria-label="新しいタスクを追加"

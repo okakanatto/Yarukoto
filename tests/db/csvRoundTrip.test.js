@@ -23,6 +23,7 @@ describe('実際のCSV入出力', () => {
         const [child] = await seedTasks(db, [{ title: '調査', parent_id: root }]);
         const [leaf] = await seedTasks(db, [{ title: '照合', parent_id: child }]);
         await db.execute('UPDATE tasks SET capture_text = $1, source_ref = $2, waiting_on = $3, review_date = $4, next_task_id = $5, last_opened_at = $6 WHERE id = $7', [original, 'local/path\n資料', '田中さん', '2026-10-01', leaf, '2026-09-12 12:00:00', root]);
+        await db.execute('UPDATE tasks SET next_step = $1, work_started_at = $2 WHERE id = $3', ['比較表の見出しだけ\n最初の1件', '2026-09-13 09:12:03.456', root]);
         const rows = await db.select('SELECT * FROM tasks ORDER BY id');
         const csv = exportTasksCSV(rows);
         expect(parseCSV(csv)).toHaveLength(4);
@@ -34,6 +35,8 @@ describe('実際のCSV入出力', () => {
         expect(imported[0].waiting_on).toBe('田中さん');
         expect(imported[0].review_date).toBe('2026-10-01');
         expect(imported[0].last_opened_at).toBe('2026-09-12 12:00:00');
+        expect(imported[0].next_step).toBe('比較表の見出しだけ\n最初の1件');
+        expect(imported[0].work_started_at).toBe('2026-09-13 09:12:03.456');
         expect(imported[0].next_task_id).toBe(imported[2].id);
         expect(imported[1].parent_id).toBe(imported[0].id);
         expect(imported[2].parent_id).toBe(imported[1].id);

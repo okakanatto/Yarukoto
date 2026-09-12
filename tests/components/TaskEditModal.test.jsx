@@ -11,7 +11,7 @@ vi.mock('@/hooks/useMasterData', () => ({
         masters: {
             importance: [{ level: 1, label: '高' }],
             urgency: [{ level: 1, label: '高' }],
-            status: [{ code: 1, label: '未着手' }, { code: 3, label: '完了' }]
+            status: [{ code: 1, label: '未着手' }, { code: 2, label: '着手中' }, { code: 3, label: '完了' }]
         },
         tags: [{ id: 1, name: 'TagA' }],
         projects: [{ id: 1, name: 'ProjectA', is_default: 1 }]
@@ -76,6 +76,27 @@ describe('TaskEditModal save failure recovery', () => {
         expect(rows[0]).toMatchObject({ title: 'New Title', notes: '方式の判断理由を残す' });
         const tags = await db.select('SELECT tag_id FROM task_tags WHERE task_id = $1', [taskId]);
         expect(tags.map(tag => tag.tag_id)).toEqual([tagId]);
+    });
+
+    it('records an explicit start from attributes and preserves it on a later edit', async () => {
+        const [id] = await seedTasks(db, [{ title: '方式を検討する', project_id: 1 }]);
+        const onSaved = vi.fn();
+        const task = { id, title: '方式を検討する', project_id: 1, tags: [], status_code: 1 };
+        render(<TaskEditModal task={task} onClose={vi.fn()} onSaved={onSaved} />);
+        await screen.findByDisplayValue(task.title);
+        const status = screen.getAllByRole('combobox').find(element => element.querySelector('option[value="2"]')?.textContent === '着手中');
+        fireEvent.change(status, { target: { value: '2' } });
+        fireEvent.click(screen.getByRole('button', { name: '保存' }));
+        await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+        const [started] = await db.select('SELECT work_started_at FROM tasks WHERE id = $1', [id]);
+        expect(started.work_started_at).toBeTruthy();
+        cleanup();
+        await db.execute("UPDATE tasks SET work_started_at = '2026-09-01 10:00:00' WHERE id = $1", [id]);
+        render(<TaskEditModal task={{ ...task, status_code: 2 }} onClose={vi.fn()} onSaved={onSaved} />);
+        fireEvent.change(await screen.findByDisplayValue(task.title), { target: { value: '方式を比較する' } });
+        fireEvent.click(screen.getByRole('button', { name: '保存' }));
+        await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(2));
+        expect((await db.select('SELECT work_started_at FROM tasks WHERE id = $1', [id]))[0].work_started_at).toBe('2026-09-01 10:00:00');
     });
 
     it('should save successfully if no DB error occurs', async () => {

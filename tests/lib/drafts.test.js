@@ -1,16 +1,84 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DRAFT_BACKUP_PREFIX, retireDraftsForDatabaseRestore } from '@/lib/drafts';
+import { clearWorkDraftCache, readWorkDraft, writeWorkDraft } from '@/lib/workDrafts';
 
 const taskKey = 'yarukoto:task-input-draft:v1:work';
 const projectKey = 'yarukoto:project-context-draft:1';
 const timestamp = '2026-09-12T12:00:00.000Z';
 const original = '{"title":"一行目\\n背景","pendingTask":{"id":1}}';
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => { localStorage.clear(); clearWorkDraftCache(); });
 afterEach(() => vi.restoreAllMocks());
 
 describe('復元前DBに属する下書きの退避', () => {
+    it('仕事メモと選択IDを退避し、再起動に失敗しても同じIDへ旧キャッシュを復活させない', () => {
+        const workKey = 'yarukoto:work-draft:v1:1';
+        const oldDraft = { fields: { notes: '旧DBの仕事の背景\n次の確認', next_step: '旧案件の一歩' }, childText: '作成途中' };
+        expect(writeWorkDraft(1, oldDraft)).toBe(true);
+        expect(readWorkDraft(1)).toEqual(oldDraft);
+        localStorage.setItem('yarukoto:work-selection', '1');
+        localStorage.setItem('yarukoto:work-selection-extra', 'keep');
+        const result = retireDraftsForDatabaseRestore(localStorage, timestamp);
+        expect(result.count).toBe(2);
+        expect(JSON.parse(localStorage.getItem(result.backupKey)).entries).toEqual([
+            { key: workKey, value: JSON.stringify(oldDraft) }, { key: 'yarukoto:work-selection', value: '1' },
+        ]);
+        expect(localStorage.getItem(workKey)).toBeNull();
+        expect(localStorage.getItem('yarukoto:work-selection')).toBeNull();
+        expect(localStorage.getItem('yarukoto:work-selection-extra')).toBe('keep');
+        // Same module instance, representing a failed relaunch after DB replacement.
+        expect(readWorkDraft(1)).toBeUndefined();
+        const newDraft = { fields: { notes: '復元した別DBの仕事' }, childText: '' };
+        writeWorkDraft(1, newDraft);
+        expect(readWorkDraft(1)).toEqual(newDraft);
+    });
+
+    it('保存先に書けなかったメモリ上だけの変更も退避してから解除する', () => {
+        const draft = { fields: { notes: 'メモリだけの重要な背景' }, childText: '' };
+        const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
+        expect(writeWorkDraft(7, draft)).toBe(false);
+        set.mockRestore();
+        expect(localStorage.getItem('yarukoto:work-draft:v1:7')).toBeNull();
+        const result = retireDraftsForDatabaseRestore(localStorage, timestamp);
+        expect(JSON.parse(localStorage.getItem(result.backupKey)).entries).toEqual([{ key: 'yarukoto:work-draft:v1:7', value: JSON.stringify(draft) }]);
+        expect(readWorkDraft(7)).toBeUndefined();
+    });
+
+    it('保存済み本文と更新に失敗した最新メモリ本文の両方を保持する', () => {
+        const oldDraft = { fields: { notes: '保存先の原文' }, childText: '' };
+        const latestDraft = { fields: { notes: '保存失敗後の最新原文' }, childText: '最新の子' };
+        writeWorkDraft(8, oldDraft);
+        const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
+        expect(writeWorkDraft(8, latestDraft)).toBe(false);
+        set.mockRestore();
+        const result = retireDraftsForDatabaseRestore(localStorage, timestamp);
+        const snapshot = JSON.parse(localStorage.getItem(result.backupKey));
+        expect(snapshot.entries).toEqual([{ key: 'yarukoto:work-draft:v1:8', value: JSON.stringify(oldDraft) }]);
+        expect(snapshot.memoryEntries).toEqual([{ key: 'yarukoto:work-draft:v1:8', value: JSON.stringify(latestDraft) }]);
+        expect(readWorkDraft(8)).toBeUndefined();
+    });
+
+    it('退避保存または解除の失敗時はMapを消さず、本文は退避に残す', () => {
+        const draft = { fields: { notes: '退避対象の背景' }, childText: '' };
+        writeWorkDraft(9, draft);
+        localStorage.setItem('yarukoto:work-selection', '9');
+        const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('backup failed'); });
+        expect(() => retireDraftsForDatabaseRestore(localStorage, timestamp)).toThrow('backup failed');
+        expect(readWorkDraft(9)).toEqual(draft);
+        set.mockRestore();
+        const remove = Storage.prototype.removeItem;
+        const removeSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (key) {
+            if (key === 'yarukoto:work-selection') throw new Error('remove failed');
+            return remove.call(this, key);
+        });
+        expect(() => retireDraftsForDatabaseRestore(localStorage, timestamp)).toThrow('remove failed');
+        expect(readWorkDraft(9)).toEqual(draft);
+        expect(JSON.parse(localStorage.getItem(`${DRAFT_BACKUP_PREFIX}${timestamp}`)).entries[0].value).toBe(JSON.stringify(draft));
+        removeSpy.mockRestore();
+        retireDraftsForDatabaseRestore(localStorage, timestamp);
+        expect(readWorkDraft(9)).toBeUndefined();
+    });
     it('対象prefixだけを原文のまま退避し、他の設定や以前の退避分を保つ', () => {
         localStorage.setItem(taskKey, original);
         localStorage.setItem(projectKey, '{malformed but preserved');

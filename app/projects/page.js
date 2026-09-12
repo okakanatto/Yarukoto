@@ -3,12 +3,18 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowUpRight, CalendarDays, FolderOpen } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, CalendarDays, Check, Circle, FolderOpen, Play, RotateCcw } from 'lucide-react';
 import TaskInput from '@/components/TaskInput';
 import TaskList from '@/components/TaskList';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { saveProjectContext } from '@/lib/workspace';
+import { saveProjectContext, setProjectCompletion } from '@/lib/workspace';
 import { useProjectDraft, readProjectDraft } from '@/hooks/useProjectDraft';
+import styles from './projects.module.css';
+
+const openTask = id => window.dispatchEvent(new CustomEvent('yarukoto:openTask', { detail: { id } }));
+const isOpen = task => ![3, 5].includes(Number(task.status_code));
+const statusName = task => task.status_label || ({ 1: '未着手', 2: '着手中', 3: '完了', 4: '保留', 5: 'キャンセル' }[task.status_code]) || '未設定';
+const projectViews = [['progress', '進行'], ['tasks', 'タスク']];
 
 export default function ProjectPage() {
     return <Suspense fallback={<p>読み込み中…</p>}><ProjectPageInner /></Suspense>;
@@ -18,8 +24,6 @@ function ProjectPageInner() {
     const searchParams = useSearchParams();
     const projectId = Number(searchParams.get('id')) || null;
     const { tasks, projects, loading, error, reload } = useWorkspace();
-    const [refreshKey, setRefreshKey] = useState(0);
-    const refresh = () => { reload(); setRefreshKey(k => k + 1); };
     const project = projects.find(p => p.id === projectId);
 
     if (loading) return <p className="work-muted">読み込み中…</p>;
@@ -28,24 +32,76 @@ function ProjectPageInner() {
 
     return <div className="work-page">
         <header className="work-heading"><div>{project && <Link className="work-text-link" href="/projects"><ArrowLeft size={14} />プロジェクト一覧</Link>}<h1>{project?.name || 'プロジェクト'}</h1></div><Link className="work-text-link" href="/settings?tab=projects">設定 <ArrowUpRight size={15} /></Link></header>
-        {project ? <>
-            <ProjectContext key={project.id} project={project} onChanged={reload} />
-            <ProjectProgress tasks={tasks.filter(t => t.project_id === projectId)} />
-            <TaskInput key={project.id} onTaskAdded={refresh} defaultProjectId={projectId} />
-            <div style={{ marginTop: 24 }}><TaskList key={`${projectId}-${refreshKey}`} projectId={projectId} /></div>
-        </> : <div className="project-grid">{projects.map(p => {
-            const pending = tasks.filter(t => t.project_id === p.id && ![3, 5].includes(t.status_code));
-            const waiting = pending.filter(t => t.waiting_on || t.status_code === 4).length;
-            const overdue = pending.filter(t => t.due_date && t.due_date < new Date().toLocaleDateString('sv-SE')).length;
-            return <Link key={p.id} href={`/projects?id=${p.id}`} className="project-overview-card"><FolderOpen size={21} style={{ color: p.color }} /><h2>{p.name}</h2>{p.outcome && <p>{p.outcome}</p>}<div className="work-row-meta">{p.due_date && <span><CalendarDays size={13} />期限 {p.due_date}</span>}<span>未完了 {pending.length}件</span>{waiting > 0 && <span>待ち {waiting}件</span>}{overdue > 0 && <span className="work-overdue">期限超過 {overdue}件</span>}{Object.keys(readProjectDraft(p.id)).length > 0 && <span>未保存の下書き</span>}</div></Link>;
-        })}</div>}
+        {project ? <ProjectWorkspace key={project.id} project={project} tasks={tasks.filter(task => task.project_id === projectId)} reload={reload} />
+            : <div className="project-grid">{projects.map(p => {
+                const pending = tasks.filter(task => task.project_id === p.id && isOpen(task));
+                const overdue = pending.filter(task => task.due_date && task.due_date < new Date().toLocaleDateString('sv-SE')).length;
+                const progress = p.progress || {};
+                return <Link key={p.id} href={`/projects?id=${p.id}`} className={`project-overview-card ${p.completed_at ? styles.completedProject : ''}`}>
+                    <FolderOpen size={21} style={{ color: p.color }} /><h2>{p.name}</h2>{p.outcome && <p>{p.outcome}</p>}
+                    <div className="work-row-meta">
+                        {p.completed_at && <span><Check size={13} />完了 {p.completed_at.slice(0, 10)}</span>}
+                        {(!p.completed_at || progress.open > 0) && <>
+                            {p.due_date && <span><CalendarDays size={13} />期限 {p.due_date}</span>}
+                            <span>{p.completed_at ? '完了後の未完了' : '未完了'} {progress.open ?? pending.length}件</span>
+                            {progress.waiting > 0 && <span>待ち {progress.waiting}件</span>}
+                            {overdue > 0 && <span className="work-overdue">期限超過 {overdue}件</span>}
+                        </>}
+                        {Object.keys(readProjectDraft(p.id)).length > 0 && <span>未保存の下書き</span>}
+                    </div>
+                </Link>;
+            })}</div>}
     </div>;
 }
 
-function ProjectProgress({ tasks }) {
-    const open = tasks.filter(t => ![3, 5].includes(t.status_code));
-    const roots = tasks.filter(t => !t.parent_id);
-    return <div className="project-progress"><span>主な仕事 {roots.filter(t => t.status_code === 3).length} / {roots.length} 完了</span><span>着手中 {open.filter(t => t.status_code === 2).length}</span><span>待ち {open.filter(t => t.waiting_on || t.status_code === 4).length}</span></div>;
+function ProjectWorkspace({ project, tasks, reload }) {
+    const [view, setView] = useState('progress');
+    const [refreshKey, setRefreshKey] = useState(0);
+    const refresh = () => { reload(); setRefreshKey(key => key + 1); };
+    const milestones = project.milestones || tasks.filter(task => !task.parent_id);
+    const ongoing = milestones.filter(isOpen);
+    const finished = milestones.filter(task => !isOpen(task));
+    return <>
+        <ProjectContext project={project} onChanged={reload} />
+        <div className={styles.tabs} role="tablist" aria-label="プロジェクトの見方">
+            {projectViews.map(([key, label], index) => <button key={key} id={`project-tab-${key}`} role="tab" tabIndex={view === key ? 0 : -1} aria-selected={view === key} aria-controls="project-panel" onClick={() => setView(key)} onKeyDown={event => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const next = event.key === 'Home' ? 0 : event.key === 'End' ? projectViews.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + projectViews.length) % projectViews.length;
+                setView(projectViews[next][0]);
+                document.getElementById(`project-tab-${projectViews[next][0]}`)?.focus();
+            }}>{label}</button>)}
+        </div>
+        {view === 'progress' ? <section id="project-panel" role="tabpanel" aria-labelledby="project-tab-progress">
+            {milestones.length ? <>
+                <h2 className={styles.sectionTitle}>主な仕事</h2>
+                <MilestoneList tasks={ongoing} />
+                {finished.length > 0 && <details className={styles.finishedWork} open={!ongoing.length || undefined}><summary>完了・キャンセル {finished.length}件</summary><MilestoneList tasks={finished} /></details>}
+            </> : <div className={styles.empty}><FolderOpen size={24} /><p>まだ仕事がありません</p></div>}
+            <div className={styles.progressFooter}><ProjectProgress progress={project.progress} /><button className="work-button" onClick={() => setView('tasks')}>タスクを管理 <ArrowUpRight size={14} /></button></div>
+        </section> : <section id="project-panel" role="tabpanel" aria-labelledby="project-tab-tasks">
+            <TaskInput onTaskAdded={refresh} defaultProjectId={project.id} />
+            <div className={styles.taskList}><TaskList key={`${project.id}-${refreshKey}`} projectId={project.id} /></div>
+        </section>}
+    </>;
+}
+
+function MilestoneList({ tasks }) {
+    if (!tasks.length) return null;
+    return <ul className={styles.milestones}>{tasks.map(task => {
+        const note = (task.notes || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ');
+        const Icon = Number(task.status_code) === 3 ? Check : Number(task.status_code) === 2 ? Play : Circle;
+        return <li key={task.id}><button className={styles.milestone} onClick={() => openTask(task.id)}>
+            <Icon size={17} className={Number(task.status_code) === 3 ? styles.finishedIcon : styles.taskIcon} aria-hidden="true" />
+            <span className={styles.milestoneBody}><strong>{task.title}</strong>{note && <span className={styles.note}>{note}</span>}<span className={styles.meta}>{statusName(task)}{task.due_date && ` · 期限 ${task.due_date}`}{task.completed_at && ` · ${task.completed_at.slice(0, 10)}`}{task.archived_at && ' · アーカイブ'}</span></span>
+            <ArrowUpRight size={15} className={styles.openIcon} aria-hidden="true" />
+        </button></li>;
+    })}</ul>;
+}
+
+function ProjectProgress({ progress }) {
+    if (!progress) return null;
+    return <div className={styles.counts} aria-label="タスク件数"><span>タスク {progress.completed} / {progress.total} 完了</span>{progress.inProgress > 0 && <span>着手中 {progress.inProgress}</span>}{progress.waiting > 0 && <span>待ち {progress.waiting}</span>}</div>;
 }
 
 function ProjectContext({ project, onChanged }) {
@@ -67,8 +123,24 @@ function ProjectContext({ project, onChanged }) {
         catch (failure) { setError(`保存できませんでした。${failure.message}`); }
         finally { setSaving(false); }
     }
+    async function changeCompletion() {
+        if (saving) return;
+        setSaving(true); setError('');
+        try {
+            // Save the edited outcome first. A failed save must not complete the project.
+            if (dirty) { await saveProjectContext(project.id, draft.changes); draft.clear(); await onChanged(); }
+            await setProjectCompletion(project.id, !project.completed_at);
+            await onChanged();
+            setEditing(false);
+        } catch (failure) { setError(failure.message || '状態を変更できませんでした。'); }
+        finally { setSaving(false); }
+    }
     return <section className="project-context" aria-label="プロジェクトの成果と期限">
-        <div className="project-context-summary"><div><small>成果</small><p>{project.outcome || '未設定'}</p>{project.due_date && <span className="work-row-meta"><CalendarDays size={14} />期限 {project.due_date}</span>}</div><button className="work-button" disabled={saving} onClick={() => setEditing(!editing)}>{editing ? '閉じる' : dirty ? '下書きを再開' : '編集'}</button></div>
+        <div className="project-context-summary"><div><small>成果</small><p>{project.outcome || '未設定'}</p><div className="work-row-meta">{project.due_date && <span><CalendarDays size={14} />期限 {project.due_date}</span>}{project.completed_at && <span className={styles.completeStatus}><Check size={14} />完了 {project.completed_at.slice(0, 10)}</span>}{project.completed_at && project.progress?.open > 0 && <span>完了後の未完了 {project.progress.open}件</span>}</div></div>
+            <div className={styles.contextActions}><button className="work-button" disabled={saving} onClick={() => setEditing(!editing)}>{editing ? '閉じる' : dirty ? '下書きを再開' : '編集'}</button>
+                {!project.is_default && <button className="work-button" disabled={saving} onClick={changeCompletion}>{project.completed_at ? <><RotateCcw size={14} />再開</> : <><Check size={14} />完了にする</>}</button>}
+            </div>
+        </div>
         {dirty && <p role="status" className="work-muted">未保存の変更{!persisted && '（終了前に保存してください）'}{draft.changes.due_date !== undefined && ' · 期限は未反映'}</p>}
         {error && <p role="alert" className="work-error">{error}</p>}
         {editing && <form className="project-context-form" onSubmit={save}>

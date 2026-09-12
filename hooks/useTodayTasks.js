@@ -22,7 +22,9 @@ import { ancestorPath } from '@/lib/taskHierarchy';
 export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filterImportance, filterUrgency }) {
     // allTasks: unfiltered data from DB (used for stats + as source for filtering)
     const [allTasks, setAllTasks] = useState([]);
+    const [dataDate, setDataDate] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     const [statuses, setStatuses] = useState([]);
     const [allTags, setAllTags] = useState([]);
@@ -35,47 +37,61 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
 
     // Tracks the most recent async fetch request to prevent tab-switching Race Conditions
     const activeRequestId = useRef(0);
+    const masterRequestId = useRef(0);
+    const selectedDateRef = useRef(selectedDate);
+    const invalidateTaskRequests = useCallback(() => { activeRequestId.current++; }, []);
+    const invalidateAllRequests = useCallback(() => { masterRequestId.current++; activeRequestId.current++; }, []);
     // Guards against fetching tasks before master data (statuses, settings) is loaded
     const [masterDataReady, setMasterDataReady] = useState(false);
 
-    // Load master data once on mount
-    useEffect(() => {
-        (async () => {
-            try {
-                const db = await fetchDb();
-                const rows = await db.select('SELECT * FROM status_master ORDER BY sort_order, code');
-                setStatuses(rows);
-
-                const tagsRows = await db.select('SELECT * FROM tags ORDER BY sort_order, id');
-                setAllTags(tagsRows);
-
-                const importanceRows = await db.select('SELECT * FROM importance_master ORDER BY level');
-                setAllImportance(importanceRows);
-                const urgencyRows = await db.select('SELECT * FROM urgency_master ORDER BY level');
-                setAllUrgency(urgencyRows);
-
-                const settingsRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['show_overdue_in_today']);
-                if (settingsRows.length > 0) {
-                    setShowOverdue(settingsRows[0].value === '1');
-                }
-
-                const sortModeRows = await db.select('SELECT value FROM app_settings WHERE key = $1', ['sort_mode_today']);
-                if (sortModeRows.length > 0) setSortMode(sortModeRows[0].value);
-
-                // Mark master data as ready so loadTasks can proceed
-                setMasterDataReady(true);
-            } catch (e) { console.error('Failed to load statuses/tags:', e); }
-        })();
+    const loadMasterData = useCallback(async () => {
+        const currentRequest = ++masterRequestId.current;
+        activeRequestId.current++;
+        setLoading(true);
+        setError('');
+        setMasterDataReady(false);
+        try {
+            const db = await fetchDb();
+            const [rows, tagsRows, importanceRows, urgencyRows, settingsRows, sortModeRows] = await Promise.all([
+                db.select('SELECT * FROM status_master ORDER BY sort_order, code'),
+                db.select('SELECT * FROM tags ORDER BY sort_order, id'),
+                db.select('SELECT * FROM importance_master ORDER BY level'),
+                db.select('SELECT * FROM urgency_master ORDER BY level'),
+                db.select('SELECT value FROM app_settings WHERE key = $1', ['show_overdue_in_today']),
+                db.select('SELECT value FROM app_settings WHERE key = $1', ['sort_mode_today']),
+            ]);
+            if (currentRequest !== masterRequestId.current) return;
+            setStatuses(rows);
+            setAllTags(tagsRows);
+            setAllImportance(importanceRows);
+            setAllUrgency(urgencyRows);
+            setShowOverdue(settingsRows[0]?.value === '1');
+            setSortMode(sortModeRows[0]?.value || 'auto');
+            setMasterDataReady(true);
+        } catch (failure) {
+            if (currentRequest !== masterRequestId.current) return;
+            console.error('Failed to load today settings:', failure);
+            setAllTasks([]);
+            setDataDate(null);
+            setError('予定の設定を読み込めませんでした。');
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadMasterData();
+        return invalidateAllRequests;
+    }, [loadMasterData, invalidateAllRequests]);
 
     // Fetch all tasks/routines for the date WITHOUT filter conditions.
     // Filtering is applied in useMemo below (BUG-12 fix).
     const loadTasks = useCallback(async (date) => {
         // Skip fetching until master data (statuses, settings) is loaded.
-        if (!masterDataReady) return;
+        if (!masterDataReady || date !== selectedDateRef.current) return;
 
         const currentReq = ++activeRequestId.current;
         setLoading(true);
+        setError('');
         try {
             const db = await fetchDb();
 
@@ -165,10 +181,14 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
 
             if (currentReq === activeRequestId.current) {
                 setAllTasks(unified);
+                setDataDate(date);
             }
         } catch (e) {
+            if (currentReq !== activeRequestId.current) return;
             console.error("Tauri DB fetch today error:", e);
-            window.dispatchEvent(new CustomEvent('yarukoto:toast', { detail: { message: 'タスクの読み込みに失敗しました', type: 'error' } }));
+            setAllTasks([]);
+            setDataDate(null);
+            setError('予定を読み込めませんでした。');
         } finally {
             if (currentReq === activeRequestId.current) {
                 setLoading(false);
@@ -178,20 +198,28 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
 
     // Re-fetch tasks when selectedDate or loadTasks changes; listen for taskAdded events
     useEffect(() => {
+        selectedDateRef.current = selectedDate;
         loadTasks(selectedDate);
         const handleTaskAdded = () => loadTasks(selectedDate);
         window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
         window.addEventListener('yarukoto:tasksChanged', handleTaskAdded);
         return () => {
+            invalidateTaskRequests();
             window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
             window.removeEventListener('yarukoto:tasksChanged', handleTaskAdded);
         };
-    }, [selectedDate, loadTasks]);
+    }, [selectedDate, loadTasks, invalidateTaskRequests]);
+
+    const retry = useCallback(() => masterDataReady ? loadTasks(selectedDate) : loadMasterData(), [masterDataReady, loadTasks, selectedDate, loadMasterData]);
+
+    // A different date must never borrow the previous date's successful result,
+    // including the render before the date-change effect has started its fetch.
+    const datedTasks = useMemo(() => dataDate === selectedDate ? allTasks : [], [allTasks, dataDate, selectedDate]);
 
     // BUG-12 fix: Apply filters + sort in useMemo (reactive to filter/sort changes).
     // allTasks is the unfiltered source, ensuring stats are computed from all data.
     const tasks = useMemo(() => {
-        let filtered = [...allTasks];
+        let filtered = [...datedTasks];
 
         // Status filter
         if (filterStatuses.length > 0) {
@@ -240,17 +268,17 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
         }
 
         return filtered;
-    }, [allTasks, filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, sortMode, statuses]);
+    }, [datedTasks, filterStatuses, filterTags, filterImportance, filterUrgency, sortKey, sortMode, statuses]);
 
     // BUG-12 fix: Stats computed from unfiltered allTasks, independent of active filters.
     const unfilteredStats = useMemo(() => {
-        const total = allTasks.length;
-        const completed = allTasks.filter(t => t.status_code === 3).length;
-        const remaining = allTasks.filter(t => t.status_code !== 3 && t.status_code !== 5);
+        const total = datedTasks.length;
+        const completed = datedTasks.filter(t => t.status_code === 3).length;
+        const remaining = datedTasks.filter(t => t.status_code !== 3 && t.status_code !== 5);
         const remainingMin = remaining.reduce((s, t) => s + (t.estimated_hours || 0), 0);
         const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
         return { total, completed, remaining: remaining.length, remainingMin, pct };
-    }, [allTasks]);
+    }, [datedTasks]);
 
     const toggleSortMode = useCallback(async () => {
         const prevMode = sortMode;
@@ -270,7 +298,7 @@ export function useTodayTasks(selectedDate, { filterStatuses, filterTags, filter
     }, [sortMode]);
 
     return {
-        tasks, setTasks: setAllTasks, loading, loadTasks,
+        tasks, setTasks: setAllTasks, loading: loading || (!error && dataDate !== selectedDate), loadTasks, error, retry, dataDate,
         unfilteredStats,
         statuses, allTags, allImportance, allUrgency,
         showOverdue, sortMode, sortKey, setSortKey,

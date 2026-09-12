@@ -2,11 +2,11 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Compass, Sun, ListTodo, FolderOpen, Repeat, CircleCheckBig, BarChart3, Settings, Plus } from 'lucide-react';
+import { Compass, CalendarDays, ListTodo, FolderOpen, Repeat, CircleCheckBig, BarChart3, Settings, Plus } from 'lucide-react';
 import { fetchDb } from '@/lib/utils';
 
 const items = [
-    ['/work', 'いまの仕事', Compass], ['/today', '今日', Sun], ['/tasks', 'すべてのタスク', ListTodo],
+    ['/work', '仕事', Compass], ['/today', '予定表', CalendarDays], ['/tasks', 'すべてのタスク', ListTodo],
     ['/projects', 'プロジェクト', FolderOpen], ['/routines', 'ルーティン', Repeat],
     ['/done', 'やったタスク', CircleCheckBig], ['/dashboard', '振り返り', BarChart3],
 ];

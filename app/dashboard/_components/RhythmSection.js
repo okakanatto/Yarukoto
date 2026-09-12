@@ -14,7 +14,7 @@ export default function RhythmSection({ rhythm }) {
 
     return (
         <div className="rh-card">
-            <span className="rh-label">自分のリズム</span>
+            <span className="rh-label">曜日別の記録</span>
             {hasData ? (
                 <>
                     {summary && <div className="rh-summary">{summary}</div>}
@@ -38,10 +38,10 @@ export default function RhythmSection({ rhythm }) {
                             );
                         })}
                     </div>
-                    <span className="rh-caption">直近10週の活動パターン</span>
+                    <span className="rh-caption">直近10週 · 登録・完了があった日の割合</span>
                 </>
             ) : (
-                <div className="rh-empty">まだ活動パターンを分析中です</div>
+                <div className="rh-empty">登録・完了の記録はありません</div>
             )}
 
             <style jsx>{`

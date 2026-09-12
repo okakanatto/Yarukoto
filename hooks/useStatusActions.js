@@ -39,6 +39,8 @@ export function useStatusActions({ setTasks, fetchTasks, refresh }) {
             await dbOp(async (db) => {
                 if (code === 3) {
                     await db.execute("UPDATE tasks SET status_code = $1, completed_at = datetime('now', 'localtime') WHERE id = $2", [newStatusCode, taskId]);
+                } else if (code === 2) {
+                    await db.execute("UPDATE tasks SET status_code = $1, completed_at = NULL, work_started_at = datetime('now', 'localtime') WHERE id = $2", [newStatusCode, taskId]);
                 } else {
                     await db.execute('UPDATE tasks SET status_code = $1, completed_at = NULL WHERE id = $2', [newStatusCode, taskId]);
                 }

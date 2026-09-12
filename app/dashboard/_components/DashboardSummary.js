@@ -12,7 +12,7 @@ export default function SummarySection({ data }) {
     return (
         <div className="summary-card">
             <div className="summary-header">
-                <span className="summary-label">今週のサマリー</span>
+                <span className="summary-label">登録・完了件数</span>
                 {velocity && <span className="summary-velocity">{velocity}</span>}
             </div>
 
@@ -44,7 +44,7 @@ export default function SummarySection({ data }) {
                     letter-spacing: 0.05em; text-transform: uppercase;
                 }
                 .summary-velocity {
-                    font-size: 0.78rem; font-weight: 600; color: var(--color-accent);
+                    font-size: 0.72rem; font-weight: 400; color: var(--color-text-muted);
                 }
                 .summary-body {
                     display: flex; gap: 12px; align-items: flex-start;

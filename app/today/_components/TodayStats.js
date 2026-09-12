@@ -1,79 +1,18 @@
 'use client';
 
 import { formatMin } from '@/lib/utils';
-import { ClipboardList, CircleCheck, Hourglass, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
-/**
- * Progress ring + task count summary for the today page.
- */
 export default function TodayStats({ stats }) {
-    return (
-        <div className="today-stats">
-            <div className="stat-ring-area">
-                <svg viewBox="0 0 120 120" className="stat-ring">
-                    <circle cx="60" cy="60" r="50" className="ring-bg" />
-                    <circle cx="60" cy="60" r="50" className="ring-fill"
-                        style={{
-                            strokeDasharray: `${stats.pct * 3.14} 314`,
-                            stroke: stats.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)'
-                        }}
-                    />
-                </svg>
-                <div className="ring-label">
-                    <span className="ring-pct">{stats.pct}%</span>
-                    <span className="ring-sub">完了</span>
-                </div>
-            </div>
-            <div className="stat-details">
-                <div className="stat-row">
-                    <span className="stat-icon"><ClipboardList size={16} /></span>
-                    <span className="stat-text">全 <strong>{stats.total}</strong> 件</span>
-                </div>
-                <div className="stat-row">
-                    <span className="stat-icon"><CircleCheck size={16} /></span>
-                    <span className="stat-text">完了 <strong>{stats.completed}</strong> 件</span>
-                </div>
-                <div className="stat-row">
-                    <span className="stat-icon"><Hourglass size={16} /></span>
-                    <span className="stat-text">残り <strong>{stats.remaining}</strong> 件</span>
-                </div>
-                {stats.remainingMin > 0 && (
-                    <div className="stat-row">
-                        <span className="stat-icon"><Clock size={16} /></span>
-                        <span className="stat-text">残り想定 <strong>{formatMin(stats.remainingMin)}</strong></span>
-                    </div>
-                )}
-            </div>
-
-            <style jsx global>{`
-        .today-stats {
-          display: flex; align-items: center; gap: 24px;
-          padding: 14px;
-          background: var(--color-surface); border-radius: var(--radius-md);
-          box-shadow: var(--shadow-card);
-          margin-bottom: 14px;
-        }
-        .stat-ring-area { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
-        .stat-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .ring-bg { fill: none; stroke: var(--color-surface-hover); stroke-width: 6; }
-        .ring-fill { fill: none; stroke-width: 6; stroke-linecap: butt; transition: stroke-dasharray 0.5s ease; }
-        .ring-label {
-          position: absolute; inset: 0; display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-        }
-        .ring-pct { font-size: 1.2rem; font-weight: 800; color: var(--color-text); line-height: 1; letter-spacing: -0.02em; }
-        .ring-sub {
-          font-size: 0.72rem; color: var(--color-text-muted); font-weight: 500;
-        }
-
-        .stat-details { display: flex; flex-direction: column; gap: 4px; }
-        .stat-row {
-          display: flex; align-items: center; gap: 6px;
-          font-size: 0.72rem; color: var(--color-text-secondary);
-          font-weight: 500;
-        }
-        .stat-icon { color: var(--color-text-muted); display: flex; align-items: center; }
-      `}</style>
-        </div>
-    );
+    return <div className="today-stats" aria-label="この日のタスク件数">
+        <span>全 <strong>{stats.total}</strong> 件</span>
+        <span>完了 <strong>{stats.completed}</strong></span>
+        <span>未完了 <strong>{stats.remaining}</strong></span>
+        {stats.remainingMin > 0 && <span className="today-stats-estimate"><Clock size={13} />残り見積 <strong>{formatMin(stats.remainingMin)}</strong></span>}
+        <style jsx>{`
+            .today-stats { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; padding: 6px 0; color: var(--color-text-muted); font-size: 0.78rem; }
+            .today-stats strong { color: var(--color-text-secondary); font-weight: 550; }
+            .today-stats-estimate { display: inline-flex; align-items: center; gap: 5px; }
+        `}</style>
+    </div>;
 }

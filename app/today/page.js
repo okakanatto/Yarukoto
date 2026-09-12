@@ -12,7 +12,7 @@ import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { useTodayGrouping, flattenTodayGroups } from '@/hooks/useTodayGrouping';
 import { notifyTasksChanged } from '@/lib/taskHierarchy';
-import { Sun, CalendarDays, PartyPopper, Hand, ArrowUpDown, Pin, RefreshCw, GripVertical } from 'lucide-react';
+import { Sun, CalendarDays, Hand, ArrowUpDown, Pin, RefreshCw, GripVertical } from 'lucide-react';
 import TodayCardItem from './_components/TodayCardItem';
 import TodayGroupHeader from './_components/TodayGroupHeader';
 import TodayStats from './_components/TodayStats';
@@ -66,7 +66,7 @@ export default function TodayPage() {
 
     // Data hook: master data, tasks, sort, loading
     const {
-        tasks, setTasks, loading, loadTasks,
+        tasks, setTasks, loading, loadTasks, error, retry,
         unfilteredStats,
         statuses, allTags, allImportance, allUrgency,
         sortMode, sortKey, setSortKey,
@@ -305,13 +305,14 @@ export default function TodayPage() {
                 </div>
 
                 {/* Mini Dashboard */}
-                <TodayStats stats={stats} />
+                {!loading && !error && <TodayStats stats={stats} />}
+                {error && <div role="alert" className="work-error">{error}<button type="button" onClick={retry} disabled={loading}>再試行</button></div>}
 
                 {/* Task List */}
-                <div className="today-list">
+                <div className="today-list" aria-busy={loading}>
                     {loading && tasks.length === 0 && <div className="today-placeholder"><span className="spinner" /> 読み込み中...</div>}
 
-                    {!loading && tasks.length === 0 && (
+                    {!loading && !error && tasks.length === 0 && (
                         <div className="today-empty">
                             <span className="today-empty-icon">{currentTab.isToday ? <Sun size={48} strokeWidth={1.2} /> : <CalendarDays size={48} strokeWidth={1.2} />}</span>
                             <span className="today-empty-title">{currentTab.isToday ? '今日やるタスクがありません' : `${currentTab.label}のタスクがありません`}</span>
@@ -384,23 +385,6 @@ export default function TodayPage() {
                         );
                     })}
                 </div>
-
-                {currentTab.isToday && stats.total > 0 && stats.completed >= 1 && stats.pct < 50 && (
-                    <div className="today-milestone-banner milestone-start">
-                        いいスタート！ まず1件クリアしました
-                    </div>
-                )}
-                {currentTab.isToday && stats.pct >= 50 && stats.pct < 100 && (
-                    <div className="today-milestone-banner milestone-half">
-                        半分突破！ あと {stats.remaining} 件で完了です
-                    </div>
-                )}
-                {currentTab.isToday && stats.pct === 100 && stats.total > 0 && (
-                    <div className="today-complete-banner">
-                        <span className="today-complete-icon"><PartyPopper size={28} strokeWidth={1.5} /></span>
-                        <span className="today-complete-text">すべて完了しました！ お疲れさまでした</span>
-                    </div>
-                )}
 
                 <DragOverlay>
                     {activeTaskData ? (
@@ -510,40 +494,6 @@ export default function TodayPage() {
         }
         .today-sort-toggle.active:hover { background: var(--color-accent-hover); }
 
-        /* Milestone banners */
-        .today-milestone-banner {
-          margin-top: 12px; padding: 12px 16px;
-          border-radius: var(--radius-md);
-          font-size: 0.85rem; font-weight: 600;
-          box-shadow: var(--shadow-card);
-          animation: celebIn 0.3s var(--ease-out);
-        }
-        .milestone-start {
-          background: var(--color-accent);
-          color: #fff;
-        }
-        .milestone-half {
-          background: var(--color-warning);
-          color: #fff;
-        }
-        .today-complete-banner {
-          margin-top: 16px; padding: 12px 16px;
-          background: var(--color-success);
-          border-radius: var(--radius-md);
-          box-shadow: var(--shadow-card);
-          display: flex; align-items: center; gap: 10px;
-          font-size: 1rem; font-weight: 600;
-          color: #fff;
-          animation: celebIn 0.4s var(--ease-out);
-        }
-        .today-complete-icon {
-          display: flex; align-items: center;
-          animation: celebBounce 0.5s 0.2s cubic-bezier(.34,1.56,.64,1) both;
-        }
-        .today-complete-text { animation: celebFadeIn 0.4s 0.15s ease both; }
-        @keyframes celebIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes celebBounce { from{opacity:0;transform:scale(0) rotate(-10deg)} to{opacity:1;transform:scale(1) rotate(0deg)} }
-        @keyframes celebFadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
       `}</style>
 
                 {editingTask && (

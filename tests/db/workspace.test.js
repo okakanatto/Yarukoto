@@ -1,14 +1,55 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Database from '@tauri-apps/plugin-sql';
 import { getDb } from '@/lib/db';
-import { createCapturedTask, loadTaskContext, loadWorkspace, rememberTask, saveProjectContext, saveWorkContext } from '@/lib/workspace';
-import { createTestDb, linkTaskTags, seedProject, seedTags, seedTasks } from '../__helpers__/testDb';
+import { createCapturedTask, loadTaskContext, loadWorkspace, rememberTask, saveProjectContext, saveWorkContext, stampWorkStarted, resolveWaiting, setTaskPlan, setProjectCompletion } from '@/lib/workspace';
+import { createTestDb, linkTaskTags, seedProject, seedRoutine, seedTags, seedTasks } from '../__helpers__/testDb';
 
 let db;
 beforeEach(async () => { db = await createTestDb(); });
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe('仕事の記録と再開', () => {
+  it('子タスクを増やさず次の一歩を保持し、閲覧と実作業開始を分ける', async () => {
+    const id = await createCapturedTask({ text: '移行の懸念', due_date: '2026-10-20' });
+    await saveWorkContext(id, { next_step: '比較表の見出しだけ書く' });
+    await rememberTask(id);
+    expect((await loadTaskContext(id)).task).toMatchObject({ next_step: '比較表の見出しだけ書く', work_started_at: null, status_code: 1 });
+    await db.execute('UPDATE tasks SET status_code = 2 WHERE id = $1', [id]);
+    const started = await stampWorkStarted(id);
+    expect(started.work_started_at).toMatch(/^\d{4}-\d{2}-\d{2} /);
+    expect(started).toMatchObject({ capture_text: '移行の懸念', due_date: '2026-10-20', status_code: 2 });
+    expect(await db.select('SELECT id FROM tasks')).toHaveLength(1);
+  });
+
+  it('待ちの解消は相手・確認日だけを消し、保留だけ未着手へ戻す', async () => {
+    for (const status of [1, 2, 4]) {
+      const [id] = await seedTasks(db, [{ title: '回答待ち', status_code: status, due_date: '2026-10-20', today_date: '2026-10-18', notes: '検討内容' }]);
+      await saveWorkContext(id, { waiting_on: '担当者', review_date: '2026-10-17', next_step: '届いた条件を比較' });
+      const result = await resolveWaiting(id);
+      expect(result).toMatchObject({ waiting_on: '', review_date: null, status_code: status === 4 ? 1 : status, due_date: '2026-10-20', today_date: '2026-10-18', notes: '検討内容', next_step: '届いた条件を比較' });
+    }
+  });
+
+  it('実行予定の見直しで真の期限や状態を変更せず、無効な日付は拒否する', async () => {
+    const id = await createCapturedTask({ text: '予定を見直す', due_date: '2026-10-20' });
+    await setTaskPlan(id, '2026-10-18');
+    expect((await loadTaskContext(id)).task).toMatchObject({ today_date: '2026-10-18', due_date: '2026-10-20', status_code: 1 });
+    await expect(setTaskPlan(id, '2026-02-31')).rejects.toThrow();
+    expect((await loadTaskContext(id)).task.today_date).toBe('2026-10-18');
+    await setTaskPlan(id, null);
+    expect((await loadTaskContext(id)).task).toMatchObject({ today_date: null, due_date: '2026-10-20' });
+  });
+
+  it('完了・アーカイブ後の仕事を操作で無断復活させない', async () => {
+    const [id] = await seedTasks(db, [{ title: '完了', status_code: 3 }]);
+    await expect(stampWorkStarted(id)).rejects.toThrow();
+    await expect(resolveWaiting(id)).rejects.toThrow();
+    await expect(setTaskPlan(id, '2026-10-18')).rejects.toThrow();
+    expect((await loadTaskContext(id)).task.status_code).toBe(3);
+    await db.execute("UPDATE tasks SET status_code = 1, archived_at = '2026-09-01' WHERE id = $1", [id]);
+    await expect(stampWorkStarted(id)).rejects.toThrow();
+    await expect(resolveWaiting(id)).rejects.toThrow();
+  });
   it('長文の原文を固定し、タイトル変更・再開メモ保存で上書きしない', async () => {
     const firstLine = '人事データの件を考える'.repeat(12);
     const original = `\n  ${firstLine}  \r\n会議で「数字が違う」と聞いた。\n比較ファイルを残す。\n`;
@@ -135,6 +176,39 @@ describe('仕事の記録と再開', () => {
 });
 
 describe('全体の信頼性と文脈', () => {
+  it('プロジェクト進捗は完了タスクを保管しても後退しない', async () => {
+    const projectId = await seedProject(db, { name: '成果確認' });
+    const [done, open, cancelled] = await seedTasks(db, [
+      { title: '完了した判断', status_code: 3, project_id: projectId },
+      { title: '残る判断', status_code: 2, project_id: projectId },
+      { title: '不要になった仕事', status_code: 5, project_id: projectId },
+    ]);
+    await seedTasks(db, [{ title: '未完了の孫ではなく子', parent_id: open, status_code: 4, project_id: projectId }]);
+    const before = (await loadWorkspace()).projects.find(p => p.id === projectId).progress;
+    expect(before).toMatchObject({ total: 3, completed: 1, rootTotal: 2, rootCompleted: 1, open: 2, inProgress: 1, waiting: 1 });
+    await db.execute("UPDATE tasks SET archived_at = '2026-09-01' WHERE id IN ($1, $2)", [done, cancelled]);
+    expect((await loadWorkspace()).projects.find(p => p.id === projectId).progress).toEqual(before);
+    const milestones = (await loadWorkspace()).projects.find(p => p.id === projectId).milestones;
+    expect(milestones.map(t => t.id)).toEqual([done, open, cancelled]);
+    expect(milestones[0]).toMatchObject({ status_code: 3, archived_at: '2026-09-01', status_label: '完了' });
+  });
+
+  it('成果達成は未完了・実施中ルーティンを隠さず、明示的に完了・再開する', async () => {
+    const projectId = await seedProject(db, { name: '成果の合意' });
+    const [taskId] = await seedTasks(db, [{ title: '合意する', project_id: projectId }]);
+    await saveProjectContext(projectId, { outcome: '集計条件に合意', due_date: '2026-10-20' });
+    await expect(setProjectCompletion(projectId, true)).rejects.toThrow('未完了');
+    expect((await loadTaskContext(taskId)).task.status_code).toBe(1);
+    await db.execute('UPDATE tasks SET status_code = 3 WHERE id = $1', [taskId]);
+    const routineId = await seedRoutine(db, { title: '定期確認', project_id: projectId });
+    await expect(setProjectCompletion(projectId, true)).rejects.toThrow('ルーティン');
+    await db.execute('UPDATE routines SET enabled = 0 WHERE id = $1', [routineId]);
+    const completed = await setProjectCompletion(projectId, true);
+    expect(completed.completed_at).toBeTruthy();
+    expect(completed).toMatchObject({ outcome: '集計条件に合意', due_date: '2026-10-20', archived_at: null });
+    expect((await setProjectCompletion(projectId, true)).completed_at).toBe(completed.completed_at);
+    expect((await setProjectCompletion(projectId, false)).completed_at).toBeNull();
+  });
   it('未絞り込みデータは完了・保留・期限超過も保持し、アーカイブだけ除外する', async () => {
     const projectId = await seedProject(db, { name: '人事' });
     const ids = await seedTasks(db, [
@@ -202,7 +276,7 @@ describe('v7からv8への追加移行', () => {
     expect((await db.select('SELECT title, notes FROM tasks WHERE id = $1', [id]))[0])
       .toEqual({ title: '失ってはいけない仕事', notes: '移行前のメモ' });
     await getDb();
-    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('8');
+    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('9');
     expect((await loadTaskContext(id)).task).toMatchObject({ title: '失ってはいけない仕事', notes: '移行前のメモ', capture_text: '', source_ref: '' });
   });
 
@@ -234,11 +308,48 @@ describe('v7からv8への追加移行', () => {
     }
     expect(await db.select('SELECT * FROM task_tags')).toEqual(previousLinks);
     expect((await db.select("SELECT value FROM app_settings WHERE key = 'show_overdue_in_today'"))[0].value).toBe('0');
-    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('8');
+    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('9');
     expect((await db.select('SELECT outcome, due_date FROM projects'))[0]).toEqual({ outcome: '', due_date: null });
     // Reinitialization is idempotent, including a DB copied back from a backup.
     globalThis.__yarukoto_db_promise = null;
     await getDb();
     expect(await db.select('SELECT * FROM tasks ORDER BY id')).toEqual(migrated);
+  });
+});
+
+describe('v8からv9への非破壊移行', () => {
+  it('原文・次の子参照・閲覧時刻・待ち・予定・成果を保ち、失敗後に再試行できる', async () => {
+    const projectId = await seedProject(db, { name: '移行前のプロジェクト' });
+    const parent = await createCapturedTask({ text: '原文\n背景も保存', project_id: projectId, due_date: '2026-10-20' });
+    const child = await createCapturedTask({ text: '子の調査', parent_id: parent });
+    await saveWorkContext(parent, { notes: '元のメモ\n二行目', source_ref: '資料.xlsx', next_task_id: child, waiting_on: '担当者', review_date: '2026-10-01' });
+    await rememberTask(parent);
+    await setTaskPlan(parent, '2026-09-20');
+    await saveProjectContext(projectId, { outcome: '条件に合意', due_date: '2026-10-22' });
+    await db.execute('ALTER TABLE tasks DROP COLUMN next_step');
+    await db.execute('ALTER TABLE tasks DROP COLUMN work_started_at');
+    await db.execute('ALTER TABLE projects DROP COLUMN completed_at');
+    await db.execute("UPDATE app_settings SET value = '8' WHERE key = 'db_schema_version'");
+    const previousTasks = await db.select('SELECT * FROM tasks ORDER BY id');
+    const previousProjects = await db.select('SELECT * FROM projects ORDER BY id');
+    const execute = db.execute.bind(db);
+    let failOnce = true;
+    vi.spyOn(db, 'execute').mockImplementation(async (sql, params) => {
+      if (failOnce && sql.startsWith('ALTER TABLE tasks ADD COLUMN work_started_at')) { failOnce = false; throw new Error('migration interrupted'); }
+      return execute(sql, params);
+    });
+    vi.spyOn(Database, 'load').mockResolvedValue(db);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    globalThis.__yarukoto_db_promise = null;
+    await expect(getDb()).rejects.toThrow('migration interrupted');
+    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('8');
+    await getDb();
+    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('9');
+    const migratedTasks = await db.select('SELECT * FROM tasks ORDER BY id');
+    expect(migratedTasks).toEqual(previousTasks.map(t => ({ ...t, next_step: '', work_started_at: null })));
+    expect(await db.select('SELECT * FROM projects ORDER BY id')).toEqual(previousProjects.map(p => ({ ...p, completed_at: null })));
+    globalThis.__yarukoto_db_promise = null;
+    await getDb();
+    expect(await db.select('SELECT * FROM tasks ORDER BY id')).toEqual(migratedTasks);
   });
 });

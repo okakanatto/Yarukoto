@@ -180,7 +180,7 @@ export async function loadDashboard() {
     }
 
     // Compute velocity text
-    const velocity = computeVelocityText(thisWeekCompleted, priorWeekCompletions, chartWeeks, summary);
+    const velocity = computeVelocityText(thisWeekCompleted, priorWeekCompletions);
 
     // --- Heatmap: 90-day footprint data ---
     const heatmap = buildHeatmapData(completedByDay, createdByDay, nowDate);

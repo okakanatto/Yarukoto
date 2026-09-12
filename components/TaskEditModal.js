@@ -90,12 +90,14 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     estimated_hours = $6, notes = $7, status_code = $8,
                     parent_id = $9, project_id = $10,
                     updated_at = datetime('now', 'localtime'),
+                    work_started_at = CASE WHEN CAST($11 AS INTEGER) = 2 AND status_code != 2
+                        THEN datetime('now', 'localtime') ELSE work_started_at END,
                     completed_at = CASE
-                            WHEN CAST($11 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
-                            WHEN CAST($12 AS INTEGER) != 3 THEN NULL
+                            WHEN CAST($12 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
+                            WHEN CAST($13 AS INTEGER) != 3 THEN NULL
                             ELSE completed_at
                         END
-                    WHERE id = $13
+                    WHERE id = $14
                     `, [
                     title,
                     startDate || null,
@@ -107,6 +109,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     parseInt(statusCode),
                     parentId || null,
                     resolvedProjectId,
+                    parseInt(statusCode),
                     parseInt(statusCode),
                     parseInt(statusCode),
                     task.id

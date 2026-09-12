@@ -19,16 +19,16 @@ export default function BasecampStrip({ task }) {
                     <>
                         <span className="bc-dot" />
                         <span className="bc-text">
-                            中断中: <b className="bc-task-name">{task.title}</b>
+                            着手中: <b className="bc-task-name">{task.title}</b>
                         </span>
                     </>
                 ) : (
-                    <span className="bc-empty-text">いつでも再開できます</span>
+                    <span className="bc-empty-text">着手中のタスクはありません</span>
                 )}
             </div>
             <div className="bc-actions">
                 {task && (
-                    <Link href="/tasks" className="bc-chip bc-chip-primary">着手中を開く</Link>
+                    <button type="button" className="bc-chip bc-chip-primary" onClick={() => window.dispatchEvent(new CustomEvent('yarukoto:openTask', { detail: { id: task.id } }))}>開く</button>
                 )}
                 <Link href="/today" className="bc-chip">今日の一覧</Link>
                 <button className="bc-chip" onClick={handleAddTask} type="button">タスクを追加</button>
