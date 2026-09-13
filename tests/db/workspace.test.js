@@ -193,6 +193,50 @@ describe('全体の信頼性と文脈', () => {
     expect(milestones[0]).toMatchObject({ status_code: 3, archived_at: '2026-09-01', status_label: '完了' });
   });
 
+  it('現在のメモを過去の結果と分け、枝ごとの成果・待ち・次の一歩を主な仕事へ接続する', async () => {
+    const projectId = await seedProject(db, { name: '移行' });
+    const [root, decision, delivery] = await seedTasks(db, [
+      { title: '移行を完了する', notes: '親の手書き要約', status_code: 2, project_id: projectId },
+      { title: '方式を決める', parent_id: null, status_code: 3, project_id: projectId },
+      { title: '展開する', parent_id: null, status_code: 2, project_id: projectId },
+    ]);
+    await db.execute('UPDATE tasks SET parent_id = $1 WHERE id IN ($2, $3)', [root, decision, delivery]);
+    const [archivedResult, waiting] = await seedTasks(db, [
+      { title: '比較を終える', parent_id: decision, status_code: 3, project_id: projectId },
+      { title: '承認を待つ', parent_id: delivery, status_code: 4, project_id: projectId },
+    ]);
+    await db.execute("UPDATE tasks SET notes = '変更後の現在メモ', work_log = $1, updated_at = '2099-01-01 00:00:00' WHERE id = $2", [JSON.stringify([
+      { id: 'old-result', created_at: '2026-09-01 10:00:00', kind: 'pause', result: '古い検討結果' },
+    ]), delivery]);
+    await db.execute("UPDATE tasks SET work_log = $1, archived_at = '2026-09-03 00:00:00' WHERE id = $2", [JSON.stringify([
+      { id: 'done', created_at: '2026-09-02 10:00:00', kind: 'step', result: '方式Aで合意した' },
+    ]), archivedResult]);
+    await db.execute("UPDATE tasks SET waiting_on = '責任者の承認', review_date = '2026-09-20', next_step = '承認後に全社展開する' WHERE id = $1", [waiting]);
+
+    const project = (await loadWorkspace()).projects.find(item => item.id === projectId);
+    const memo = project.recentEntries.find(entry => entry.id === `memo-${delivery}`);
+    expect(memo).toMatchObject({ kind: 'memo', result: '変更後の現在メモ', created_at: '' });
+    expect(project.recentEntries.find(entry => entry.id === 'old-result')).toMatchObject({ result: '古い検討結果', created_at: '2026-09-01 10:00:00' });
+    const milestone = project.milestones.find(item => item.id === root);
+    expect(milestone.branchSummaries).toHaveLength(2);
+    expect(milestone.branchSummaries[0].latestResult).toMatchObject({ result: '方式Aで合意した', task_id: archivedResult, archived_at: '2026-09-03 00:00:00' });
+    expect(milestone.branchSummaries[1]).toMatchObject({
+      latestResult: { result: '古い検討結果', task_id: delivery },
+      waiting: [{ task_id: waiting, waiting_on: '責任者の承認', review_date: '2026-09-20' }],
+      nextSteps: [{ task_id: waiting, next_step: '承認後に全社展開する' }],
+    });
+    expect(milestone.branchSummaries.flatMap(branch => branch.latestResult ? [branch.latestResult.result] : [])).not.toContain('親の手書き要約');
+  });
+
+  it('多数のメモがあっても直近の結果と同じ仕事の現在メモを表示する', async () => {
+    const projectId = await seedProject(db, { name: '多数の記録' });
+    const ids = await seedTasks(db, Array.from({ length: 20 }, (_, i) => ({ title: `仕事${i}`, notes: `現在の背景${i}`, project_id: projectId })));
+    await db.execute('UPDATE tasks SET work_log = $1 WHERE id = $2', [JSON.stringify([{ id: 'recent', created_at: '2026-09-13 10:00:00', kind: 'step', result: '方式に合意した' }]), ids.at(-1)]);
+    const entries = (await loadWorkspace()).projects.find(item => item.id === projectId).recentEntries;
+    expect(entries.slice(0, 2)).toMatchObject([{ kind: 'memo', result: '現在の背景19', created_at: '' }, { id: 'recent', result: '方式に合意した' }]);
+    expect(entries).toHaveLength(6);
+  });
+
   it('成果達成は未完了・実施中ルーティンを隠さず、明示的に完了・再開する', async () => {
     const projectId = await seedProject(db, { name: '成果の合意' });
     const [taskId] = await seedTasks(db, [{ title: '合意する', project_id: projectId }]);

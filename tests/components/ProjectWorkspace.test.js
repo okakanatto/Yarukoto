@@ -64,7 +64,7 @@ describe('ProjectWorkspace keeps outcomes separate from task counts', () => {
         dispatch.mockRestore();
     });
 
-    it('uses the completed step when no result was written and keeps legacy notes concise', () => {
+    it('uses the completed step when no result was written and preserves the memo context', () => {
         state.data.projects[0].recentEntries = [
             { id: 'empty-pause', kind: 'pause', task_id: 21, task_title: '結果のない中断', result: '', created_at: '2026-09-13 12:00:00' },
             { id: 'step', kind: 'step', task_id: 21, task_title: '費用を確認する', result: '', consumed_step: '見積額を照合する', created_at: '2026-09-13 11:00:00' },
@@ -74,8 +74,28 @@ describe('ProjectWorkspace keeps outcomes separate from task counts', () => {
         const records = screen.getByRole('region', { name: '最近の記録' });
         expect(within(records).queryByText('結果のない中断')).toBeNull();
         expect(within(records).getByText('見積額を照合する')).toBeTruthy();
-        expect(within(records).getByText('確認した条件。 次回の論点。')).toBeTruthy();
-        expect(within(records).queryByText(/古い経緯/)).toBeNull();
+        expect(within(records).getByText('古い経緯。 確認した条件。 次回の論点。')).toBeTruthy();
+    });
+
+    it('labels a current memo without a fabricated date and shows each branch condition', () => {
+        state.data.projects[0].recentEntries = [
+            { id: 'memo-21', kind: 'memo', task_id: 21, task_title: '展開する', result: '現在の判断', created_at: '' },
+            { id: 'old-result', kind: 'pause', task_id: 21, task_title: '展開する', result: '以前の結果', created_at: '2026-09-01 10:00:00' },
+        ];
+        state.data.projects[0].milestones[1].branchSummaries = [
+            { task_id: 21, task_title: '方式を決める', latestResult: { result: '方式Aで合意', task_title: '比較する', archived_at: '2026-09-11' }, waiting: [], nextSteps: [] },
+            { task_id: 22, task_title: '展開する', latestResult: null, waiting: [{ task_id: 23, task_title: '承認を待つ', waiting_on: '責任者', review_date: '2026-09-20' }], nextSteps: [{ task_id: 23, task_title: '承認を待つ', next_step: '全社へ展開' }] },
+        ];
+        render(createElement(ProjectPage));
+        const records = screen.getByRole('region', { name: '最近の記録' });
+        expect(within(records).getByText('現在のメモ').closest('button').textContent).toContain('現在のメモ');
+        expect(within(records).getByText('現在のメモ').closest('button').textContent).not.toMatch(/2099|2026-/);
+        const milestone = screen.getByRole('button', { name: /方針を合意する/ });
+        expect(within(milestone).getByText(/結果: 方式Aで合意/)).toBeTruthy();
+        expect(within(milestone).getByText(/比較する · アーカイブ/)).toBeTruthy();
+        expect(within(milestone).getByText(/待ち: 責任者 · 確認 2026-09-20/)).toBeTruthy();
+        expect(within(milestone).getByText(/次: 全社へ展開/)).toBeTruthy();
+        expect(within(milestone).queryByText('次回定例で方式を選ぶ。')).toBeNull();
     });
 
     it('keeps archived root work, its note and full-history counts visible', () => {

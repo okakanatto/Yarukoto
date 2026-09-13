@@ -93,8 +93,8 @@ function ProjectWorkspace({ project, tasks, reload }) {
 }
 
 function RecentEntries({ entries }) {
-    const visible = entries.map(entry => ({ ...entry, text: entry.kind === 'note'
-        ? (entry.result || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ')
+    const visible = entries.map(entry => ({ ...entry, text: ['note', 'memo'].includes(entry.kind)
+        ? (entry.result || '').trim()
         : (entry.result || entry.consumed_step || '').trim(),
     })).filter(entry => entry.text).slice(0, 6);
     if (!visible.length) return null;
@@ -104,7 +104,7 @@ function RecentEntries({ entries }) {
             <button className={styles.entry} onClick={() => openTask(entry.task_id)}>
                 <span className={styles.entryBody}>
                     <span className={styles.entryResult}>{entry.text}</span>
-                    <span className={styles.entrySource}>{entry.task_title}<span className={styles.meta}>{entry.kind === 'note' ? 'メモ' : entry.kind === 'step' ? '一歩完了' : entry.kind === 'pause' ? '中断' : '記録'}{entry.created_at && ` · ${entry.created_at.slice(0, 10)}`}{entry.archived_at && ' · アーカイブ'}</span></span>
+                    <span className={styles.entrySource}>{entry.task_title}<span className={styles.meta}>{['note', 'memo'].includes(entry.kind) ? '現在のメモ' : entry.kind === 'step' ? '一歩完了' : entry.kind === 'pause' ? '中断' : '記録'}{entry.created_at && ` · ${entry.created_at.slice(0, 10)}`}{entry.archived_at && ' · アーカイブ'}</span></span>
                 </span>
                 <ArrowUpRight size={15} className={styles.openIcon} aria-hidden="true" />
             </button>
@@ -115,15 +115,26 @@ function RecentEntries({ entries }) {
 function MilestoneList({ tasks }) {
     if (!tasks.length) return null;
     return <ul className={styles.milestones}>{tasks.map(task => {
-        const note = (task.notes || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ');
+        const legacyNote = !Object.hasOwn(task, 'branchSummaries') && (task.notes || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ');
         const inconsistent = !isOpen(task) && Number(task.openDescendants) > 0;
         const Icon = inconsistent ? AlertCircle : Number(task.status_code) === 3 ? Check : Number(task.status_code) === 2 ? Play : Circle;
         return <li key={task.id}><button className={styles.milestone} onClick={() => openTask(task.id)}>
             <Icon size={17} className={inconsistent ? styles.unfinishedIcon : Number(task.status_code) === 3 ? styles.finishedIcon : styles.taskIcon} aria-hidden="true" />
-            <span className={styles.milestoneBody}><strong>{task.title}</strong>{note && <span className={styles.note}>{note}</span>}<span className={styles.meta}>{statusName(task)}{task.due_date && ` · 期限 ${task.due_date}`}{task.completed_at && ` · ${task.completed_at.slice(0, 10)}`}{task.archived_at && ' · アーカイブ'}</span>{inconsistent && <span className={styles.unfinished}>配下に未完了 {task.openDescendants}件</span>}</span>
+            <span className={styles.milestoneBody}><strong>{task.title}</strong>{legacyNote && <span className={styles.note}>{legacyNote}</span>}<BranchSummaries branches={task.branchSummaries || []} /><span className={styles.meta}>{statusName(task)}{task.due_date && ` · 期限 ${task.due_date}`}{task.completed_at && ` · ${task.completed_at.slice(0, 10)}`}{task.archived_at && ' · アーカイブ'}</span>{inconsistent && <span className={styles.unfinished}>配下に未完了 {task.openDescendants}件</span>}</span>
             <ArrowUpRight size={15} className={styles.openIcon} aria-hidden="true" />
         </button></li>;
     })}</ul>;
+}
+
+function BranchSummaries({ branches }) {
+    const visible = branches.filter(branch => branch.latestResult || branch.waiting?.length || branch.nextSteps?.length);
+    if (!visible.length) return null;
+    return <span className={styles.branchSummaries}>{visible.map(branch => <span key={branch.task_id} className={styles.branchSummary}>
+        {branches.length > 1 && <span className={styles.branchTitle}>{branch.task_title}</span>}
+        {branch.latestResult && <span className={styles.branchLine}>結果: {branch.latestResult.result}<small>{branch.latestResult.task_title}{branch.latestResult.created_at && ` · ${branch.latestResult.created_at.slice(0, 10)}`}{branch.latestResult.archived_at && ' · アーカイブ'}</small></span>}
+        {branch.waiting?.map(item => <span key={`waiting-${item.task_id}`} className={styles.branchLine}>待ち: {item.waiting_on}{item.review_date && ` · 確認 ${item.review_date}`}<small>{item.task_title}</small></span>)}
+        {branch.nextSteps?.map(item => <span key={`next-${item.task_id}`} className={styles.branchLine}>次: {item.next_step}<small>{item.task_title}</small></span>)}
+    </span>)}</span>;
 }
 
 function ProjectProgress({ progress }) {

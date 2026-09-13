@@ -206,3 +206,15 @@ describe('ホームと作業面の選択・保存境界', () => {
         expect(document.querySelector('.desk-capture-open')).toBeNull();
     });
 });
+
+it('状態を思い出さず待ちの背景を検索でき、タブを変えても検索語を保持する', async () => {
+    prepare([task(2091), task(2092, { status_code: 4, waiting_on: '法務から捺印条件の回答待ち' })]);
+    render(<WorkPage />);
+    fireEvent.click(screen.getByRole('button', { name: '仕事の一覧' }));
+    fireEvent.change(screen.getByRole('textbox', { name: '仕事を検索' }), { target: { value: '捺印' } });
+    expect(screen.getByRole('button', { name: '仕事2092' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /^今日/ }));
+    expect(screen.getByRole('textbox', { name: '仕事を検索' }).value).toBe('捺印');
+    expect(screen.getByRole('button', { name: '仕事2092' })).toBeTruthy();
+    expect(screen.getByText('全状態 · 1件')).toBeTruthy();
+});

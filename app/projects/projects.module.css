@@ -12,6 +12,11 @@
 .taskIcon, .openIcon { color: var(--color-text-muted); }
 .finishedIcon, .completeStatus { color: var(--color-success); }
 .note { color: var(--color-text-secondary); font-size: 0.86rem; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.branchSummaries { display: flex; flex-direction: column; gap: 8px; }
+.branchSummary { display: flex; flex-direction: column; gap: 3px; padding-left: 10px; border-left: 2px solid var(--border-color); }
+.branchTitle { color: var(--color-text-secondary); font-size: 0.78rem; font-weight: 600; }
+.branchLine { color: var(--color-text-secondary); font-size: 0.82rem; line-height: 1.5; overflow-wrap: anywhere; }
+.branchLine small { margin-left: 8px; color: var(--color-text-muted); font-size: 0.7rem; }
 .meta { color: var(--color-text-muted); font-size: 0.73rem; }
 .unfinishedIcon, .unfinished { color: var(--color-warning); }
 .unfinished { font-size: 0.76rem; font-weight: 550; }

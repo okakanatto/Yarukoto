@@ -48,7 +48,7 @@
 .nextTaskLink svg { flex-shrink:0; }
 .nextStep .nextTaskLink { font-size:1.1rem; line-height:1.6; margin:0 0 6px; }
 .stepLabel { display:block; font-size:.75rem; color:var(--color-text-secondary); margin-bottom:8px; }
-.focusBar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:24px 0 12px; padding:12px 0; border-top:1px solid var(--border-color); border-bottom:1px solid var(--border-color); }
+.focusBar { position:sticky; top:-8px; z-index:2; background:var(--color-surface); display:flex; align-items:center; justify-content:space-between; gap:12px; margin:24px 0 12px; padding:12px 0; border-top:1px solid var(--border-color); border-bottom:1px solid var(--border-color); }
 .focusBar > span { display:flex; gap:8px; align-items:center; font-size:.8rem; }
 .focusBar time { color:var(--color-text-secondary); font-variant-numeric:tabular-nums; margin-left:8px; }
 .liveDot { width:7px; height:7px; border-radius:50%; background:var(--color-accent); }
@@ -109,3 +109,9 @@
 .error button { display:block; border:0; background:none; color:inherit; text-decoration:underline; margin-top:8px; cursor:pointer; }
 @media(max-width:540px) { .body { padding:8px 20px 22px; } .header,.footer { padding-left:16px; padding-right:16px; } .waitFields { grid-template-columns:minmax(0,1fr); } .panel input,.panel textarea,.panel select { font-size:16px; } .title { font-size:1.4rem; } .completionButton { margin-left:0; } .nextRow { grid-template-columns:minmax(0,1fr); gap:6px; } }
 @media(pointer:coarse) { .panel button,.panel summary { min-height:44px; } .iconButton { min-width:44px; } }
+.startHelp { margin:8px 0; }
+.startHelp h3 { font-size:17px; margin:8px 0 12px; }
+.startOptions { display:grid; gap:8px; }
+.startOptions button { display:flex; justify-content:space-between; align-items:center; min-height:44px; padding:10px 14px; border:1px solid var(--border-color); border-radius:8px; background:var(--color-surface); color:var(--color-text); font:inherit; cursor:pointer; }
+.startOptions button:hover { background:var(--color-surface-hover); }
+.startOptions button:disabled { opacity:.5; cursor:default; }

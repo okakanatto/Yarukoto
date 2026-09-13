@@ -155,16 +155,19 @@ describe('project progress includes the work below its milestones', () => {
     expect((await readTask(parent)).notes).toBe('');
   });
 
-  it('uses legacy child notes as a fallback and preserves explicit step results instead of replacing them with notes', async () => {
+  it('keeps current child notes beside explicit step results with their own time', async () => {
     const projectId = await seedProject(db, { name: '既存の仕事' });
     const parent = await createCapturedTask({ text: '移行条件', project_id: projectId });
     const child = await createCapturedTask({ text: '条件の確認', parent_id: parent });
     await saveWorkContext(child, { notes: '従来の確認内容\n次回の論点' });
     let project = (await loadWorkspace()).projects.find(item => item.id === projectId);
-    expect(project.recentEntries).toEqual([expect.objectContaining({ task_id: child, kind: 'note', result: '従来の確認内容\n次回の論点' })]);
+    expect(project.recentEntries).toEqual([expect.objectContaining({ task_id: child, kind: 'memo', result: '従来の確認内容\n次回の論点', created_at: '' })]);
     await setEntries(child, [record('step-done', '2026-09-13', '', { kind: 'step', consumed_step: '資料を5件確認する' })]);
     project = (await loadWorkspace()).projects.find(item => item.id === projectId);
-    expect(project.recentEntries).toEqual([expect.objectContaining({ task_id: child, kind: 'step', consumed_step: '資料を5件確認する' })]);
+    expect(project.recentEntries).toEqual([
+      expect.objectContaining({ task_id: child, kind: 'memo', result: '従来の確認内容\n次回の論点', created_at: '' }),
+      expect.objectContaining({ task_id: child, kind: 'step', consumed_step: '資料を5件確認する', created_at: '2026-09-13 10:00:00' }),
+    ]);
   });
 
   it('counts open grandchildren beneath completed parents while excluding completed and cancelled descendants', async () => {

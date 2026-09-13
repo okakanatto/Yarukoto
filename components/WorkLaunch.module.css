@@ -1,6 +1,8 @@
-.home { width:100%; max-width:790px; padding:28px 36px; margin:0 auto; }
-.card { padding:26px 30px 20px; border:1px solid var(--border-color); border-radius:14px; background:var(--color-surface); box-shadow:var(--shadow-sm); }
-.eyebrow { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--color-text-secondary); font-size:12px; margin-bottom:26px; }
+.home { width:100%; height:100%; min-height:0; display:flex; flex-direction:column; max-width:790px; padding:20px 28px; margin:0 auto; }
+.home > section { min-height:0; overflow:auto; }
+.card { flex:1; min-height:0; display:flex; flex-direction:column; padding:26px 30px 20px; border:1px solid var(--border-color); border-radius:14px; background:var(--color-surface); box-shadow:var(--shadow-sm); }
+.workContext { flex:1; min-height:0; overflow:auto; padding-right:4px; }
+.eyebrow { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--color-text-secondary); font-size:12px; margin-bottom:16px; }
 .eyebrow > span:first-child { color:var(--color-accent); font-weight:600; }
 .parent { color:var(--color-text-secondary); font-size:12px; margin-bottom:6px; }
 .card h2 { margin:0; font-size:25px; font-weight:600; line-height:1.6; letter-spacing:-.025em; }
@@ -12,24 +14,33 @@
 .step svg { flex-shrink:0; margin-top:6px; color:var(--color-accent); }
 .context { color:var(--color-text-secondary); font-size:14px; line-height:1.85; white-space:pre-wrap; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; margin:14px 0; }
 .context span { font-size:11px; margin-right:9px; color:var(--color-text-secondary); }
-.actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:28px; }
+.actions { flex-shrink:0; display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
 .primary,.short { border-radius:8px; padding:12px 18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
 .primary { border:1px solid var(--color-accent); background:var(--color-accent); color:var(--color-on-accent, #fff); }
 .primary:hover { background:var(--color-accent-hover); }
 .short { border:1px solid var(--border-color-hover); background:var(--color-surface); color:var(--color-text); }
 .short:hover { background:var(--color-surface-hover); }
-.alternativesToggle { border:0; background:transparent; color:var(--color-text-secondary); font:inherit; font-size:12px; display:flex; align-items:center; gap:8px; margin-top:22px; padding:7px 0; cursor:pointer; }
+.alternativesToggle { border:0; background:transparent; color:var(--color-text-secondary); font:inherit; font-size:13px; display:flex; align-items:center; gap:8px; margin-top:12px; padding:7px 0; cursor:pointer; }
 .alternatives { border-top:1px solid var(--border-color); margin-top:10px; }
-.alternatives button { display:grid; grid-template-columns:1fr auto; gap:4px 12px; width:100%; text-align:left; border:0; border-bottom:1px solid var(--border-color); padding:14px 0; background:transparent; color:var(--color-text); font:inherit; cursor:pointer; }
+.adjustments { flex-shrink:0; display:flex; flex-wrap:wrap; gap:0 24px; }
+.alternatives button { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:2px 12px; width:100%; text-align:left; border:0; border-bottom:1px solid var(--border-color); padding:10px 0; background:transparent; color:var(--color-text); font:inherit; line-height:1.45; cursor:pointer; }
 .alternatives button span { grid-column:1; color:var(--color-text-secondary); font-size:11px; }
 .alternatives button strong { grid-column:1; font-size:13px; font-weight:500; }
 .alternatives button small { grid-column:1; color:var(--color-text-secondary); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .alternatives button svg { grid-column:2; grid-row:1 / 3; align-self:center; }
 .alternatives button:hover { color:var(--color-accent); }
-.shelf { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin:22px 0; }
+.shelf { flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin:14px 0 0; }
 .shelf button,.shelf a { display:flex; align-items:center; gap:9px; padding:10px 4px; border:0; background:transparent; color:var(--color-text-secondary); font:inherit; font-size:13px; cursor:pointer; }
 .shelf button:hover,.shelf a:hover { color:var(--color-text); }
 .revisit { border:1px solid var(--border-color); border-radius:10px; padding:20px 24px; }
+.modeTitle { font-size:21px; font-weight:600; margin:4px 0 12px; outline:none; }
+.modeNav { flex-shrink:0; display:flex; justify-content:space-between; gap:12px; }
+.back { display:flex; align-items:center; gap:8px; font:inherit; font-size:13px; color:var(--color-text-secondary); border:0; background:none; padding:8px 0; margin-bottom:10px; cursor:pointer; }
+.reviewMeta { color:var(--color-text-secondary); font-size:12px; }
+.revisit p { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.85; }
+.previousResult { color:var(--color-text-secondary); font-size:12px; line-height:1.8; }
+.previousResult summary { cursor:pointer; }
+.warning { color:var(--color-danger); font-size:13px; }
 .revisitHeading { display:flex; justify-content:space-between; align-items:center; color:var(--color-text-secondary); font-size:12px; }
 .revisitHeading button { background:transparent; border:0; padding:6px; color:inherit; cursor:pointer; }
 .revisit h3 { font-size:16px; font-weight:600; margin:14px 0 8px; }
@@ -38,5 +49,5 @@
 .revisitActions button { display:flex; align-items:center; gap:8px; background:transparent; border:0; color:var(--color-text); padding:8px 0; font:inherit; cursor:pointer; }
 .empty { text-align:center; padding:42px 12px; color:var(--color-text-secondary); }
 .empty h2 { font-size:21px; font-weight:500; margin-bottom:24px; color:var(--color-text); }
-@media(max-width:1100px) { .home { padding:22px; } .card { padding:22px; } .card h2 { font-size:22px; } }
+@media(max-width:1100px) { .home { padding:16px 22px; } .card { padding:22px; } .card h2 { font-size:22px; } }
 @media(max-width:600px) { .home { padding:16px 12px; } .card { padding:20px; } .shelf { gap:4px; } }

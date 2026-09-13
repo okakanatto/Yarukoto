@@ -654,3 +654,55 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         expect(onWorkStarted).toHaveBeenCalledExactlyOnceWith(1291);
     });
 });
+
+it('小さな始め方で一歩を作り、元の一歩とメモを保ち、連打しても一度だけ開始する', async () => {
+    const context = example(1901); context.descendants = [];
+    context.task.next_step = '完成版を全員に送る';
+    api.loadTaskContext.mockResolvedValue(context);
+    statusApi.change.mockImplementation(async (id, code) => { context.task.status_code = code; });
+    api.saveWorkContext.mockImplementation(async (id, patch) => { Object.assign(context.task, patch); });
+    const onWorkStarted = vi.fn();
+    render(createElement(WorkDetailPanel, { taskId: 1901, onWorkStarted }));
+    fireEvent.click(await screen.findByRole('button', { name: 'はじめ方を小さくする' }));
+    const choice = screen.getByRole('button', { name: '送らずに下書きする' });
+    fireEvent.click(choice); fireEvent.click(choice);
+    await waitFor(() => expect(onWorkStarted).toHaveBeenCalledTimes(1));
+    expect(api.saveWorkContext).toHaveBeenCalledWith(1901, {
+        next_step: '下書きを一文だけ書く（まだ送らない）',
+        notes: 'データの所在を確認。例外件数は未確認。\n\n以前の一歩：完成版を全員に送る',
+    });
+    expect(statusApi.change).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('今する一歩').value).toContain('まだ送らない');
+    expect(document.activeElement).toBe(screen.getByLabelText('作業メモ'));
+    expect(api.createCapturedTask).not.toHaveBeenCalled();
+});
+
+it('小さな始め方の保存に失敗したら開始せず、一歩の下書きを保つ', async () => {
+    const context = example(1911); context.descendants = [];
+    api.loadTaskContext.mockResolvedValue(context);
+    api.saveWorkContext.mockRejectedValue(new Error('disk full'));
+    render(createElement(WorkDetailPanel, { taskId: 1911 }));
+    fireEvent.click(await screen.findByRole('button', { name: 'はじめ方を小さくする' }));
+    fireEvent.click(screen.getByRole('button', { name: '不明点を一つ書く' }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('disk full'));
+    expect(statusApi.change).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem('yarukoto:work-draft:v1:1911')).fields.next_step).toContain('分からない点を一つ');
+});
+
+it('ホームから小さな始め方を開いても、選ぶまでは開始しない', async () => {
+    api.loadTaskContext.mockResolvedValue(example(1931));
+    render(createElement(WorkDetailPanel, { taskId: 1931, startRequested: { token: 1, help: true } }));
+    expect(await screen.findByRole('button', { name: '不明点を一つ書く' })).toBeTruthy();
+    expect(statusApi.change).not.toHaveBeenCalled();
+    expect(api.saveWorkContext).not.toHaveBeenCalled();
+});
+
+it('親の一歩が他者待ちなら開始を止め、子の確認へ移れる', async () => {
+    const context = example(1921); context.task.next_task_id = 1922;
+    context.descendants[0].waiting_on = '先方の回答';
+    api.loadTaskContext.mockResolvedValue(context);
+    render(createElement(WorkDetailPanel, { taskId: 1921 }));
+    fireEvent.click(await screen.findByRole('button', { name: '取りかかる' }));
+    expect(screen.getByRole('alert').textContent).toContain('待ち・予定');
+    expect(statusApi.change).not.toHaveBeenCalled();
+});

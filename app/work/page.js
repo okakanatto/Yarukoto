@@ -17,7 +17,7 @@ import { formatMin } from '@/lib/utils';
 import { guardWorkNavigation } from '@/lib/workNavigation';
 
 const FILTERS = { filterStatuses: [], filterTags: [], filterImportance: [], filterUrgency: [] };
-const VIEWS = [['today', '今日'], ['working', '進行中'], ['open', '未着手'], ['waiting', '待ち']];
+const VIEWS = [['all', '未完了'], ['today', '今日'], ['working', '進行中'], ['open', '未着手'], ['waiting', '待ち']];
 
 export default function WorkPage() {
     const router = useRouter();
@@ -53,7 +53,7 @@ export default function WorkPage() {
         if (!await navigationPromise.current) return;
         if (request !== selectRequest.current) return;
         setSelectedId(id);
-        setStartRequested(start ? { token: ++startToken.current, minutes: start.minutes, openReference: !!start.openReference } : null);
+        setStartRequested(start ? { token: ++startToken.current, minutes: start.minutes, openReference: !!start.openReference, help: !!start.help } : null);
         if (id) setCapture(false);
         // Viewing another task must not replace the actual work to return to.
     }, []);
@@ -79,10 +79,11 @@ export default function WorkPage() {
         reload();
     }, [reload]);
     const go = path => guardWorkNavigation(() => router.push(path));
-    function changeView(value) { setView(value); setSearch(''); setLimit(50); }
-    const visible = groups[view].filter(task => !search || [task.title, task.notes, task.next_step, task.capture_text, task.source_ref, task.project_name, task.work_log, task.waiting_on].some(value => value?.toLocaleLowerCase().includes(search.toLocaleLowerCase())));
+    function changeView(value) { setView(value); setLimit(50); }
+    const searchTasks = [...workspace.tasks, ...day.tasks.filter(task => task.is_routine)];
+    const visible = search.trim() ? searchTasks.filter(task => [task.title, task.notes, task.next_step, task.capture_text, task.source_ref, task.project_name, task.work_log, task.waiting_on].some(value => value?.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))) : groups[view];
     const minutes = visible.reduce((sum, task) => sum + (Number(task.estimated_hours) || 0), 0);
-    const busy = workspace.loading || (view === 'today' && day.loading);
+    const busy = workspace.loading || (view === 'today' && !search.trim() && day.loading);
     async function changeStatus(id, code) {
         const routine = day.tasks.find(task => task.id === id && task.is_routine);
         if (routine) await actions.handleRoutineStatusChange(id, code, { routineId: routine.routine_id, completionDate: today });
@@ -102,9 +103,9 @@ export default function WorkPage() {
                 {!browse ? <div className="desk-launch-scroll"><WorkLaunch tasks={workspace.tasks} todayTasks={day.tasks} today={today} previousId={lastWorkedId} loading={workspace.loading || day.loading} onOpen={selectTask} onStart={(id, minutes = null, openReference = false) => selectTask(id, { minutes, openReference })} onCapture={() => setCapture(true)} onBrowse={value => { setBrowse(true); changeView(value); }} /></div> : <>
                 <button className="desk-back-home" onClick={() => setBrowse(false)}><ArrowLeft size={15} />いまに戻る</button>
                 <div className="desk-tabs" role="tablist" aria-label="仕事の一覧">{VIEWS.map(([key, label]) => <button key={key} id={`desk-tab-${key}`} role="tab" aria-selected={view === key} aria-controls="desk-results" onClick={() => changeView(key)}>{label}<span>{groups[key].length}</span></button>)}</div>
-                <div className="desk-list-tools"><label><Search size={15} /><span className="sr-only">この一覧を検索</span><input value={search} onChange={event => { setSearch(event.target.value); setLimit(50); }} placeholder="検索" /></label>{minutes > 0 && <span title="見積を入力した仕事の合計">見積 {formatMin(minutes)}</span>}</div>
+                <div className="desk-list-tools"><label><Search size={15} /><span className="sr-only">仕事を検索</span><input value={search} onChange={event => { setSearch(event.target.value); setLimit(50); }} placeholder="仕事を検索" /></label>{search.trim() ? <span>全状態 · {visible.length}件</span> : minutes > 0 && <span title="見積を入力した仕事の合計">見積 {formatMin(minutes)}</span>}</div>
                 <div className="desk-results" id="desk-results" role="tabpanel" aria-labelledby={`desk-tab-${view}`}>
-                    {day.error && view === 'today' ? null : busy ? <p className="desk-empty">読み込み中…</p> : visible.length ? <>{visible.slice(0, limit).map(task => <WorkRow key={task.id} task={task} selected={task.id === selectedId} onOpen={task.is_routine ? () => go('/routines') : selectTask} onStatus={changeStatus} onToday={task.is_routine ? undefined : actions.handleTodayToggle} disabled={actions.processingIds.has(task.id)} />)}{visible.length > limit && <button className="desk-more" onClick={() => setLimit(value => value + 50)}>残り {visible.length - limit}件を表示</button>}</> : <div className="desk-empty">{search ? '一致する仕事がありません' : ({ today: '今日の仕事はありません', working: '進行中の仕事はありません', open: '未着手の仕事はありません', waiting: '待ちの仕事はありません' }[view])}{view === 'today' && !search && <button onClick={() => changeView('open')}>仕事を選ぶ</button>}</div>}
+                    {day.error && view === 'today' && !search.trim() ? null : busy ? <p className="desk-empty">読み込み中…</p> : visible.length ? <>{visible.slice(0, limit).map(task => <WorkRow key={task.id} task={task} selected={task.id === selectedId} onOpen={task.is_routine ? () => go('/routines') : selectTask} onStatus={changeStatus} onToday={task.is_routine ? undefined : actions.handleTodayToggle} disabled={actions.processingIds.has(task.id)} />)}{visible.length > limit && <button className="desk-more" onClick={() => setLimit(value => value + 50)}>残り {visible.length - limit}件を表示</button>}</> : <div className="desk-empty">{search ? '一致する仕事がありません' : ({ all: '未完了の仕事はありません', today: '今日の仕事はありません', working: '進行中の仕事はありません', open: '未着手の仕事はありません', waiting: '待ちの仕事はありません' }[view])}{view === 'today' && !search && <button onClick={() => changeView('open')}>仕事を選ぶ</button>}</div>}
                 </div>
                 </>}
                 <footer className="desk-list-footer"><Link href="/tasks">すべてのタスク</Link><Link href="/done">完了した仕事</Link></footer>

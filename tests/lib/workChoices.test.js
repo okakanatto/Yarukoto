@@ -8,7 +8,7 @@ const task = (id, changes = {}) => ({ id, title: `仕事 ${id}`, status_code: 1,
 const ids = choices => choices.map(choice => choice.task.id);
 
 describe('取りかかる候補と記録の見返し', () => {
-    it('今日までの実期限を再開候補より先に示し、重複掲載せず元の予定・状態を変えない', () => {
+    it('再開と本日期限を並べ、超過の件数で再開を押し出さず、元の予定・状態を変えない', () => {
         const tasks = [
             task(1, { due_date: '2026-09-12', today_date: '2026-09-10' }),
             task(2, { due_date: today, status_code: 2, work_started_at: '2026-09-13 09:00:00' }),
@@ -16,8 +16,8 @@ describe('取りかかる候補と記録の見返し', () => {
         ];
         const before = structuredClone(tasks);
         const choices = workChoices(tasks, [tasks[1]], today, 3);
-        expect(ids(choices)).toEqual([1, 2, 3]);
-        expect(choices.map(choice => choice.reason)).toEqual(['期限を確認', '今日が期限', '続きから']);
+        expect(ids(choices)).toEqual([3, 2, 1]);
+        expect(choices.map(choice => choice.reason)).toEqual(['続きから', '今日が期限', '期限を確認']);
         expect(tasks).toEqual(before);
     });
 
@@ -105,7 +105,7 @@ describe('候補を再理解する文脈', () => {
             { id: '1', created_at: '2026-09-12', result: '例外11件を特定' },
             { id: '2', created_at: today, result: '', kind: 'pause' },
         ]) });
-        expect(workSummary(record)).toMatchObject({ step: '方式Aを比較する', context: '例外11件を特定', result: '例外11件を特定' });
+        expect(workSummary(record)).toMatchObject({ step: '方式Aを比較する', context: '古いメモ', contextKind: 'memo', memo: '古いメモ', result: '例外11件を特定' });
         expect(workSummary({ ...record, next_task_title: '方式Bの見積を確認' }).step).toBe('方式Bの見積を確認');
     });
 
@@ -114,5 +114,39 @@ describe('候補を再理解する文脈', () => {
             { created_at: today, result: 123 }, { created_at: today, result: { detail: '型が不正' } },
         ]) });
         expect(workSummary(record).context).toBe('原文から復帰できる');
+    });
+
+    it('keeps the complete current memo distinct from an older result and identifies each fallback', () => {
+        const record = task(1, { notes: '現在の判断\n次回も参照する詳細', capture_text: '取り込み原文', work_log: JSON.stringify([
+            { created_at: '2026-09-10', result: '以前の作業結果' },
+        ]) });
+        expect(workSummary(record)).toMatchObject({
+            context: '現在の判断\n次回も参照する詳細', contextKind: 'memo',
+            memo: '現在の判断\n次回も参照する詳細', result: '以前の作業結果',
+        });
+        expect(workSummary({ ...record, notes: '' })).toMatchObject({ context: '以前の作業結果', contextKind: 'result' });
+        expect(workSummary({ ...record, notes: '', work_log: '[]' })).toMatchObject({ context: '取り込み原文', contextKind: 'capture' });
+    });
+});
+
+describe('100件と前提不足からの候補', () => {
+    it('超過が12件あっても再開・本日期限・重要な無期限仕事を先頭で比較できる', () => {
+        const tasks = Array.from({ length: 100 }, (_, i) => task(i + 1, i < 12 ? { due_date: '2026-09-01' } : {}));
+        Object.assign(tasks[12], { status_code: 2, work_started_at: '2026-09-13 10:00:00' });
+        Object.assign(tasks[13], { importance_level: 3 });
+        Object.assign(tasks[14], { due_date: today });
+        Object.assign(tasks[15], { due_date: '2027-01-01', importance_level: 1 });
+        const before = structuredClone(tasks);
+        const choices = ids(workChoices(tasks, [], today, 13));
+        expect(choices.slice(0, 3)).toEqual([13, 15, 14]);
+        expect(choices.indexOf(14)).toBeLessThan(choices.indexOf(16));
+        expect(choices).toHaveLength(100);
+        expect(tasks).toEqual(before);
+        expect(collectWorkSignals(tasks, today).find(group => group.key === 'overdue').tasks).toHaveLength(12);
+    });
+    it('一歩に選んだ子が待ち・未来予定なら親の期限は残し着手候補から外す', () => {
+        const tasks = [task(1, { due_date: today, next_task_id: 2 }), task(2, { parent_id: 1, waiting_on: '回答待ち' }), task(3, { next_task_id: 4 }), task(4, { parent_id: 3, today_date: '2026-09-20' }), task(5)];
+        expect(ids(workChoices(tasks, [], today))).toEqual([5]);
+        expect(collectWorkSignals(tasks, today).find(group => group.key === 'due').tasks[0].id).toBe(1);
     });
 });

@@ -13,6 +13,14 @@ beforeEach(() => { localStorage.clear(); clearWorkDraftCache(); clearProjectDraf
 afterEach(() => vi.restoreAllMocks());
 
 describe('復元前DBに属する下書きの退避', () => {
+    it('以前のDBの見返し位置も退避し、新DBの同じIDには引き継がない', () => {
+        const key = 'yarukoto:work-review:v1';
+        const originalReview = JSON.stringify({ open: true, current: '[8]', seen: ['[7]'] });
+        localStorage.setItem(key, originalReview);
+        const result = retireDraftsForDatabaseRestore(localStorage, timestamp);
+        expect(localStorage.getItem(key)).toBeNull();
+        expect(JSON.parse(localStorage.getItem(result.backupKey)).entries).toContainEqual({ key, value: originalReview });
+    });
     it('再起動に失敗しても旧プロジェクトの成果・期限を復元DBの同じIDへ適用しない', () => {
         const draft = { outcome: '旧案件の合意', due_date: '2026-09-30' };
         expect(writeProjectDraft(1, draft)).toBe(true);

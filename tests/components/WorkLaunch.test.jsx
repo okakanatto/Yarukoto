@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import WorkLaunch from '@/components/WorkLaunch';
 import WorkSignals from '@/components/WorkSignals';
@@ -56,7 +56,7 @@ describe('ホームから仕事へ入る操作', () => {
         expect(within(screen.getByRole('list', { name: '確認する仕事' })).getByRole('button', { name: /締切のある判断/ })).toBeTruthy();
     });
 
-    it('仮題が同じ古い記録を背景から見返し、次へ送っても永続値を変更せず再表示で戻せる', () => {
+    it('背景で見返し、タスクを変更せず送り位置だけ保存し、再表示でも続きを復元する', async () => {
         const tasks = [
             task(1, { title: '人事データの件', capture_text: '人事データの件\n旧コード移行の例外' }),
             task(2, { title: '人事データの件', capture_text: '人事データの件\n採用データとの連携方法' }),
@@ -72,14 +72,15 @@ describe('ホームから仕事へ入る操作', () => {
         expect(within(region).getByText('採用データとの連携方法')).toBeTruthy();
         expect(props.onOpen).not.toHaveBeenCalled();
         expect(props.onStart).not.toHaveBeenCalled();
-        expect(save).not.toHaveBeenCalled();
+        expect(save).toHaveBeenCalledWith('yarukoto:work-review:v1', expect.any(String));
+        expect(localStorage.getItem('yarukoto:work-selection')).toBeNull();
         expect(tasks).toEqual(before);
         fireEvent.click(within(region).getByRole('button', { name: '開く' }));
         expect(props.onOpen).toHaveBeenCalledWith(2);
         first.unmount();
         render(<WorkLaunch {...props} />);
-        fireEvent.click(screen.getByRole('button', { name: '記録を見返す' }));
-        expect(within(screen.getByRole('region', { name: '記録を一つずつ見返す' })).getByText('旧コード移行の例外')).toBeTruthy();
+        await waitFor(() => expect(screen.getByRole('region', { name: '記録を一つずつ見返す' })).toBeTruthy());
+        expect(within(screen.getByRole('region', { name: '記録を一つずつ見返す' })).getByText('採用データとの連携方法')).toBeTruthy();
     });
 
     it('候補を眺めた後に再表示しても、前回取り組んだ仕事へ戻る', () => {
@@ -117,7 +118,7 @@ describe('ホームから仕事へ入る操作', () => {
         const { rerender } = render(<WorkLaunch {...props} />);
         fireEvent.click(screen.getByRole('button', { name: '別の仕事を選ぶ' }));
         fireEvent.click(screen.getByRole('button', { name: '一覧から選ぶ' }));
-        expect(props.onBrowse).toHaveBeenCalledWith('open');
+        expect(props.onBrowse).toHaveBeenCalledWith('all');
         rerender(<WorkLaunch {...props} loading />);
         expect(screen.getByText('読み込み中…')).toBeTruthy();
         expect(screen.queryByRole('button', { name: '取りかかる' })).toBeNull();
