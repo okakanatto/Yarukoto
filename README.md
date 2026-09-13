@@ -57,36 +57,6 @@ DB復元時は、以前の下書きが別の仕事に紐づかないよう、入
 - [Rust](https://www.rust-lang.org/tools/install)
 - Tauri v2 の前提条件 ([公式ガイド](https://v2.tauri.app/start/prerequisites/))
 
-### インストール
-
-```bash
-git clone https://github.com/okakanatto/Yarukoto.git
-cd Yarukoto
-npm install
-```
-
-### 開発
-
-```bash
-npm run tauri dev
-```
-
-> **注意**: `npm run dev` だけではTauri IPCにアクセスできないため動作しません。必ず `npm run tauri dev` を使用してください。
-
-### ビルド
-
-```bash
-npm run tauri build
-```
-
-インストーラー (.exe) とポータブル版が `src-tauri/target/release/` 以下に生成されます。
-
-### テスト
-
-```bash
-npm test
-```
-
 ## ダウンロード
 
 ビルド済みバイナリは [Releases](https://github.com/okakanatto/Yarukoto/releases) からダウンロードできます。
