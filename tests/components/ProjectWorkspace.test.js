@@ -116,7 +116,7 @@ describe('ProjectWorkspace keeps outcomes separate from task counts', () => {
         progress.focus();
         fireEvent.keyDown(progress, { key: 'ArrowRight' });
         expect(screen.getByRole('tab', { name: 'タスク' }).getAttribute('aria-selected')).toBe('true');
-        expect(screen.getByTestId('existing-input').textContent).toBe('入力先 7');
+        expect(screen.queryByTestId('existing-input')).toBeNull(); // Adding lives inside the management table.
         expect(screen.getByTestId('existing-list').textContent).toBe('管理対象 7');
     });
 

@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, ArrowLeft, ArrowUpRight, CalendarDays, Check, Circle, FolderOpen, Play, RotateCcw } from 'lucide-react';
-import TaskInput from '@/components/TaskInput';
 import TaskList from '@/components/TaskList';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { saveProjectContext, setProjectCompletion } from '@/lib/workspace';
@@ -57,8 +56,6 @@ function ProjectPageInner() {
 
 function ProjectWorkspace({ project, tasks, reload }) {
     const [view, setView] = useState('progress');
-    const [refreshKey, setRefreshKey] = useState(0);
-    const refresh = () => { reload(); setRefreshKey(key => key + 1); };
     const milestones = project.milestones || tasks.filter(task => !task.parent_id);
     const ongoing = milestones.filter(hasOpenWork);
     const finished = milestones.filter(task => !hasOpenWork(task));
@@ -75,7 +72,6 @@ function ProjectWorkspace({ project, tasks, reload }) {
         </div>
         {view === 'progress' ? <section id="project-panel" role="tabpanel" aria-labelledby="project-tab-progress">
             <div className={project.recentEntries?.length ? styles.progressColumns : undefined}>
-            <RecentEntries entries={project.recentEntries || []} />
             <div>
             {milestones.length ? <>
                 <h2 className={styles.sectionTitle}>主な仕事</h2>
@@ -83,11 +79,11 @@ function ProjectWorkspace({ project, tasks, reload }) {
                 {finished.length > 0 && <details className={styles.finishedWork} open={!ongoing.length || undefined}><summary>完了・キャンセル {finished.length}件</summary><MilestoneList tasks={finished} /></details>}
             </> : <div className={styles.empty}><FolderOpen size={24} /><p>まだ仕事がありません</p></div>}
             </div>
+            <RecentEntries entries={project.recentEntries || []} />
             </div>
             <div className={styles.progressFooter}><ProjectProgress progress={project.progress} /><button className="work-button" onClick={() => setView('tasks')}>タスクを管理 <ArrowUpRight size={14} /></button></div>
         </section> : <section id="project-panel" role="tabpanel" aria-labelledby="project-tab-tasks">
-            <TaskInput onTaskAdded={refresh} defaultProjectId={project.id} />
-            <div className={styles.taskList}><TaskList key={`${project.id}-${refreshKey}`} projectId={project.id} /></div>
+            <div className={styles.taskList}><TaskList key={project.id} projectId={project.id} /></div>
         </section>}
     </>;
 }

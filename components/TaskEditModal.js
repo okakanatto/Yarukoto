@@ -8,6 +8,7 @@ import { useDbOperation } from '../hooks/useDbOperation';
 import { fetchDb } from '@/lib/utils';
 import { descendantIds, ancestorPath, validateParent, reparentTask, autoCompleteAncestors, clearInvalidNextTasks, restoreTaskTree, notifyTasksChanged } from '@/lib/taskHierarchy';
 import { useWorkNavigationGuard } from '@/hooks/useWorkNavigationGuard';
+import { memoChangeAssignments } from '@/lib/workEntries';
 
 const valuesFrom = task => ({
     title: task.title || '', startDate: task.start_date || '', dueDate: task.due_date || '',
@@ -97,6 +98,10 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
             const saved = await dbOp(async (db) => {
                 const current = (await db.select('SELECT * FROM tasks WHERE id = $1', [task.id]))[0];
                 if (!current) throw new Error('タスクが見つかりません。');
+                if ('notes' in changes && (current.notes || '') !== initial.current.notes
+                    && (current.notes || '') !== (changes.notes || '')) {
+                    throw new Error('作業メモが別の画面で更新されました。内容を確認してもう一度保存してください。');
+                }
                 const { title, startDate, dueDate, importance, urgency, estimatedMinutes, notes, statusCode, parentId, projectId, selectedTags } = { ...valuesFrom(current), ...changes };
                 const unchangedArchivedParent = current.archived_at && Number(parentId) === current.parent_id;
                 const parent = unchangedArchivedParent
@@ -115,38 +120,40 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     await reparentTask(db, task.id, parentId, resolvedProjectId);
                 }
 
-                // Update the main task record
-                await db.execute(`
-                    UPDATE tasks
-                    SET title = $1, start_date = $2, due_date = $3,
-                    importance_level = $4, urgency_level = $5,
-                    estimated_hours = $6, notes = $7, status_code = $8,
-                    parent_id = $9, project_id = $10,
+                // Update attributes and the memo event together. Every placeholder
+                // is bound once for parity with the Tauri and test DB adapters.
+                const params = [];
+                const bind = value => { params.push(value); return `$${params.length}`; };
+                const assignments = [
+                    `title = ${bind(title)}`,
+                    `start_date = ${bind(startDate || null)}`,
+                    `due_date = ${bind(dueDate || null)}`,
+                    `importance_level = ${bind(importance ? parseInt(importance) : null)}`,
+                    `urgency_level = ${bind(urgency ? parseInt(urgency) : null)}`,
+                    `estimated_hours = ${bind(estimatedMinutes ? parseInt(estimatedMinutes) : null)}`,
+                    ...memoChangeAssignments(bind, notes || ''),
+                    `status_code = ${bind(parseInt(statusCode))}`,
+                    `parent_id = ${bind(parentId || null)}`,
+                    `project_id = ${bind(resolvedProjectId)}`,
+                ];
+                const startedStatus = bind(parseInt(statusCode));
+                const completedStatus = bind(parseInt(statusCode));
+                const reopenedStatus = bind(parseInt(statusCode));
+                const idParam = bind(task.id);
+                const expectedNotes = bind(current.notes || '');
+                const updated = await db.execute(`
+                    UPDATE tasks SET ${assignments.join(', ')},
                     updated_at = datetime('now', 'localtime'),
-                    work_started_at = CASE WHEN CAST($11 AS INTEGER) = 2 AND status_code != 2
+                    work_started_at = CASE WHEN CAST(${startedStatus} AS INTEGER) = 2 AND status_code != 2
                         THEN datetime('now', 'localtime') ELSE work_started_at END,
                     completed_at = CASE
-                            WHEN CAST($12 AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
-                            WHEN CAST($13 AS INTEGER) != 3 THEN NULL
+                            WHEN CAST(${completedStatus} AS INTEGER) = 3 AND status_code != 3 THEN datetime('now', 'localtime')
+                            WHEN CAST(${reopenedStatus} AS INTEGER) != 3 THEN NULL
                             ELSE completed_at
                         END
-                    WHERE id = $14
-                    `, [
-                    title,
-                    startDate || null,
-                    dueDate || null,
-                    importance ? parseInt(importance) : null,
-                    urgency ? parseInt(urgency) : null,
-                    estimatedMinutes ? parseInt(estimatedMinutes) : null,
-                    notes || '',
-                    parseInt(statusCode),
-                    parentId || null,
-                    resolvedProjectId,
-                    parseInt(statusCode),
-                    parseInt(statusCode),
-                    parseInt(statusCode),
-                    task.id
-                ]);
+                    WHERE id = ${idParam} AND COALESCE(notes, '') = ${expectedNotes}
+                    `, params);
+                if (!updated.rowsAffected) throw new Error('作業メモが別の画面で更新されました。内容を確認してもう一度保存してください。');
 
                 if (parseInt(statusCode) === 3) await autoCompleteAncestors(db, task.id);
                 if (current.archived_at && ![3, 5].includes(parseInt(statusCode))) await restoreTaskTree(db, task.id);

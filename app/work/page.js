@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CalendarDays, Plus, Search, X } from 'lucide-react';
 import TaskInput from '@/components/TaskInput';
 import WorkRow from '@/components/WorkRow';
@@ -21,6 +21,7 @@ const VIEWS = [['all', '未完了'], ['today', '今日'], ['working', '進行中
 
 export default function WorkPage() {
     const router = useRouter();
+    const params = useSearchParams();
     const workspace = useWorkspace();
     const [today, setToday] = useState(() => new Date().toLocaleDateString('sv-SE'));
     const day = useTodayTasks(today, FILTERS);
@@ -57,6 +58,12 @@ export default function WorkPage() {
         if (id) setCapture(false);
         // Viewing another task must not replace the actual work to return to.
     }, []);
+    useEffect(() => {
+        const id = Number(params.get('task'));
+        if (!Number.isInteger(id) || id <= 0) return;
+        const timer = setTimeout(() => selectTask(id, params.get('start') === '1' ? {} : null), 0);
+        return () => clearTimeout(timer);
+    }, [params, selectTask]);
     useEffect(() => {
         const updateDate = () => setToday(new Date().toLocaleDateString('sv-SE'));
         const timer = setInterval(updateDate, 60000);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Database from '@tauri-apps/plugin-sql';
 import { getDb } from '@/lib/db';
-import { createCapturedTask, loadTaskContext, loadWorkspace, rememberTask, saveProjectContext, saveWorkContext, stampWorkStarted, resolveWaiting, setTaskPlan, setProjectCompletion } from '@/lib/workspace';
+import { createCapturedTask, finishWorkStep, loadTaskContext, loadWorkspace, rememberTask, saveProjectContext, saveWorkContext, stampWorkStarted, resolveWaiting, setTaskPlan, setProjectCompletion } from '@/lib/workspace';
 import { createTestDb, linkTaskTags, seedProject, seedRoutine, seedTags, seedTasks } from '../__helpers__/testDb';
 
 let db;
@@ -81,6 +81,31 @@ describe('仕事の記録と再開', () => {
     expect((await loadTaskContext(id)).task.notes).toBe('途中まで確認した');
     await saveWorkContext(id, { review_date: null });
     expect((await loadTaskContext(id)).task.review_date).toBeNull();
+  });
+
+  it('備考変更を実時刻つきで記録し、区切りまでの連続保存は一つのスナップショットへまとめる', async () => {
+    const id = await createCapturedTask({ text: '判断を更新する' });
+    await saveWorkContext(id, { notes: '未決定' });
+    await saveWorkContext(id, { notes: '方式Aを軸にする' });
+    await saveWorkContext(id, { notes: '方式Aを軸にする' });
+    let entries = JSON.parse((await loadTaskContext(id)).task.work_log);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ kind: 'memo', memo: '方式Aを軸にする', result: '', consumed_step: '' });
+    expect(entries[0].created_at).toMatch(/^\d{4}-\d{2}-\d{2} /);
+
+    await finishWorkStep(id, { result: '方式Aで合意済み' });
+    await saveWorkContext(id, { notes: '展開条件を確認する' });
+    entries = JSON.parse((await loadTaskContext(id)).task.work_log);
+    expect(entries.map(entry => entry.kind)).toEqual(['memo', 'pause', 'memo']);
+    expect(entries[2].memo).toBe('展開条件を確認する');
+  });
+
+  it('備考とその変更イベントを同じSQLite更新でロールバックする', async () => {
+    const id = await createCapturedTask({ text: '原子的に保存する' });
+    await db.execute(`CREATE TRIGGER reject_memo AFTER UPDATE OF work_log ON tasks
+      BEGIN SELECT RAISE(ABORT, 'memo rejected'); END`);
+    await expect(saveWorkContext(id, { notes: '保存されない変更' })).rejects.toThrow('memo rejected');
+    expect((await loadTaskContext(id)).task).toMatchObject({ notes: '', work_log: '[]' });
   });
 
   it('次の行動は未完了の子孫だけを参照し、完了後も備考だけ保存できる', async () => {
@@ -201,6 +226,9 @@ describe('全体の信頼性と文脈', () => {
       { title: '展開する', parent_id: null, status_code: 2, project_id: projectId },
     ]);
     await db.execute('UPDATE tasks SET parent_id = $1 WHERE id IN ($2, $3)', [root, decision, delivery]);
+    await db.execute("UPDATE tasks SET status_code = 4, next_step = '全体方針を確認する', work_log = $1 WHERE id = $2", [JSON.stringify([
+      { id: 'root-result', created_at: '2026-09-04 10:00:00', kind: 'step', result: '移行日を確定した' },
+    ]), root]);
     const [archivedResult, waiting] = await seedTasks(db, [
       { title: '比較を終える', parent_id: decision, status_code: 3, project_id: projectId },
       { title: '承認を待つ', parent_id: delivery, status_code: 4, project_id: projectId },
@@ -218,9 +246,15 @@ describe('全体の信頼性と文脈', () => {
     expect(memo).toMatchObject({ kind: 'memo', result: '変更後の現在メモ', created_at: '' });
     expect(project.recentEntries.find(entry => entry.id === 'old-result')).toMatchObject({ result: '古い検討結果', created_at: '2026-09-01 10:00:00' });
     const milestone = project.milestones.find(item => item.id === root);
-    expect(milestone.branchSummaries).toHaveLength(2);
-    expect(milestone.branchSummaries[0].latestResult).toMatchObject({ result: '方式Aで合意した', task_id: archivedResult, archived_at: '2026-09-03 00:00:00' });
-    expect(milestone.branchSummaries[1]).toMatchObject({
+    expect(milestone.branchSummaries).toHaveLength(3);
+    expect(milestone.branchSummaries[0]).toMatchObject({
+      task_id: root,
+      latestResult: { result: '移行日を確定した', task_id: root },
+      waiting: [{ task_id: root, status_code: 4, waiting_on: '' }],
+      nextSteps: [{ task_id: root, next_step: '全体方針を確認する' }],
+    });
+    expect(milestone.branchSummaries[1].latestResult).toMatchObject({ result: '方式Aで合意した', task_id: archivedResult, archived_at: '2026-09-03 00:00:00' });
+    expect(milestone.branchSummaries[2]).toMatchObject({
       latestResult: { result: '古い検討結果', task_id: delivery },
       waiting: [{ task_id: waiting, waiting_on: '責任者の承認', review_date: '2026-09-20' }],
       nextSteps: [{ task_id: waiting, next_step: '承認後に全社展開する' }],
@@ -228,13 +262,38 @@ describe('全体の信頼性と文脈', () => {
     expect(milestone.branchSummaries.flatMap(branch => branch.latestResult ? [branch.latestResult.result] : [])).not.toContain('親の手書き要約');
   });
 
+  it('アーカイブされた未完了の枝を待ち・次の一歩・未完了数へ戻さない', async () => {
+    const projectId = await seedProject(db, { name: '保管済みの枝' });
+    const root = await createCapturedTask({ text: '主な仕事', project_id: projectId });
+    const child = await createCapturedTask({ text: '保管した作業', parent_id: root });
+    await db.execute("UPDATE tasks SET status_code = 4, waiting_on = '旧担当者', next_step = '旧計画を再開', archived_at = '2026-09-01' WHERE id = $1", [child]);
+    const project = (await loadWorkspace()).projects.find(item => item.id === projectId);
+    const milestone = project.milestones.find(item => item.id === root);
+    expect(project.progress).toMatchObject({ open: 1, waiting: 0 });
+    expect(milestone.openDescendants).toBe(0);
+    expect(milestone.branchSummaries[1]).toMatchObject({ waiting: [], nextSteps: [] });
+  });
+
   it('多数のメモがあっても直近の結果と同じ仕事の現在メモを表示する', async () => {
     const projectId = await seedProject(db, { name: '多数の記録' });
     const ids = await seedTasks(db, Array.from({ length: 20 }, (_, i) => ({ title: `仕事${i}`, notes: `現在の背景${i}`, project_id: projectId })));
     await db.execute('UPDATE tasks SET work_log = $1 WHERE id = $2', [JSON.stringify([{ id: 'recent', created_at: '2026-09-13 10:00:00', kind: 'step', result: '方式に合意した' }]), ids.at(-1)]);
     const entries = (await loadWorkspace()).projects.find(item => item.id === projectId).recentEntries;
-    expect(entries.slice(0, 2)).toMatchObject([{ kind: 'memo', result: '現在の背景19', created_at: '' }, { id: 'recent', result: '方式に合意した' }]);
+    expect(entries.slice(0, 2)).toMatchObject([{ id: 'recent', result: '方式に合意した' }, { kind: 'memo', result: '現在の背景19', created_at: '' }]);
     expect(entries).toHaveLength(6);
+  });
+
+  it('同じ仕事の同文メモと結果は最近の表示だけ重複を除く', async () => {
+    const projectId = await seedProject(db, { name: '重複しない記録' });
+    const [id] = await seedTasks(db, [{ title: '方式を決める', notes: '方式Aで合意した', project_id: projectId }]);
+    await db.execute('UPDATE tasks SET work_log = $1 WHERE id = $2', [JSON.stringify([
+      { id: 'agreed', created_at: '2026-09-13 10:00:00', kind: 'step', result: '方式Aで合意した' },
+    ]), id]);
+    const entries = (await loadWorkspace()).projects.find(item => item.id === projectId).recentEntries;
+    expect(entries.filter(entry => entry.task_id === id && entry.result === '方式Aで合意した')).toEqual([
+      expect.objectContaining({ id: 'agreed', kind: 'step', created_at: '2026-09-13 10:00:00' }),
+    ]);
+    expect(JSON.parse((await loadTaskContext(id)).task.work_log)).toHaveLength(1);
   });
 
   it('成果達成は未完了・実施中ルーティンを隠さず、明示的に完了・再開する', async () => {

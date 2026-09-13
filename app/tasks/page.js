@@ -1,31 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import TaskInput from '@/components/TaskInput';
 import TaskList from '@/components/TaskList';
 
 export default function TasksPage() {
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // Refresh task list when a task is added from the global FAB
-  useEffect(() => {
-    const handleTaskAdded = () => setRefreshKey(k => k + 1);
-    window.addEventListener('yarukoto:taskAdded', handleTaskAdded);
-    return () => window.removeEventListener('yarukoto:taskAdded', handleTaskAdded);
-  }, []);
-
   return (
-    <div className="page-container">
-      <h2 className="page-title">タスク一覧</h2>
-      <TaskInput onTaskAdded={() => setRefreshKey(k => k + 1)} />
-      <div style={{ marginTop: '1.5rem' }}>
-        <TaskList key={refreshKey} />
-      </div>
+    <div className="task-management-page">
+      <TaskList fullPage />
 
       <style jsx>{`
-        .page-container {
-          max-width: 900px;
-          animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        .task-management-page {
+          max-width: 1600px;
+          margin: 0 auto;
+          width:100%; flex:1; min-height:0;
         }
       `}</style>
     </div>

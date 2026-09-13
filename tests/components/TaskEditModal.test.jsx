@@ -73,8 +73,11 @@ describe('TaskEditModal save failure recovery', () => {
         fireEvent.click(saveBtn);
         await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
         expect(onClose).toHaveBeenCalledOnce();
-        const rows = await db.select('SELECT title, notes FROM tasks WHERE id = $1', [taskId]);
+        const rows = await db.select('SELECT title, notes, work_log FROM tasks WHERE id = $1', [taskId]);
         expect(rows[0]).toMatchObject({ title: 'New Title', notes: '方式の判断理由を残す' });
+        expect(JSON.parse(rows[0].work_log)).toEqual([
+            expect.objectContaining({ kind: 'memo', memo: '方式の判断理由を残す', result: '' }),
+        ]);
         const tags = await db.select('SELECT tag_id FROM task_tags WHERE task_id = $1', [taskId]);
         expect(tags.map(tag => tag.tag_id)).toEqual([]);
     });
@@ -156,5 +159,18 @@ describe('TaskEditModal save failure recovery', () => {
         await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
         expect((await db.select('SELECT title, notes, status_code, due_date FROM tasks WHERE id = $1', [id]))[0]).toEqual({ title: '名前だけ変更', notes: '外部で更新した作業文脈', status_code: 2, due_date: '2026-10-01' });
         expect((await db.select('SELECT tag_id FROM task_tags WHERE task_id = $1', [id])).map(row => row.tag_id)).toEqual([tagId]);
+    });
+
+    it('does not overwrite a newer memo when this form also edited the memo', async () => {
+        const [id] = await seedTasks(db, [{ title: 'Old Title', notes: '元のメモ', project_id: 1 }]);
+        const onClose = vi.fn(), onSaved = vi.fn();
+        render(<TaskEditModal task={{ id, title: 'Old Title', notes: '元のメモ', project_id: 1, tags: [], status_code: 1 }} onClose={onClose} onSaved={onSaved} />);
+        fireEvent.change(await screen.findByDisplayValue('元のメモ'), { target: { value: 'この画面の変更' } });
+        await db.execute("UPDATE tasks SET notes = '別画面の新しいメモ' WHERE id = $1", [id]);
+        fireEvent.click(screen.getByRole('button', { name: '保存' }));
+        await waitFor(() => expect(screen.getByText(/作業メモが別の画面で更新されました/)).toBeTruthy());
+        expect(onClose).not.toHaveBeenCalled();
+        expect(onSaved).not.toHaveBeenCalled();
+        expect((await db.select('SELECT notes, work_log FROM tasks WHERE id = $1', [id]))[0]).toEqual({ notes: '別画面の新しいメモ', work_log: '[]' });
     });
 });

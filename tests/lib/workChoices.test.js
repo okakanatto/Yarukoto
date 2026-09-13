@@ -73,14 +73,25 @@ describe('取りかかる候補と記録の見返し', () => {
         expect(choices).toHaveLength(200);
         expect(new Set(ids(choices)).size).toBe(200);
         expect(ids(choices).slice(0, 3)).toEqual([2, 3, 4]);
-        expect(revisit.map(t => t.id)).toEqual(ids(choices));
-        expect(revisit.at(-1).id).toBe(1);
+        expect(revisit.map(t => t.id)).toEqual(Array.from({ length: 200 }, (_, index) => index + 1));
         expect(tasks).toEqual(before);
     });
 
-    it('見返しから待ち・進行中・完了・取消・保管を除き、未整理のカスタム状態を残す', () => {
+    it('見返しから待ち・完了・取消・保管を除き、放置された進行中と未整理のカスタム状態を残す', () => {
         const tasks = [task(1), task(2, { status_code: 2 }), task(3, { status_code: 3 }), task(4, { status_code: 4 }), task(5, { status_code: 5 }), task(6, { archived_at: today }), task(7, { waiting_on: '回答待ち' }), task(8, { status_code: 6 })];
-        expect(recordsToRevisit(tasks, today).map(t => t.id)).toEqual([1, 8]);
+        expect(recordsToRevisit(tasks, today).map(t => t.id)).toEqual([1, 2, 8]);
+    });
+    it('進行中は実作業から7日空いた時だけ古い順に戻し、閲覧・未来予定・待ちは作業と混同しない', () => {
+        const tasks = [
+            task(1, { status_code: 2, work_started_at: '2026-09-05 10:00:00', last_opened_at: '2026-09-13 12:00:00' }),
+            task(2, { status_code: 2, work_started_at: '2026-09-06 10:00:00' }),
+            task(3, { status_code: 2, work_started_at: '2026-09-07 10:00:00' }),
+            task(4, { status_code: 2, work_started_at: '2026-09-01 10:00:00', work_log: JSON.stringify([{ created_at: '2026-09-12 09:00:00', kind: 'pause', result: '' }]) }),
+            task(5, { status_code: 2, work_started_at: '2026-09-01 10:00:00', today_date: '2026-09-20' }),
+            task(6, { status_code: 2, work_started_at: '2026-09-01 10:00:00', waiting_on: '返答待ち' }),
+        ];
+        expect(recordsToRevisit(tasks, today).map(t => t.id)).toEqual([1, 2]);
+        expect(tasks[0].last_opened_at).toBe('2026-09-13 12:00:00');
     });
     it('開始前・未来に予定済みの仕事を見返しで再判断させず、その当日になったら戻す', () => {
         const tasks = [task(1, { start_date: '2026-09-20' }), task(2, { today_date: '2026-09-20' }), task(3, { today_date: today })];
@@ -105,7 +116,7 @@ describe('候補を再理解する文脈', () => {
             { id: '1', created_at: '2026-09-12', result: '例外11件を特定' },
             { id: '2', created_at: today, result: '', kind: 'pause' },
         ]) });
-        expect(workSummary(record)).toMatchObject({ step: '方式Aを比較する', context: '古いメモ', contextKind: 'memo', memo: '古いメモ', result: '例外11件を特定' });
+        expect(workSummary(record)).toMatchObject({ step: '方式Aを比較する', context: '例外11件を特定', contextKind: 'result', memo: '古いメモ', result: '例外11件を特定', background: { kind: 'memo', text: '古いメモ' } });
         expect(workSummary({ ...record, next_task_title: '方式Bの見積を確認' }).step).toBe('方式Bの見積を確認');
     });
 
@@ -116,16 +127,40 @@ describe('候補を再理解する文脈', () => {
         expect(workSummary(record).context).toBe('原文から復帰できる');
     });
 
-    it('keeps the complete current memo distinct from an older result and identifies each fallback', () => {
+    it('keeps an undated legacy memo as background beside a dated result', () => {
         const record = task(1, { notes: '現在の判断\n次回も参照する詳細', capture_text: '取り込み原文', work_log: JSON.stringify([
             { created_at: '2026-09-10', result: '以前の作業結果' },
         ]) });
         expect(workSummary(record)).toMatchObject({
-            context: '現在の判断\n次回も参照する詳細', contextKind: 'memo',
+            context: '以前の作業結果', contextKind: 'result',
             memo: '現在の判断\n次回も参照する詳細', result: '以前の作業結果',
+            latestUpdate: { kind: 'result', text: '以前の作業結果', created_at: '2026-09-10' },
+            background: { kind: 'memo', text: '現在の判断\n次回も参照する詳細' },
         });
         expect(workSummary({ ...record, notes: '' })).toMatchObject({ context: '以前の作業結果', contextKind: 'result' });
         expect(workSummary({ ...record, notes: '', work_log: '[]' })).toMatchObject({ context: '取り込み原文', contextKind: 'capture' });
+    });
+
+    it('orders a logged memo and result by their real events in both directions', () => {
+        const base = task(1, { notes: '合意後の補足', capture_text: '取り込み原文' });
+        const memoThenResult = { ...base, work_log: JSON.stringify([
+            { created_at: '2026-09-10 09:00:00', kind: 'memo', memo: '合意後の補足' },
+            { created_at: '2026-09-11 09:00:00', kind: 'step', result: '方式Aで合意済み' },
+        ]) };
+        expect(workSummary(memoThenResult)).toMatchObject({
+            context: '方式Aで合意済み', contextKind: 'result',
+            latestUpdate: { kind: 'result', text: '方式Aで合意済み' },
+            background: { kind: 'memo', text: '合意後の補足' },
+        });
+        const resultThenMemo = { ...base, work_log: JSON.stringify([
+            { created_at: '2026-09-10 09:00:00', kind: 'step', result: '方式Aで合意済み' },
+            { created_at: '2026-09-11 09:00:00', kind: 'memo', memo: '合意後の補足' },
+        ]) };
+        expect(workSummary(resultThenMemo)).toMatchObject({
+            context: '合意後の補足', contextKind: 'memo',
+            latestUpdate: { kind: 'memo', text: '合意後の補足' },
+            result: '方式Aで合意済み',
+        });
     });
 });
 

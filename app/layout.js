@@ -143,7 +143,7 @@ function LayoutInner({ children }) {
         <>
             <div className="layout-container" suppressHydrationWarning>
                 <Sidebar mounted={mounted} />
-                <main className={`content ${pathname === '/work' ? 'content-desk' : ''}`} suppressHydrationWarning>
+                <main className={`content ${pathname === '/work' ? 'content-desk' : pathname === '/tasks' ? 'content-table' : ''}`} suppressHydrationWarning>
                     {mounted && pathname !== '/work' && <GlobalWorkSignals />}
                     {mounted && children}
                 </main>
@@ -156,7 +156,7 @@ function LayoutInner({ children }) {
                 <>
                     <button
                         className={`fab ${fabOpen ? 'fab-open' : ''}`}
-                        hidden={pathname === '/work'}
+                        hidden={pathname === '/work' || pathname === '/tasks'}
                         onClick={() => setFabOpen(v => !v)}
                         title="新しいタスクを追加"
                         aria-label="新しいタスクを追加"

@@ -10,7 +10,7 @@ const actions = vi.hoisted(() => ({ handleStatusChange: vi.fn(), handleRoutineSt
 vi.mock('@/hooks/useWorkspace', () => ({ useWorkspace: () => fixture.workspace }));
 vi.mock('@/hooks/useTodayTasks', () => ({ useTodayTasks: () => fixture.day }));
 vi.mock('@/hooks/useTaskActions', () => ({ useTaskActions: () => actions }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock('next/link', () => ({ default: ({ href, children, ...props }) => <a href={href} {...props}>{children}</a> }));
 vi.mock('@/components/WorkSignals', () => ({ default: () => null }));
 vi.mock('@/components/WorkRow', () => ({ default: ({ task, onOpen }) => <button onClick={() => onOpen(task.id)}>{task.title}</button> }));

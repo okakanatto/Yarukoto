@@ -2,6 +2,7 @@
 import { createElement } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
 import WorkSignals, { collectWorkSignals } from '@/components/WorkSignals';
 import * as workspace from '@/lib/workspace';
 import { createTestDb, seedTasks } from '../__helpers__/testDb';
@@ -50,7 +51,6 @@ describe('WorkSignals reliability', () => {
         expect(within(screen.getByRole('list', { name: '確認する仕事' })).getAllByRole('listitem')).toHaveLength(5);
         fireEvent.click(screen.getByRole('button', { name: /期限確認 5/ }));
         expect(onOpenTask).toHaveBeenCalledWith(5);
-        expandAll();
         expect(screen.queryByRole('list')).toBeNull();
     });
 
@@ -76,7 +76,8 @@ describe('WorkSignals reliability', () => {
         render(createElement(WorkSignals, { tasks, projects, onOpenTask, onOpenProject }));
         expect(screen.getByRole('button', { name: '確認 2' })).toBeTruthy();
         expandAll();
-        fireEvent.click(screen.getByRole('button', { name: /^タスクの約束/ }));
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^タスクの約束/ }));
+        expandAll();
         fireEvent.click(screen.getByRole('button', { name: /^プロジェクト · プロジェクトの約束/ }));
         expect(onOpenTask).toHaveBeenCalledTimes(1);
         expect(onOpenTask).toHaveBeenCalledWith(10);

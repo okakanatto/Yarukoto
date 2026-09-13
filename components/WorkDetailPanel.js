@@ -9,6 +9,7 @@ import { useWorkNavigationGuard } from '@/hooks/useWorkNavigationGuard';
 import { classifyWorkReference, openWorkReference } from '@/lib/workReferences';
 import { clearWorkDraft, readWorkDraft, writeWorkDraft } from '@/lib/workDrafts';
 import { isWaiting } from '@/lib/workViews';
+import { workSummary } from '@/lib/workEntries';
 import styles from './WorkDetailPanel.module.css';
 
 // Navigation saves first; a local recovery copy also survives an unexpected close.
@@ -56,6 +57,8 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     const [focused, setFocused] = useState(false);
     const [startHelp, setStartHelp] = useState(false);
     const [smallStarting, setSmallStarting] = useState(false);
+    const [entryStep, setEntryStep] = useState('');
+    const [customEntry, setCustomEntry] = useState('');
     const smallStartRef = useRef(false);
     const [sessionStarted, setSessionStarted] = useState(null);
     const [sessionMinutes, setSessionMinutes] = useState(null);
@@ -523,12 +526,8 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
         if (smallStartRef.current || pendingRef.current || checkpointRef.current || nextTask) return;
         smallStartRef.current = true; setSmallStarting(true);
         const nextStep = makeStep(draftRef.current.title);
-        const oldStep = draftRef.current.next_step.trim();
-        const notes = oldStep && oldStep !== nextStep && !draftRef.current.notes.includes(oldStep)
-            ? [draftRef.current.notes, `以前の一歩：${oldStep}`].filter(Boolean).join('\n\n') : draftRef.current.notes;
-        changeFields({ next_step: nextStep, notes });
         try {
-            if (await startWork()) { setStartHelp(false); notesRef.current?.focus(); notesRef.current?.setSelectionRange(notes.length, notes.length); }
+            if (await startWork()) { setEntryStep(nextStep); setStartHelp(false); notesRef.current?.focus(); }
         } finally { smallStartRef.current = false; if (aliveRef.current) setSmallStarting(false); }
     }
 
@@ -560,7 +559,7 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
                 }), { allowCheckpoint: true });
                 if (!success) return false;
                 editCheckpoint(null);
-                setSessionStarted(null);
+                setSessionStarted(null); setEntryStep('');
                 setFocused(false);
                 callbacks.current.onFocusChange?.(false);
                 if (close) callbacks.current.onClose?.();
@@ -588,7 +587,7 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
             <span id={`work-heading-${taskId}`} className={styles.srOnly}>{draft?.title || task?.title || '仕事'}</span>
             <header className={styles.header}>
                 <nav className={styles.breadcrumb} aria-label="仕事の階層">
-                    <span>{task?.project_name || '仕事'}</span>
+                    <span>{task?.project_name || '仕事'}</span>{focused && <strong className={styles.currentTask}>{draft?.title}</strong>}
                     {ancestors.map(parent => <span className={styles.crumb} key={parent.id}><ChevronRight size={12} /><button type="button" disabled={saving} onClick={() => leave(() => callbacks.current.onOpenTask(parent.id))}>{parent.title}</button></span>)}
                 </nav>
                 <button ref={closeRef} type="button" className={styles.iconButton} aria-label="仕事の内容を閉じる" disabled={saving || checkpointSaving} onClick={() => leave(() => callbacks.current.onClose?.())}><X size={20} /></button>
@@ -613,25 +612,29 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
                     </div>}
                     {focused && <div className={styles.focusBar}><span><span className={styles.liveDot} />作業中{sessionMinutes && <time aria-label="作業の経過時間">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')} / {sessionMinutes}:00</time>}</span><button type="button" className={styles.secondaryButton} disabled={saving || !!checkpoint} onClick={() => openCheckpoint()}><Pause size={14} />区切る</button></div>}
 
+                    {focused && entryStep && <div className={styles.entryStep}><small>今回だけ</small><p>{entryStep}</p><button type="button" onClick={() => setEntryStep('')}>本来の一歩へ<ArrowRight size={14} /></button></div>}
                     <div className={styles.referenceLine}>
                         <Paperclip size={15} aria-hidden="true" />
                         {sourceEditing ? <><input aria-label="出どころ" autoFocus value={draft.source_ref} disabled={saving} placeholder="資料の場所・URL" onChange={event => changeField('source_ref', event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); setSourceEditing(false); } }} /><button className={styles.iconButton} aria-label="資料の編集を終える" type="button" disabled={saving} onClick={() => setSourceEditing(false)}><Check size={16} /></button></> : draft.source_ref ? <>{reference.kind !== 'text' ? <button type="button" className={styles.referenceLink} disabled={saving} onClick={openReference} title={draft.source_ref}>{reference.label}<ArrowUpRight size={14} /></button> : <span className={styles.referenceText}>{draft.source_ref}</span>}<button type="button" className={styles.iconButton} aria-label="資料を編集" title="資料を編集" disabled={saving} onClick={() => setSourceEditing(true)}><Pencil size={14} /></button></> : <button type="button" className={styles.textButton} disabled={saving} onClick={() => setSourceEditing(true)}>資料を追加</button>}
                     </div>
 
                     <section className={styles.nextStep}>
-                        {nextTask ? <><span className={styles.stepLabel}>今する一歩</span><button type="button" className={styles.nextTaskLink} disabled={saving} onClick={() => { if (draftRef.current.next_step) chooseChild(String(nextTask.id)); void leave(() => callbacks.current.onOpenTask(nextTask.id)); }}>{nextTask.title}<ArrowRight size={16} /></button><button type="button" className={styles.textButton} disabled={saving} onClick={() => chooseChild('')}>一歩を変更</button></> : <><label htmlFor={`work-step-${taskId}`}>今する一歩</label><textarea id={`work-step-${taskId}`} rows={1} value={draft.next_step} placeholder="最初の一歩（任意）" disabled={saving} onChange={event => changeField('next_step', event.target.value)} /></>}
-                        {focused && !nextTask && draft.next_step.trim() && <button type="button" className={styles.stepDone} disabled={saving || !!checkpoint} onClick={() => openCheckpoint(true)}><Check size={15} />一歩を終える</button>}
+                        {nextTask ? <><span className={styles.stepLabel}>今する一歩</span><button type="button" className={styles.nextTaskLink} disabled={saving} onClick={() => { if (draftRef.current.next_step) chooseChild(String(nextTask.id)); void leave(() => callbacks.current.onOpenTask(nextTask.id)); }}>{nextTask.title}<ArrowRight size={16} /></button><button type="button" className={styles.textButton} disabled={saving} onClick={() => chooseChild('')}>一歩を変更</button></> : <><label htmlFor={`work-step-${taskId}`}>{entryStep ? '本来の一歩' : '今する一歩'}</label><textarea id={`work-step-${taskId}`} rows={1} value={draft.next_step} placeholder="最初の一歩（任意）" disabled={saving} onChange={event => changeField('next_step', event.target.value)} /></>}
+                        {focused && !entryStep && !nextTask && draft.next_step.trim() && <button type="button" className={styles.stepDone} disabled={saving || !!checkpoint} onClick={() => openCheckpoint(true)}><Check size={15} />一歩を終える</button>}
                     </section></>}
 
                     {startHelp && !checkpoint && <section className={styles.startHelp} aria-label="はじめ方を小さくする">
                         <button type="button" className={styles.textButton} disabled={smallStarting} onClick={() => setStartHelp(false)}>戻る</button>
                         <h3>はじめ方を小さくする</h3>
+                        {!nextTask && draft.next_step && <p className={styles.originalStep}>{draft.next_step}</p>}
                         {nextTask ? <><p>{nextTask.title}{nextBlocked && ' · 待ち・予定を確認'}</p><button type="button" className={styles.secondaryButton} disabled={saving} onClick={() => leave(() => callbacks.current.onOpenTask(nextTask.id))}>この一歩を開く<ArrowRight size={15} /></button></>
-                            : <div className={styles.startOptions}>{SMALL_STARTS.map(([label, makeStep]) => <button key={label} type="button" disabled={saving || smallStarting || isWaiting({ ...task, ...draft })} onClick={() => beginSmall(makeStep)}>{label}<ArrowRight size={16} /></button>)}</div>}
+                            : <><div className={styles.startOptions}>{reference.kind !== 'text' && <button type="button" disabled={saving || smallStarting} onClick={async () => { if (await startWork(null, true)) { setEntryStep('資料を開いて、作業する箇所を見る'); setStartHelp(false); } }}>資料を開いて見る<ArrowRight size={16} /></button>}{SMALL_STARTS.map(([label, makeStep]) => <button key={label} type="button" disabled={saving || smallStarting || isWaiting({ ...task, ...draft })} onClick={() => beginSmall(makeStep)}>{label}<ArrowRight size={16} /></button>)}</div><form className={styles.entryForm} onSubmit={event => { event.preventDefault(); if (customEntry.trim()) void beginSmall(() => customEntry.trim()); }}><input aria-label="今回だけの小さい着手" placeholder="今回だけの一歩" value={customEntry} onChange={event => setCustomEntry(event.target.value)} /><button type="submit" disabled={!customEntry.trim() || saving || smallStarting}>始める</button></form></>}
                     </section>}
                     {checkpoint && <form className={styles.checkpoint} onSubmit={event => { event.preventDefault(); void saveCheckpoint(); }}><h3>{checkpoint.stepCompleted ? '一歩を終える' : '区切る'}</h3><label>進んだこと（任意）<textarea ref={checkpointInputRef} rows={2} value={checkpoint.result} disabled={saving || checkpointSaving} onChange={event => editCheckpoint({ ...checkpoint, result: event.target.value })} autoFocus /></label>{!nextTask && <label>次の一歩（任意）<input value={checkpoint.next_step} disabled={saving || checkpointSaving} onChange={event => editCheckpoint({ ...checkpoint, next_step: event.target.value })} /></label>}<div className={styles.childActions}><button type="submit" className={styles.primaryButton} disabled={saving || checkpointSaving}>{checkpointSaving ? '保存中…' : checkpoint.stepCompleted ? '記録する' : '保存して中断'}</button><button type="button" className={styles.textButton} disabled={saving || checkpointSaving} onClick={() => { editCheckpoint(null); callbacks.current.onFocusChange?.(focused); }}>戻る</button></div></form>}
 
                     {!checkpoint && !startHelp && <>{!task.notes && renderOriginal()}
+
+                    {workSummary(task).latestUpdate?.kind === 'result' && <div className={styles.latestResult}><small>前回の結果</small><p>{workSummary(task).latestUpdate.text}</p></div>}
                     <section className={styles.notesSection}>
                         <label htmlFor={`work-notes-${taskId}`}>作業メモ</label>
                         <textarea id={`work-notes-${taskId}`} ref={notesRef} rows={Math.min(14, Math.max(4, (draft.notes.match(/\n/g)?.length || 0) + 2))} value={draft.notes} placeholder="メモ…" onChange={event => changeField('notes', event.target.value)} onSelect={selectNotes} disabled={saving} />
@@ -639,7 +642,7 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
                     </section>
                     {task.notes && renderOriginal()}
                     {nextTask && draft.next_step && <details className={styles.originalSection}><summary>以前の一歩</summary><p className={styles.original}>{draft.next_step}</p></details>}
-                    {context.entries?.length > 0 && <details className={styles.section}><summary>作業の記録<span className={styles.summaryHint}>{context.entries.length}</span></summary><ol className={styles.entries}>{context.entries.map(entry => <li key={entry.id}><time>{entry.created_at?.slice(0, 16)}</time>{entry.consumed_step && <p><Check size={13} />{entry.consumed_step}</p>}{entry.result && <p>{entry.result}</p>}{!entry.result && !entry.consumed_step && <p>中断</p>}</li>)}</ol></details>}
+                    {context.entries?.length > 0 && <details className={styles.section}><summary>作業の記録<span className={styles.summaryHint}>{context.entries.length}</span></summary><ol className={styles.entries}>{context.entries.map(entry => <li key={entry.id}><time>{entry.created_at?.slice(0, 16)}</time>{entry.consumed_step && <p><Check size={13} />{entry.consumed_step}</p>}{entry.result && <p>{entry.result}</p>}{entry.kind === 'memo' ? <details><summary>メモを更新</summary><p>{entry.memo}</p></details> : !entry.result && !entry.consumed_step && <p>中断</p>}</li>)}</ol></details>}
 
                     <details className={styles.management} open={!focused || undefined}><summary>管理</summary>
                     {active && <div className={styles.workActions}>

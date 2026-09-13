@@ -54,7 +54,7 @@ export default function WorkLaunch({ tasks, todayTasks, today, previousId, onOpe
             {choice.task.due_date && <p className={[styles.due, choice.task.due_date < today ? styles.overdue : ''].join(' ')}><CalendarDays size={15} />期限 {choice.task.due_date}</p>}
             {summary.step && <p className={styles.step}><ArrowRight size={17} /><span>{summary.step}</span></p>}
             {summary.context && summary.context !== choice.task.title && <p className={styles.context}><span>{summary.contextKind === 'memo' ? 'メモ' : summary.contextKind === 'result' ? '前回の結果' : '背景'}</span>{summary.context}</p>}
-            {summary.result && summary.contextKind === 'memo' && summary.result !== summary.context && <details className={styles.previousResult}><summary>前回の結果</summary><p>{summary.result}</p></details>}
+            {summary.background && <details className={styles.previousResult}><summary>背景・メモ</summary><p>{summary.background.text}</p></details>}
             </div>
             <div className={styles.actions}><button className={styles.primary} onClick={() => choice.task.is_routine ? onBrowse('today') : hasReference ? onStart(choice.task.id, null, true) : onStart(choice.task.id)}><Play size={16} />{choice.task.is_routine ? '今日の一覧を開く' : hasReference ? '資料を開いて始める' : '取りかかる'}</button>{!choice.task.is_routine && <button className={styles.short} onClick={() => onStart(choice.task.id, 5)}><Clock3 size={16} />5分だけ</button>}</div>
             <div className={styles.adjustments}>{!choice.task.is_routine && <button className={styles.alternativesToggle} onClick={() => onOpen(choice.task.id, { help: true })}>はじめ方を小さくする<ArrowRight size={15} /></button>}

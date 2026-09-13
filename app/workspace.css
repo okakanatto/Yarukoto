@@ -162,3 +162,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media(min-width:961px) { .desk-has-selection .desk-home-panes { grid-template-columns:minmax(250px,.75fr) minmax(390px,1.4fr); } }
 @media(max-width:960px) { .launch-desk.desk-has-selection .desk-work { display:block; } .launch-desk.desk-has-selection .desk-list { display:none; } .launch-desk.desk-capture-open .desk-list { display:flex; } .launch-desk.desk-capture-open .desk-work { display:none; } }
 .desk-focused .desk-home-panes { grid-template-columns:minmax(0, 1fr); }
+.desk-capture-open .desk-launch-scroll, .desk-capture-open .desk-back-home, .desk-capture-open .desk-tabs, .desk-capture-open .desk-list-tools, .desk-capture-open .desk-results { display:none; }
+.desk-capture-open .desk-capture { max-height:none; flex:1; padding:24px; }
+.desk-capture-open .desk-panes { grid-template-columns:minmax(0,1fr); }
+.desk-capture-open .desk-work { display:none; }
+.global-work-signals { margin-bottom:14px; max-width:1600px; }
+.content.content-table { display:flex; flex-direction:column; overflow:hidden; }
+.content-table .global-work-signals { flex-shrink:0; width:100%; }

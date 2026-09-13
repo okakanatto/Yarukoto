@@ -2,6 +2,15 @@
 .srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .panel { position:fixed; inset:0 0 0 auto; width:min(680px,100vw); background:var(--color-surface); color:var(--color-text); z-index:1601; display:flex; flex-direction:column; box-shadow:var(--shadow-lg); border-left:1px solid var(--border-color); min-height:0; }
 .embedded { position:relative; inset:auto; width:100%; height:100%; z-index:auto; border:0; box-shadow:none; border-radius:inherit; }
+.entryStep,.latestResult { border-left:2px solid var(--color-accent); padding:8px 14px; margin:16px 0; }
+.entryStep small,.latestResult small { color:var(--color-text-secondary); font-size:11px; }
+.entryStep p,.latestResult p { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; line-height:1.7; margin:5px 0; }
+.entryStep button { display:flex; align-items:center; gap:6px; background:transparent; border:0; color:var(--color-accent); padding:8px 0; font:inherit; font-size:12px; cursor:pointer; }
+.entryForm { display:flex; gap:8px; margin-top:14px; }
+.entryForm input { flex:1; min-width:0; padding:9px; border:1px solid var(--border-color); border-radius:5px; background:var(--color-surface); color:var(--color-text); font:inherit; font-size:13px; }
+.entryForm button { padding:8px 12px; border:1px solid var(--border-color); border-radius:5px; background:var(--color-surface); color:var(--color-text); font:inherit; font-size:12px; cursor:pointer; }
+.originalStep { color:var(--color-text-secondary); line-height:1.7; font-size:13px; }
+.currentTask { font-weight:600; color:var(--color-text); max-width:360px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .header { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:52px; padding:10px 28px; flex-shrink:0; }
 .iconButton { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; flex-shrink:0; border:0; background:transparent; border-radius:6px; color:var(--color-text-secondary); cursor:pointer; }
 .iconButton:hover { background:var(--color-surface-active); color:var(--color-text); }

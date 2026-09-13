@@ -161,12 +161,12 @@ describe('project progress includes the work below its milestones', () => {
     const child = await createCapturedTask({ text: '条件の確認', parent_id: parent });
     await saveWorkContext(child, { notes: '従来の確認内容\n次回の論点' });
     let project = (await loadWorkspace()).projects.find(item => item.id === projectId);
-    expect(project.recentEntries).toEqual([expect.objectContaining({ task_id: child, kind: 'memo', result: '従来の確認内容\n次回の論点', created_at: '' })]);
+    expect(project.recentEntries).toEqual([expect.objectContaining({ task_id: child, kind: 'memo', result: '従来の確認内容\n次回の論点', created_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2} /) })]);
     await setEntries(child, [record('step-done', '2026-09-13', '', { kind: 'step', consumed_step: '資料を5件確認する' })]);
     project = (await loadWorkspace()).projects.find(item => item.id === projectId);
     expect(project.recentEntries).toEqual([
-      expect.objectContaining({ task_id: child, kind: 'memo', result: '従来の確認内容\n次回の論点', created_at: '' }),
       expect.objectContaining({ task_id: child, kind: 'step', consumed_step: '資料を5件確認する', created_at: '2026-09-13 10:00:00' }),
+      expect.objectContaining({ task_id: child, kind: 'memo', result: '従来の確認内容\n次回の論点', created_at: '' }),
     ]);
   });
 

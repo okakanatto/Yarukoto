@@ -8,7 +8,14 @@
 .danger { color:var(--color-danger); }
 .warning { color:var(--color-text); }
 .neutral { color:var(--color-text-secondary); }
-.expanded { border-top:1px solid var(--border-color); max-height:32vh; overflow:auto; }
+.dialog { width:min(860px,calc(100vw - 40px)); max-height:80vh; padding:0; border:1px solid var(--border-color); border-radius:10px; background:var(--color-surface); color:var(--color-text); margin:auto; }
+.dialog::backdrop { background:#0004; }
+.dialog header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; }
+.dialog h2 { font-size:17px; margin:0; font-weight:600; }
+.dialog header button { background:transparent; border:0; color:var(--color-text); cursor:pointer; }
+.expanded { border-top:1px solid var(--border-color); max-height:calc(80vh - 70px); overflow:auto; }
+.reviewDate { display:grid; gap:3px; font-size:10px; color:var(--color-text-secondary); padding:8px 0; }
+.reviewDate input { width:130px; border:1px solid var(--border-color); border-radius:4px; background:var(--color-surface); color:var(--color-text); padding:5px; font:inherit; font-size:12px; }
 .expanded ul { margin:0; padding:0 14px; list-style:none; }
 .row { display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border-color); }
 .row:last-child { border:0; }

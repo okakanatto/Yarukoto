@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import WorkLaunch from '@/components/WorkLaunch';
 import WorkSignals from '@/components/WorkSignals';
 
+// jsdom has no native top layer; simulate the observable open state.
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+
 const today = '2026-09-13';
 const task = (id, changes = {}) => ({ id, title: `仕事 ${id}`, status_code: 1, importance_level: 2, created_at: '2026-09-01 09:00:00', ...changes });
 const setupProps = changes => ({ tasks: [], todayTasks: [], today, previousId: null, loading: false, onOpen: vi.fn(), onStart: vi.fn(), onBrowse: vi.fn(), onCapture: vi.fn(), ...changes });

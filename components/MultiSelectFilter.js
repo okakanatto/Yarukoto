@@ -11,7 +11,7 @@ import { useState, useRef, useEffect } from 'react';
  *   selected – array of currently selected values.  [] = "all" (no filter)
  *   onChange – (newSelected) => void
  */
-export default function MultiSelectFilter({ label, options, selected, onChange }) {
+export default function MultiSelectFilter({ label, options, selected, onChange, selectionMode = 'exclude-from-all' }) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -36,6 +36,11 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
     };
 
     const handleToggleItem = (value) => {
+        if (selectionMode === 'include') {
+            const next = selected.includes(value) ? selected.filter(item => item !== value) : [...selected, value];
+            onChange(next.length === options.length ? [] : next);
+            return;
+        }
         if (isAllSelected) {
             // Uncheck this item from "all" → select everything except this
             const newSelected = options.filter(o => o.value !== value).map(o => o.value);
@@ -59,7 +64,7 @@ export default function MultiSelectFilter({ label, options, selected, onChange }
         }
     };
 
-    const isItemChecked = (value) => isAllSelected || selected.includes(value);
+    const isItemChecked = (value) => (selectionMode !== 'include' && isAllSelected) || selected.includes(value);
     const activeCount = isAllSelected ? 0 : selected.length;
 
     return (
