@@ -2,6 +2,7 @@
 
 import './globals.css';
 import './workspace.css';
+import './ui.css';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import TaskInput from '@/components/TaskInput';
@@ -156,7 +157,7 @@ function LayoutInner({ children }) {
                 <>
                     <button
                         className={`fab ${fabOpen ? 'fab-open' : ''}`}
-                        hidden={pathname === '/work' || pathname === '/tasks'}
+                        hidden
                         onClick={() => setFabOpen(v => !v)}
                         title="新しいタスクを追加"
                         aria-label="新しいタスクを追加"
@@ -250,10 +251,11 @@ function LayoutInner({ children }) {
 
                     .fab-modal {
                         position: fixed;
-                        bottom: calc(20px + 44px + 8px);
-                        right: 28px;
-                        width: min(480px, calc(100vw - 48px));
-                        max-height: calc(100vh - 20px - 44px - 8px - 16px);
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: min(560px, calc(100vw - 32px));
+                        max-height: calc(100vh - 48px);
                         display: flex;
                         flex-direction: column;
                         overflow: hidden;
@@ -263,22 +265,21 @@ function LayoutInner({ children }) {
                         box-shadow: var(--shadow-lg);
                         z-index: 1001;
                         animation: fabModalIn 0.15s var(--ease-out);
-                        transform-origin: bottom right;
                     }
                     @keyframes fabModalIn {
-                        from { opacity: 0; transform: translateY(8px); }
-                        to   { opacity: 1; transform: translateY(0); }
+                        from { opacity: 0; }
+                        to   { opacity: 1; }
                     }
 
                     .fab-modal-header {
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        padding: 10px 16px 8px;
+                        padding: 12px 20px;
                         border-bottom: 1px solid var(--border-color);
                     }
                     .fab-modal-title {
-                        font-size: 0.82rem;
+                        font-size: 14px;
                         font-weight: 600;
                         color: var(--color-text-secondary);
                     }
@@ -287,8 +288,8 @@ function LayoutInner({ children }) {
                         border: none;
                         color: var(--color-text-muted);
                         cursor: pointer;
-                        width: 24px;
-                        height: 24px;
+                        width: 32px;
+                        height: 32px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
@@ -303,7 +304,7 @@ function LayoutInner({ children }) {
                         border: none;
                         border-radius: 0 0 var(--radius-lg) var(--radius-lg);
                         box-shadow: none;
-                        padding: 12px 16px 16px;
+                        padding: 16px 20px 20px;
                         background: transparent;
                         overflow-y: auto;
                         flex: 1;

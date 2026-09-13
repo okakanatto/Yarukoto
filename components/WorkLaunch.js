@@ -46,7 +46,7 @@ export default function WorkLaunch({ tasks, todayTasks, today, previousId, onOpe
                 {current ? <><span className={styles.reviewMeta}>{current.project_name}{current.due_date && ' · 期限 ' + current.due_date}</span><h3>{current.title}</h3><p>{workSummary(current).context || captureExcerpt(current) || '背景はまだ記録されていません。'}</p><div className={styles.revisitActions}><button onClick={() => { saveReview({ ...review, open: true, current: reviewToken(current) }); onOpen(current.id); }}>開く<ArrowRight size={15} /></button><button onClick={nextRecord}>次の記録<ChevronRight size={15} /></button></div></>
                     : <><p>この回の記録は一通り見ました。</p><button className={styles.back} onClick={() => saveReview({ open: true, current: null, seen: [] })}>もう一度見返す</button></>}
             </section>}
-        </> : choice ? <article className={styles.card} aria-label="取りかかる仕事">
+        </> : choice ? <article className={styles.card} aria-label="選択中の仕事">
             <div className={styles.workContext}>
             <div className={styles.eyebrow}><span>{choice.reason}</span><span>{choice.task.project_name}</span></div>
             {choice.task.parent_title && <p className={styles.parent}>{choice.task.parent_title}</p>}
@@ -56,11 +56,11 @@ export default function WorkLaunch({ tasks, todayTasks, today, previousId, onOpe
             {summary.context && summary.context !== choice.task.title && <p className={styles.context}><span>{summary.contextKind === 'memo' ? 'メモ' : summary.contextKind === 'result' ? '前回の結果' : '背景'}</span>{summary.context}</p>}
             {summary.background && <details className={styles.previousResult}><summary>背景・メモ</summary><p>{summary.background.text}</p></details>}
             </div>
-            <div className={styles.actions}><button className={styles.primary} onClick={() => choice.task.is_routine ? onBrowse('today') : hasReference ? onStart(choice.task.id, null, true) : onStart(choice.task.id)}><Play size={16} />{choice.task.is_routine ? '今日の一覧を開く' : hasReference ? '資料を開いて始める' : '取りかかる'}</button>{!choice.task.is_routine && <button className={styles.short} onClick={() => onStart(choice.task.id, 5)}><Clock3 size={16} />5分だけ</button>}</div>
-            <div className={styles.adjustments}>{!choice.task.is_routine && <button className={styles.alternativesToggle} onClick={() => onOpen(choice.task.id, { help: true })}>はじめ方を小さくする<ArrowRight size={15} /></button>}
+            <div className={styles.actions}><button className={styles.primary} onClick={() => choice.task.is_routine ? onBrowse('today') : hasReference ? onStart(choice.task.id, null, true) : onStart(choice.task.id)}><Play size={16} />{choice.task.is_routine ? '予定表を開く' : hasReference ? 'リンクを開いて開始' : '作業を開始'}</button>{!choice.task.is_routine && <button className={styles.short} onClick={() => onStart(choice.task.id, 5)}><Clock3 size={16} />5分だけ</button>}</div>
+            <div className={styles.adjustments}>{!choice.task.is_routine && <button className={styles.alternativesToggle} onClick={() => onOpen(choice.task.id, { help: true })}>着手のヒント<ArrowRight size={15} /></button>}
             <button className={styles.alternativesToggle} onClick={() => setMode('choices')}>別の仕事を選ぶ<ChevronRight size={15} /></button>
             </div>
-        </article> : <div className={styles.empty}><h2>気になっていることから</h2><button className={styles.primary} onClick={onCapture}>書き留める</button></div>}
+        </article> : <div className={styles.empty}><h2>気になっていることから</h2><button className={styles.primary} onClick={onCapture}>記録する</button></div>}
         {mode === 'home' && <div className={styles.shelf}><button onClick={() => onBrowse('all')}><List size={18} /><span>仕事の一覧</span><ChevronRight size={16} /></button><button onClick={openReview}><Clock3 size={18} /><span>記録を見返す</span><ChevronRight size={16} /></button><Link href="/projects"><span>プロジェクト</span><ChevronRight size={16} /></Link></div>}
     </div>;
 }

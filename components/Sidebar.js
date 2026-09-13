@@ -35,7 +35,7 @@ export default function Sidebar({ mounted }) {
         <Link href="/work" className="work-brand"><span className="work-brand-mark">y.</span><span>Yarukoto</span></Link>
         <button className="work-nav-capture" onClick={() => window.dispatchEvent(new CustomEvent('yarukoto:openFab'))} aria-label="仕事を記録する"><Plus size={17} /><span>記録する</span><kbd>Ctrl ⇧ K</kbd></button>
         <nav className="work-nav-links" aria-label="メインナビゲーション">{items.map(([href, label, Icon]) => <Link key={href} href={href} title={label} aria-label={label} aria-current={pathname === href ? 'page' : undefined} className={pathname === href ? 'active' : ''}><Icon size={18} /><span>{label}</span></Link>)}</nav>
-        <div className="work-nav-projects"><div className="work-nav-caption">PROJECTS</div>{projects.map(project => <Link key={project.id} href={`/projects?id=${project.id}`} className={pathname === '/projects' && params.get('id') === String(project.id) ? 'active' : ''}><i style={{ background: project.color }} /><span>{project.name}</span></Link>)}</div>
+        <div className="work-nav-projects"><div className="work-nav-caption">プロジェクト</div>{projects.map(project => <Link key={project.id} href={`/projects?id=${project.id}`} className={pathname === '/projects' && params.get('id') === String(project.id) ? 'active' : ''}><i style={{ background: project.color }} /><span>{project.name}</span></Link>)}</div>
         <div className="work-nav-bottom"><Link href="/settings" title="設定" aria-label="設定" aria-current={pathname === '/settings' ? 'page' : undefined}><Settings size={17} /><span>設定</span></Link><small>v{process.env.NEXT_PUBLIC_APP_VERSION}</small></div>
     </aside>;
 }

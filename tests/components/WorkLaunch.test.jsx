@@ -22,7 +22,7 @@ describe('ホームから仕事へ入る操作', () => {
         expect(props.onStart).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: '5分だけ' }));
         expect(props.onStart).toHaveBeenLastCalledWith(1, 5);
-        fireEvent.click(screen.getByRole('button', { name: '資料を開いて始める' }));
+        fireEvent.click(screen.getByRole('button', { name: 'リンクを開いて開始' }));
         expect(props.onStart).toHaveBeenLastCalledWith(1, null, true);
     });
     it('内容を開く操作と実際の着手要求を分け、5分の選択をそのまま渡す', () => {
@@ -33,7 +33,7 @@ describe('ホームから仕事へ入る操作', () => {
         expect(props.onStart).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: '5分だけ' }));
         expect(props.onStart).toHaveBeenLastCalledWith(1, 5);
-        fireEvent.click(screen.getByRole('button', { name: '取りかかる' }));
+        fireEvent.click(screen.getByRole('button', { name: '作業を開始' }));
         expect(props.onStart).toHaveBeenLastCalledWith(1);
     });
 
@@ -46,9 +46,9 @@ describe('ホームから仕事へ入る操作', () => {
         ]);
         const props = setupProps({ tasks });
         render(<><WorkSignals tasks={tasks} /><WorkLaunch {...props} /></>);
-        expect(within(screen.getByRole('article', { name: '取りかかる仕事' })).getByText('期限 2020-01-01')).toBeTruthy();
+        expect(within(screen.getByRole('article', { name: '選択中の仕事' })).getByText('期限 2020-01-01')).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: '別の仕事を選ぶ' }));
-        fireEvent.click(screen.getByRole('button', { name: /次の一歩あり\s*今進められる仕事/ }));
+        fireEvent.click(screen.getByRole('button', { name: /次の行動あり\s*今進められる仕事/ }));
         expect(within(screen.getByRole('article')).getByRole('button', { name: '今進められる仕事' })).toBeTruthy();
         expect(props.onStart).not.toHaveBeenCalled();
         expect(props.onOpen).not.toHaveBeenCalled();
@@ -107,7 +107,7 @@ describe('ホームから仕事へ入る操作', () => {
         const routine = task('routine_7_2026-09-13', { title: '朝の確認', is_routine: true });
         const props = setupProps({ todayTasks: [routine] });
         render(<WorkLaunch {...props} />);
-        fireEvent.click(screen.getByRole('button', { name: '今日の一覧を開く' }));
+        fireEvent.click(screen.getByRole('button', { name: '予定表を開く' }));
         fireEvent.click(screen.getByRole('button', { name: '朝の確認' }));
         expect(props.onBrowse).toHaveBeenCalledTimes(2);
         expect(props.onBrowse).toHaveBeenLastCalledWith('today');
@@ -124,7 +124,7 @@ describe('ホームから仕事へ入る操作', () => {
         expect(props.onBrowse).toHaveBeenCalledWith('all');
         rerender(<WorkLaunch {...props} loading />);
         expect(screen.getByText('読み込み中…')).toBeTruthy();
-        expect(screen.queryByRole('button', { name: '取りかかる' })).toBeNull();
+        expect(screen.queryByRole('button', { name: '作業を開始' })).toBeNull();
         expect(screen.queryByRole('button', { name: '5分だけ' })).toBeNull();
     });
 });

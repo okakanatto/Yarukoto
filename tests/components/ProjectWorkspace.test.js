@@ -43,7 +43,7 @@ describe('ProjectWorkspace keeps outcomes separate from task counts', () => {
         render(createElement(ProjectPage));
         const records = screen.getByRole('region', { name: '最近の記録' });
         expect(within(records).getByText('追加費用なしと確認できた。')).toBeTruthy();
-        expect(within(records).getByText(/一歩完了 · 2026-09-12 · アーカイブ/)).toBeTruthy();
+        expect(within(records).getByText(/作業記録 · 2026-09-12 · アーカイブ/)).toBeTruthy();
         fireEvent.click(within(records).getByRole('button', { name: /5件中1件は変換表にない。.*旧部門コードを照合する/ }));
         expect(dispatch.mock.calls.some(([event]) => event.type === 'yarukoto:openTask' && event.detail.id === 22)).toBe(true);
         expect(state.save).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe('ProjectWorkspace keeps outcomes separate from task counts', () => {
         const parent = screen.getByRole('button', { name: /方式を比較する/ });
         expect(parent.closest('details')).toBeNull();
         expect(within(parent).getByText('配下に未完了 2件')).toBeTruthy();
-        expect(within(parent).getByText(/期限 2026-09-14/)).toBeTruthy();
+        expect(within(parent).getByTitle('2026年9月14日')).toBeTruthy();
         fireEvent.click(parent);
         expect(dispatch.mock.calls.some(([event]) => event.type === 'yarukoto:openTask' && event.detail.id === 11)).toBe(true);
         dispatch.mockRestore();
@@ -124,11 +124,11 @@ describe('ProjectWorkspace keeps outcomes separate from task counts', () => {
         state.save.mockRejectedValue(new Error('保存に失敗'));
         render(createElement(ProjectPage));
         fireEvent.click(screen.getByRole('button', { name: '編集' }));
-        fireEvent.change(screen.getByLabelText('成果'), { target: { value: '合意した条件を残す' } });
+        fireEvent.change(screen.getByLabelText('目標'), { target: { value: '合意した条件を残す' } });
         fireEvent.click(screen.getByRole('button', { name: '完了にする' }));
         await screen.findByRole('alert');
         expect(state.complete).not.toHaveBeenCalled();
-        expect(screen.getByLabelText('成果').value).toBe('合意した条件を残す');
+        expect(screen.getByLabelText('目標').value).toBe('合意した条件を残す');
         fireEvent.click(screen.getByRole('button', { name: '下書きを破棄' }));
     });
 

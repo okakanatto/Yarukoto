@@ -53,8 +53,8 @@ describe('WorkDetailPanel supports work without requiring another management scr
         notes.focus();
         notes.setSelectionRange(0, 'データの所在を確認'.length);
         fireEvent.select(notes);
-        fireEvent.click(screen.getByRole('button', { name: '今する一歩に' }));
-        expect(screen.getByLabelText('今する一歩').value).toBe('データの所在を確認');
+        fireEvent.click(screen.getByRole('button', { name: '次の行動にする' }));
+        expect(screen.getByLabelText('次の行動').value).toBe('データの所在を確認');
         expect(notes.value).toBe(context.task.notes);
         fireEvent.click(screen.getByRole('button', { name: '保存', exact: true }));
         await waitFor(() => expect(api.saveWorkContext).toHaveBeenCalledWith(1001, { next_step: 'データの所在を確認' }));
@@ -69,7 +69,7 @@ describe('WorkDetailPanel supports work without requiring another management scr
             context.task.today_date = date;
         });
         render(createElement(WorkDetailPanel, { taskId: 1011 }));
-        fireEvent.change(await screen.findByLabelText('今する一歩'), { target: { value: 'サンプルを5件見る' } });
+        fireEvent.change(await screen.findByLabelText('次の行動'), { target: { value: 'サンプルを5件見る' } });
         fireEvent.click(screen.getByRole('button', { name: '今日やる' }));
         await screen.findByRole('button', { name: '今日から外す' });
         expect(api.setTaskPlan).toHaveBeenCalledWith(1011, new Date().toLocaleDateString('sv-SE'));
@@ -135,12 +135,12 @@ describe('WorkDetailPanel supports work without requiring another management scr
         const context = example(1051);
         api.loadTaskContext.mockResolvedValue(context);
         const view = render(createElement(WorkDetailPanel, { taskId: 1051, embedded: true }));
-        fireEvent.change(await screen.findByLabelText('今する一歩'), { target: { value: '例外を5件だけ確認' } });
+        fireEvent.change(await screen.findByLabelText('次の行動'), { target: { value: '例外を5件だけ確認' } });
         expect(JSON.parse(localStorage.getItem('yarukoto:work-draft:v1:1051'))).toEqual({ fields: { next_step: '例外を5件だけ確認' }, childText: '' });
         view.unmount();
         context.task.notes = '別の場所で保存された新しいメモ';
         render(createElement(WorkDetailPanel, { taskId: 1051, embedded: true }));
-        expect((await screen.findByLabelText('今する一歩')).value).toBe('例外を5件だけ確認');
+        expect((await screen.findByLabelText('次の行動')).value).toBe('例外を5件だけ確認');
         expect(screen.getByLabelText('作業メモ').value).toBe('別の場所で保存された新しいメモ');
         fireEvent.click(screen.getByRole('button', { name: '保存', exact: true }));
         await waitFor(() => expect(localStorage.getItem('yarukoto:work-draft:v1:1051')).toBeNull());
@@ -164,11 +164,11 @@ describe('WorkDetailPanel supports work without requiring another management scr
         api.loadTaskContext.mockResolvedValue(example(1071));
         api.saveWorkContext.mockRejectedValue(new Error('disk full'));
         render(createElement(WorkDetailPanel, { taskId: 1071 }));
-        fireEvent.change(await screen.findByLabelText('今する一歩'), { target: { value: 'まず旧コードだけ' } });
+        fireEvent.change(await screen.findByLabelText('次の行動'), { target: { value: 'まず旧コードだけ' } });
         fireEvent.click(screen.getByRole('button', { name: '今日やる' }));
         await screen.findByRole('alert');
         expect(api.setTaskPlan).not.toHaveBeenCalled();
-        expect(screen.getByLabelText('今する一歩').value).toBe('まず旧コードだけ');
+        expect(screen.getByLabelText('次の行動').value).toBe('まず旧コードだけ');
     });
 
     it('reflects status and planning changed outside the panel while retaining its edited memo', async () => {
@@ -178,11 +178,11 @@ describe('WorkDetailPanel supports work without requiring another management scr
         fireEvent.change(await screen.findByLabelText('作業メモ'), { target: { value: '右側で入力中のメモ' } });
         context.task.status_code = 2;
         context.task.today_date = new Date().toLocaleDateString('sv-SE');
-        context.task.next_step = '左側の変更で得た次の一歩';
+        context.task.next_step = '左側の変更で得た次の行動';
         fireEvent(window, new CustomEvent('yarukoto:tasksChanged'));
         await screen.findByRole('button', { name: '今日から外す' });
-        expect(screen.getByRole('button', { name: '再開する' })).toBeTruthy();
-        expect(screen.getByLabelText('今する一歩').value).toBe(context.task.next_step);
+        expect(screen.getByRole('button', { name: '再開' })).toBeTruthy();
+        expect(screen.getByLabelText('次の行動').value).toBe(context.task.next_step);
         expect(screen.getByLabelText('作業メモ').value).toBe('右側で入力中のメモ');
         fireEvent.click(screen.getByRole('button', { name: '保存', exact: true }));
         await waitFor(() => expect(api.saveWorkContext).toHaveBeenCalledWith(1081, { notes: '右側で入力中のメモ' }));
@@ -223,7 +223,7 @@ describe('WorkDetailPanel preserves the work during persistence and navigation',
         expect(raw.closest('details').open).toBe(true);
         expect(raw.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         expect(notes.rows).toBe(4);
-        expect(screen.getByLabelText('今する一歩').value).toBe('');
+        expect(screen.getByLabelText('次の行動').value).toBe('');
         expect(screen.queryByLabelText('次の子タスク')).toBeNull();
 
         api.loadTaskContext.mockResolvedValue(example(882));
@@ -311,7 +311,7 @@ describe('WorkDetailPanel preserves the work during persistence and navigation',
     it('stores the next action as a descendant reference without duplicating its title', async () => {
         api.loadTaskContext.mockResolvedValue(example(831));
         render(createElement(WorkDetailPanel, { taskId: 831 }));
-        fireEvent.change(await screen.findByLabelText('一歩にする子タスク'), { target: { value: '833' } });
+        fireEvent.change(await screen.findByLabelText('次に進める子タスク'), { target: { value: '833' } });
         fireEvent.click(screen.getByRole('button', { name: '保存', exact: true }));
         await waitFor(() => expect(api.saveWorkContext).toHaveBeenCalledWith(831, { next_task_id: 833 }));
         expect(api.createCapturedTask).not.toHaveBeenCalled();
@@ -340,15 +340,15 @@ describe('WorkDetailPanel preserves the work during persistence and navigation',
         const onClose = vi.fn();
         render(createElement(WorkDetailPanel, { taskId: 851, onClose }));
         fireEvent.change(await screen.findByLabelText('作業メモ'), { target: { value: '通常コードは確認済み' } });
-        fireEvent.click(screen.getByRole('button', { name: '取りかかる', exact: true }));
-        await screen.findByRole('button', { name: '区切る' });
+        fireEvent.click(screen.getByRole('button', { name: '作業を開始', exact: true }));
+        await screen.findByRole('button', { name: '中断' });
         expect(statusApi.change).toHaveBeenCalledWith(851, 2);
         expect(api.saveWorkContext.mock.invocationCallOrder[0]).toBeLessThan(statusApi.change.mock.invocationCallOrder[0]);
         fireEvent.change(screen.getByLabelText('作業メモ'), { target: { value: '次は旧部門コードの例外を確認' } });
-        fireEvent.click(screen.getByRole('button', { name: '区切る' }));
+        fireEvent.click(screen.getByRole('button', { name: '中断' }));
         fireEvent.click(screen.getByRole('button', { name: '保存して中断' }));
         await waitFor(() => expect(api.finishWorkStep).toHaveBeenCalledWith(851, { result: '', next_step: '', stepCompleted: false }));
-        await screen.findByRole('button', { name: '再開する' });
+        await screen.findByRole('button', { name: '再開' });
         expect(onClose).toHaveBeenCalledOnce();
         expect(api.saveWorkContext).toHaveBeenLastCalledWith(851, { notes: '次は旧部門コードの例外を確認' });
         expect(statusApi.change).toHaveBeenCalledTimes(1);
@@ -441,7 +441,7 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         expect(onFocusChange).toHaveBeenCalledWith(true);
         await act(async () => vi.advanceTimersByTime(301000));
         expect(screen.getByLabelText('作業の経過時間').textContent).toBe('5:01 / 5:00');
-        expect(screen.getByRole('button', { name: '区切る' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: '中断' })).toBeTruthy();
         expect(context.task.status_code).toBe(2);
         expect(context.task.due_date).toBe('2026-09-18');
         expect(api.finishWorkStep).not.toHaveBeenCalled();
@@ -456,7 +456,7 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         api.loadTaskContext.mockResolvedValue(context);
         const onWorkStarted = vi.fn();
         const view = render(createElement(WorkDetailPanel, { taskId: 1231, onWorkStarted, startRequested: { token: 1, minutes: null } }));
-        await screen.findByRole('button', { name: '区切る' });
+        await screen.findByRole('button', { name: '中断' });
         expect(api.stampWorkStarted).toHaveBeenCalledExactlyOnceWith(1231);
         expect(statusApi.change).not.toHaveBeenCalled();
         view.rerender(createElement(WorkDetailPanel, { taskId: 1231, onWorkStarted, startRequested: { token: 1, minutes: null } }));
@@ -471,12 +471,12 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         await db.execute('UPDATE tasks SET status_code = 2 WHERE id = $1', [id]);
         for (const name of Object.keys(api)) api[name].mockImplementation(workspace[name]);
         render(createElement(WorkDetailPanel, { taskId: id }));
-        fireEvent.click(await screen.findByRole('button', { name: '再開する' }));
-        fireEvent.click(await screen.findByRole('button', { name: '一歩を終える' }));
+        fireEvent.click(await screen.findByRole('button', { name: '再開' }));
+        fireEvent.click(await screen.findByRole('button', { name: '完了を記録' }));
         fireEvent.change(screen.getByLabelText('進んだこと（任意）'), { target: { value: '重複は旧部門だけと判明' } });
-        fireEvent.change(screen.getByLabelText('次の一歩（任意）'), { target: { value: '人事担当に対応表を確認' } });
+        fireEvent.change(screen.getByLabelText('次の行動（任意）'), { target: { value: '人事担当に対応表を確認' } });
         fireEvent.click(screen.getByRole('button', { name: '記録する' }));
-        await screen.findByRole('button', { name: '再開する' });
+        await screen.findByRole('button', { name: '再開' });
         const saved = await workspace.loadTaskContext(id);
         expect(saved.task.status_code).toBe(2);
         expect(saved.task.next_step).toBe('人事担当に対応表を確認');
@@ -492,8 +492,8 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         context.task.next_step = '例外件数を先に確認';
         api.loadTaskContext.mockResolvedValue(context);
         render(createElement(WorkDetailPanel, { taskId: 1241 }));
-        fireEvent.change(await screen.findByLabelText('一歩にする子タスク'), { target: { value: '1242' } });
-        expect(screen.queryByLabelText('今する一歩')).toBeNull();
+        fireEvent.change(await screen.findByLabelText('次に進める子タスク'), { target: { value: '1242' } });
+        expect(screen.queryByLabelText('次の行動')).toBeNull();
         expect(screen.getByLabelText('作業メモ').value).toBe(`${context.task.notes}\n\n例外件数を先に確認`);
         fireEvent.click(screen.getByRole('button', { name: '保存', exact: true }));
         await waitFor(() => expect(api.saveWorkContext).toHaveBeenCalledWith(1241, { next_task_id: 1242, next_step: '', notes: `${context.task.notes}\n\n例外件数を先に確認` }));
@@ -511,10 +511,10 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         api.finishWorkStep.mockRejectedValue(new Error('disk full'));
         const onClose = vi.fn();
         const view = render(createElement(WorkDetailPanel, { taskId: 1251, onClose }));
-        fireEvent.click(await screen.findByRole('button', { name: '再開する' }));
-        fireEvent.click(await screen.findByRole('button', { name: '区切る' }));
+        fireEvent.click(await screen.findByRole('button', { name: '再開' }));
+        fireEvent.click(await screen.findByRole('button', { name: '中断' }));
         fireEvent.change(screen.getByLabelText('進んだこと（任意）'), { target: { value: '例外が2件あると判明' } });
-        fireEvent.change(screen.getByLabelText('次の一歩（任意）'), { target: { value: '例外の担当者を確認' } });
+        fireEvent.change(screen.getByLabelText('次の行動（任意）'), { target: { value: '例外の担当者を確認' } });
         fireEvent.click(screen.getByRole('button', { name: '保存して中断' }));
         await screen.findByRole('alert');
         expect(onClose).not.toHaveBeenCalled();
@@ -541,24 +541,24 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         api.loadTaskContext.mockImplementation(async () => ({ ...context, task: { ...context.task } }));
         const onClose = vi.fn();
         render(createElement(WorkDetailPanel, { taskId: 1261, onClose }));
-        fireEvent.click(await screen.findByRole('button', { name: '資料を開いて始める' }));
-        await screen.findByRole('button', { name: '区切る' });
+        fireEvent.click(await screen.findByRole('button', { name: 'リンクを開いて開始' }));
+        await screen.findByRole('button', { name: '中断' });
         let releaseSave;
         api.saveWorkContext.mockImplementation((id, patch) => new Promise(resolve => { releaseSave = () => { Object.assign(context.task, patch); resolve({}); }; }));
         fireEvent.change(screen.getByLabelText('作業メモ'), { target: { value: '記録中の作業文脈' } });
         screen.getByText('管理', { selector: 'summary' }).closest('details').open = true;
         fireEvent.click(screen.getByRole('button', { name: '仕事全体を完了' }));
         await waitFor(() => expect(releaseSave).toBeTypeOf('function'));
-        fireEvent.click(screen.getByRole('button', { name: '区切る' }));
+        fireEvent.click(screen.getByRole('button', { name: '中断' }));
         const result = screen.getByLabelText('進んだこと（任意）');
         fireEvent.change(result, { target: { value: '消してはいけない判断結果' } });
         expect(document.activeElement).toBe(result);
         expect(screen.queryByRole('button', { name: '仕事全体を完了' })).toBeNull();
-        expect(screen.queryByRole('button', { name: '属性を編集' })).toBeNull();
+        expect(screen.queryByRole('button', { name: '詳細項目を編集' })).toBeNull();
         expect(screen.queryByLabelText('作業メモ')).toBeNull();
-        expect(screen.queryByLabelText('今する一歩')).toBeNull();
+        expect(screen.queryByLabelText('次の行動')).toBeNull();
         expect(screen.queryByRole('button', { name: context.task.source_ref })).toBeNull();
-        expect(screen.getByText('期限 2026-09-18')).toBeTruthy();
+        expect(screen.getByTitle('2026年9月18日')).toBeTruthy();
         await act(async () => releaseSave());
         expect(statusApi.change).not.toHaveBeenCalled();
         expect(context.task.status_code).toBe(2);
@@ -576,8 +576,8 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         for (const name of Object.keys(api)) api[name].mockImplementation(workspace[name]);
         const onClose = vi.fn();
         render(createElement(WorkDetailPanel, { taskId: id, onClose }));
-        fireEvent.click(await screen.findByRole('button', { name: '再開する' }));
-        await screen.findByRole('button', { name: '区切る' });
+        fireEvent.click(await screen.findByRole('button', { name: '再開' }));
+        await screen.findByRole('button', { name: '中断' });
         let releaseSave;
         api.saveWorkContext.mockImplementation((taskId, patch) => new Promise(resolve => {
             releaseSave = async () => resolve(await workspace.saveWorkContext(taskId, patch));
@@ -585,7 +585,7 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         fireEvent.change(screen.getByLabelText('作業メモ'), { target: { value: '保存待ちの作業メモ' } });
         fireEvent.click(screen.getByRole('button', { name: '保存', exact: true }));
         await waitFor(() => expect(releaseSave).toBeTypeOf('function'));
-        fireEvent.click(screen.getByRole('button', { name: '区切る' }));
+        fireEvent.click(screen.getByRole('button', { name: '中断' }));
         fireEvent.change(screen.getByLabelText('進んだこと（任意）'), { target: { value: '一度だけ記録する成果' } });
         const form = screen.getByLabelText('進んだこと（任意）').closest('form');
         fireEvent.submit(form);
@@ -621,12 +621,12 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         render(createElement(WorkDetailPanel, { taskId: 1281, onWorkStarted }));
         fireEvent.change(await screen.findByLabelText('作業メモ'), { target: { value: '資料を確認する前の背景' } });
         expect(references.open).not.toHaveBeenCalled();
-        fireEvent.click(screen.getByRole('button', { name: '資料を開いて始める' }));
+        fireEvent.click(screen.getByRole('button', { name: 'リンクを開いて開始' }));
         await screen.findByRole('alert');
         expect(references.open).not.toHaveBeenCalled();
         expect(statusApi.change).not.toHaveBeenCalled();
         api.saveWorkContext.mockImplementation(async (id, patch) => Object.assign(context.task, patch));
-        fireEvent.click(screen.getByRole('button', { name: '資料を開いて始める' }));
+        fireEvent.click(screen.getByRole('button', { name: 'リンクを開いて開始' }));
         await waitFor(() => expect(references.open).toHaveBeenCalledExactlyOnceWith(context.task.source_ref));
         expect(onWorkStarted).toHaveBeenCalledExactlyOnceWith(1281);
         expect(statusApi.change.mock.invocationCallOrder[0]).toBeLessThan(references.open.mock.invocationCallOrder[0]);
@@ -648,14 +648,14 @@ describe('WorkDetailPanel makes a safe work session rather than another checklis
         expect((await screen.findByRole('alert')).textContent).toContain('資料を開けませんでした');
         expect(context.task.status_code).toBe(2);
         expect(screen.getByLabelText('作業メモ').value).toBe(context.task.notes);
-        expect(screen.getByRole('button', { name: '区切る' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: '中断' })).toBeTruthy();
         view.rerender(createElement(WorkDetailPanel, { ...props, startRequested: { ...props.startRequested } }));
         expect(references.open).toHaveBeenCalledOnce();
         expect(onWorkStarted).toHaveBeenCalledExactlyOnceWith(1291);
     });
 });
 
-it('今回だけの着手は本来の一歩とメモを書き換えず、連打でも一度だけ開始する', async () => {
+it('最初に試すことの着手は予定していた行動とメモを書き換えず、連打でも一度だけ開始する', async () => {
     const context = example(1901); context.descendants = [];
     context.task.next_step = '完成版を全員に送る';
     api.loadTaskContext.mockResolvedValue(context);
@@ -663,19 +663,19 @@ it('今回だけの着手は本来の一歩とメモを書き換えず、連打�
     api.saveWorkContext.mockImplementation(async (id, patch) => { Object.assign(context.task, patch); });
     const onWorkStarted = vi.fn();
     render(createElement(WorkDetailPanel, { taskId: 1901, onWorkStarted }));
-    fireEvent.click(await screen.findByRole('button', { name: 'はじめ方を小さくする' }));
+    fireEvent.click(await screen.findByRole('button', { name: '着手のヒント' }));
     const choice = screen.getByRole('button', { name: '送らずに下書きする' });
     fireEvent.click(choice); fireEvent.click(choice);
     await waitFor(() => expect(onWorkStarted).toHaveBeenCalledTimes(1));
     expect(api.saveWorkContext).not.toHaveBeenCalled();
     expect(statusApi.change).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText('本来の一歩').value).toBe('完成版を全員に送る');
+    expect(screen.getByLabelText('予定していた行動').value).toBe('完成版を全員に送る');
     expect(screen.getByText('下書きを一文だけ書く（まだ送らない）')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '一歩を終える' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '完了を記録' })).toBeNull();
     expect(document.activeElement).toBe(screen.getByLabelText('作業メモ'));
     expect(api.createCapturedTask).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: '本来の一歩へ' }));
-    expect(screen.getByRole('button', { name: '一歩を終える' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '次の行動へ' }));
+    expect(screen.getByRole('button', { name: '完了を記録' })).toBeTruthy();
 });
 
 it('小さく始める前にも未保存メモを保護し、失敗したら開始しない', async () => {
@@ -685,7 +685,7 @@ it('小さく始める前にも未保存メモを保護し、失敗したら開�
     render(createElement(WorkDetailPanel, { taskId: 1911 }));
     const notes = await screen.findByLabelText('作業メモ');
     fireEvent.change(notes, { target: { value: '保存すべき新しい文脈' } });
-    fireEvent.click(screen.getByRole('button', { name: 'はじめ方を小さくする' }));
+    fireEvent.click(screen.getByRole('button', { name: '着手のヒント' }));
     fireEvent.click(screen.getByRole('button', { name: '不明点を一つ書く' }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('disk full'));
     expect(statusApi.change).not.toHaveBeenCalled();
@@ -705,7 +705,7 @@ it('親の一歩が他者待ちなら開始を止め、子の確認へ移れる'
     context.descendants[0].waiting_on = '先方の回答';
     api.loadTaskContext.mockResolvedValue(context);
     render(createElement(WorkDetailPanel, { taskId: 1921 }));
-    fireEvent.click(await screen.findByRole('button', { name: '取りかかる' }));
+    fireEvent.click(await screen.findByRole('button', { name: '作業を開始' }));
     expect(screen.getByRole('alert').textContent).toContain('待ち・予定');
     expect(statusApi.change).not.toHaveBeenCalled();
 });

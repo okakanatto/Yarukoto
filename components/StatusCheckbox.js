@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Check, Minus, Play, Undo2 } from 'lucide-react';
 
 export default function StatusCheckbox({ statusCode, onChange, sparkle = false, twoStateOnly = false, disabled = false }) {
     const [hovered, setHovered] = useState(false);
@@ -40,11 +41,13 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
         >
             <button
                 className={`status-cb-main${code === 3 ? ' checked' : ''}${code === 2 ? ' in-progress' : ''}${code === 5 ? ' cancelled' : ''}${disabled ? ' disabled' : ''}${sparkle ? ' sparkle' : ''}`}
+                disabled={disabled || code === 5}
+                aria-label={code === 3 ? '未着手に戻す' : '完了にする'}
                 onClick={handleMainClick}
                 title={code === 3 ? '未着手に戻す' : code === 2 ? '完了にする' : '完了にする'}
             >
-                {code === 3 && '✓'}
-                {code === 2 && '▶'}
+                {code === 3 && <Check size={13} strokeWidth={2.4} />}
+                {code === 2 && <Minus size={12} />}
             </button>
             {showPlay && (
                 <button
@@ -52,7 +55,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     onClick={handlePlayClick}
                     title="着手中にする"
                 >
-                    ▶
+                    <Play size={10} />
                 </button>
             )}
             {showRevert && (
@@ -61,7 +64,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                     onClick={handleRevertClick}
                     title="未着手に戻す"
                 >
-                    ↩
+                    <Undo2 size={11} />
                 </button>
             )}
             <style jsx>{`
@@ -107,7 +110,7 @@ export default function StatusCheckbox({ statusCode, onChange, sparkle = false, 
                 .status-cb-main.checked {
                     background: var(--color-accent);
                     border-color: var(--color-accent);
-                    color: white;
+                    color: var(--color-on-accent);
                     font-weight: 700;
                     font-size: 0.6rem;
                 }

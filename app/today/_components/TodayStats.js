@@ -10,7 +10,7 @@ export default function TodayStats({ stats }) {
         <span>未完了 <strong>{stats.remaining}</strong></span>
         {stats.remainingMin > 0 && <span className="today-stats-estimate"><Clock size={13} />残り見積 <strong>{formatMin(stats.remainingMin)}</strong></span>}
         <style jsx>{`
-            .today-stats { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; padding: 6px 0; color: var(--color-text-muted); font-size: 0.78rem; }
+            .today-stats { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 12px 16px; color: var(--color-text-secondary); font-size: 12px; }
             .today-stats strong { color: var(--color-text-secondary); font-weight: 550; }
             .today-stats-estimate { display: inline-flex; align-items: center; gap: 5px; }
         `}</style>

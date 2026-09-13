@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { ChevronDown, ChevronRight, GripVertical, MoreHorizontal, Plus } from 'lucide-react';
+import { EffortValue, ProjectMark, TaskDue, TaskStatus } from './TaskVisual';
 import styles from './TaskTable.module.css';
 
 export function TableDropGap({ id, columns, label }) {
@@ -16,7 +17,6 @@ function EditableCell({ task, field, disabled, options, onEdit }) {
     let label = list ? list.find(item => Number(item.value) === Number(raw))?.label : raw;
     if (field === 'tags') label = task.tags?.map(tag => tag.name).join(' · ');
     const date = field === 'due_date' || field === 'today_date';
-    const overdue = field === 'due_date' && raw && raw < new Date().toLocaleDateString('sv-SE') && ![3, 5].includes(Number(task.status_code));
     const finish = async next => {
         if (cancelled.current || submitted.current) return;
         submitted.current = true; setEditing(false);
@@ -24,11 +24,18 @@ function EditableCell({ task, field, disabled, options, onEdit }) {
     };
     if (field === 'tags') return <span className={styles.tags} title={label}>{label || '—'}</span>;
     if (editing) {
-        const common = { ref: input, value, 'aria-label': `${task.title}の${{ due_date: '期限', today_date: '実行予定', estimated_hours: '見積', status_code: '状態', project_id: 'プロジェクト', importance_level: '重要度', urgency_level: '緊急度' }[field]}`, onKeyDown: event => { if (event.key === 'Escape') { cancelled.current = true; setEditing(false); } else if (event.key === 'Enter') { event.preventDefault(); finish(value); } }, onBlur: () => finish(value) };
-        return list ? <select {...common} onChange={event => { setValue(event.target.value); finish(event.target.value); }}>{field !== 'status_code' && <option value="">未設定</option>}{list.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select> : <input {...common} type={date ? 'date' : 'number'} min={!date ? 0 : undefined} onChange={event => setValue(event.target.value)} />;
+        const common = { ref: input, value, 'aria-label': `${task.title}の${{ due_date: '期限', today_date: '実行予定', estimated_hours: '見積（分）', status_code: '状態', project_id: 'プロジェクト', importance_level: '重要度', urgency_level: '緊急度' }[field]}`, onKeyDown: event => { if (event.key === 'Escape') { cancelled.current = true; setEditing(false); } else if (event.key === 'Enter') { event.preventDefault(); finish(value); } }, onBlur: () => finish(value) };
+        return list ? <select {...common} onChange={event => { setValue(event.target.value); finish(event.target.value); }}>{field !== 'status_code' && <option value="">未設定</option>}{list.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select> : date ? <input {...common} type="date" onChange={event => setValue(event.target.value)} /> : <span className={styles.numberInput}><input {...common} type="number" min={0} onChange={event => setValue(event.target.value)} /><span>分</span></span>;
     }
-    return <button className={`${styles.cell} ${overdue ? styles.overdue : ''}`} disabled={disabled} title={overdue ? `期限超過 · ${raw}` : label || '未設定'} onClick={() => { cancelled.current = false; submitted.current = false; setValue(raw ?? ''); setEditing(true); }}>
-        {field === 'status_code' && <i style={{ background: task.status_color || 'var(--color-text-muted)' }} />}{field === 'project_id' && raw && <i className={styles.projectDot} style={{ background: task.project_color }} />}{label !== null && label !== undefined && label !== '' ? label : <span className={styles.unset}>—</span>}
+    const content = {
+        status_code: <TaskStatus code={raw} label={label} color={task.status_color} />,
+        project_id: <ProjectMark name={label} color={task.project_color} />,
+        due_date: <TaskDue date={raw} done={[3, 5].includes(Number(task.status_code))} />,
+        today_date: <TaskDue date={raw} done />,
+        estimated_hours: <EffortValue minutes={raw} />,
+    }[field];
+    return <button className={styles.cell} disabled={disabled} title={!content ? label || '未設定' : undefined} onClick={() => { cancelled.current = false; submitted.current = false; setValue(raw ?? ''); setEditing(true); }}>
+        {content || (label !== null && label !== undefined && label !== '' ? label : <span className={styles.unset}>—</span>)}
     </button>;
 }
 export default function TaskTableRow({ row, columns, selected, active, onSelect, onOpen, onToggle, onEdit, options, disabled, archived, draggable, dragId, manual, onAdd, onArchive, onRestore, onDelete }) {

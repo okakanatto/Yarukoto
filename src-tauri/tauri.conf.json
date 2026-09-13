@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Yarukoto",
-  "version": "2.0.0-preview.5",
+  "version": "2.0.0-preview.6",
   "identifier": "com.yarukoto.app",
   "build": {
     "frontendDist": "../out",

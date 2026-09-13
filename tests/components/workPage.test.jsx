@@ -71,7 +71,7 @@ describe('ホームと作業面の選択・保存境界', () => {
         prepare([task(2001, { status_code: 2, next_step: '例外5件を確認', work_log: JSON.stringify([{ id: 'pause-1', kind: 'pause', created_at: '2026-09-13 09:00:00', result }]) }), task(2002)]);
         localStorage.setItem('yarukoto:work-selection', '2001');
         render(<WorkPage />);
-        await waitFor(() => expect(screen.getByRole('article', { name: '取りかかる仕事' })).toBeTruthy());
+        await waitFor(() => expect(screen.getByRole('article', { name: '選択中の仕事' })).toBeTruthy());
         expect(within(screen.getByRole('article')).getByText(result)).toBeTruthy();
         expect(screen.getByText('続きから')).toBeTruthy();
         expect(screen.queryByLabelText('作業メモ')).toBeNull();

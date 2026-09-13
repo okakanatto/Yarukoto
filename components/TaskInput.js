@@ -414,12 +414,12 @@ function TaskInputForm({ onTaskAdded, predefinedParentId = null, defaultProjectI
                 <div className="capture-toolbar">
                     <div className="capture-tools">
                         <div className="capture-calendar"><CalendarPicker value={dueDate} onChange={editWhenReady(setDueDate)} label="期限" /></div>
-                        <button type="button" className="capture-tool" aria-expanded={showSource} onClick={() => setShowSource(v => !v)}>出どころ</button>
+                        <button type="button" className="capture-tool" aria-expanded={showSource} onClick={() => setShowSource(v => !v)}>関連リンク</button>
                         <button type="button" className="capture-tool" aria-expanded={isExpanded} onClick={() => setIsExpanded(v => !v)}>{isExpanded ? '詳細を閉じる' : '詳細'}</button>
                     </div>
                     <button type="submit" className="btn-submit" disabled={!title.trim() || submitting}>{submitting ? '記録中…' : '記録'}</button>
                 </div>
-                {showSource && <label className="capture-source">出どころ<input value={sourceRef} onChange={e => setSourceRef(e.target.value)} placeholder="メモ名・資料の場所" /></label>}
+                {showSource && <label className="capture-source">関連リンク<input value={sourceRef} onChange={e => setSourceRef(e.target.value)} placeholder="URLまたはファイルパス" /></label>}
                 <div className="capture-hint"><span>{projects.find(p => String(p.id) === projectId)?.name || 'Inbox'}</span><span>Ctrl + Enter</span></div>
 
                 {isExpanded && (
@@ -630,7 +630,7 @@ function TaskInputForm({ onTaskAdded, predefinedParentId = null, defaultProjectI
         .btn-collapse:hover { color: var(--color-text); border-color: var(--border-color-hover); }
         .btn-submit {
           background: var(--color-accent); border: none; color: var(--color-on-accent);
-          padding: 6px 16px; border-radius: var(--radius-pill);
+          min-height: 32px; padding: 6px 16px; border-radius: 8px;
           font-size: 0.82rem; font-weight: 500; cursor: pointer;
           transition: background var(--duration-fast) var(--ease-out); font-family: inherit;
         }

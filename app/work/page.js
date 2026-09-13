@@ -98,7 +98,7 @@ export default function WorkPage() {
     }
 
     return <div className={`desk launch-desk ${selectedId ? 'desk-has-selection' : ''} ${focused ? 'desk-focused' : ''} ${capture ? 'desk-capture-open' : ''}`}>
-        <header className="desk-heading"><div><h1>いま</h1><time dateTime={today}>{new Date(`${today}T12:00:00`).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}</time></div><div className="desk-heading-actions"><button onClick={() => setCapture(value => !value)} aria-expanded={capture}><Plus size={18} />書き留める</button><Link href="/today"><CalendarDays size={17} />予定表</Link></div></header>
+        <header className="desk-heading"><div><h1>いま</h1><time dateTime={today}>{new Date(`${today}T12:00:00`).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}</time></div><div className="desk-heading-actions"><button onClick={() => setCapture(value => !value)} aria-expanded={capture}><Plus size={18} />記録する</button><Link href="/today"><CalendarDays size={17} />予定表</Link></div></header>
         <WorkSignals tasks={workspace.tasks} projects={workspace.projects} onOpenTask={selectTask} onOpenProject={id => go(`/projects?id=${id}`)} />
         {workspace.error && <div role="alert" className="work-error">{workspace.error}<button onClick={reload}>再読み込み</button></div>}
         {day.error && <div role="alert" className="work-error">{day.error}<button onClick={day.retry}>再読み込み</button></div>}

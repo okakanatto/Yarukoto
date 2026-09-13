@@ -1,5 +1,7 @@
 'use client';
 
+import './today.css';
+import Link from 'next/link';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
 import WorkDetailPanel from '@/components/WorkDetailPanel';
@@ -12,7 +14,7 @@ import { useTaskActions } from '@/hooks/useTaskActions';
 import { useDbOperation } from '@/hooks/useDbOperation';
 import { useTodayGrouping, flattenTodayGroups } from '@/hooks/useTodayGrouping';
 import { notifyTasksChanged } from '@/lib/taskHierarchy';
-import { Sun, CalendarDays, Hand, ArrowUpDown, Pin, RefreshCw, GripVertical } from 'lucide-react';
+import { Sun, CalendarDays, Hand, ArrowUpDown, Pin, RefreshCw, GripVertical, Plus } from 'lucide-react';
 import TodayCardItem from './_components/TodayCardItem';
 import TodayGroupHeader from './_components/TodayGroupHeader';
 import TodayStats from './_components/TodayStats';
@@ -253,18 +255,19 @@ export default function TodayPage() {
             <div className="today-root">
                 <div className="today-header">
                     <div className="today-title-row">
-                        <h2 className="page-title">{currentTab.isToday ? '今日やるタスク' : 'やるタスク'}</h2>
+                        <h1 className="page-heading">予定表</h1>
                         <span className="today-date">{dateStr}</span>
                     </div>
-                    <p className="today-subtitle">ルーティン + ピック + 期限日のタスク</p>
+                    <button className="ui-button" onClick={() => window.dispatchEvent(new CustomEvent('yarukoto:openFab'))}><Plus size={15} />記録する</button>
                 </div>
 
+                <section className="schedule-board" aria-label="この日のタスク">
                 {/* Date Navigation Tabs */}
                 <div className="date-tabs">
                     {dateTabs.map(tab => (
                         <button key={tab.date}
                             className={`date-tab ${selectedDate === tab.date ? 'active' : ''} ${tab.isWeekend ? 'weekend' : ''}`}
-                            onClick={() => setSelectedDate(tab.date)}>
+                            aria-pressed={selectedDate === tab.date} onClick={() => setSelectedDate(tab.date)}>
                             <span className="date-tab-label">{tab.label}</span>
                             <span className="date-tab-wd">{tab.weekday}</span>
                         </button>
@@ -273,11 +276,11 @@ export default function TodayPage() {
 
                 {/* Filter Toolbar */}
                 <div className="today-toolbar">
-                    <MultiSelectFilter label="ステータス" options={statusOptions} selected={filterStatuses} onChange={setFilterStatuses} />
+                    <MultiSelectFilter label="状態" options={statusOptions} selected={filterStatuses} onChange={setFilterStatuses} />
                     {tagOptions.length > 0 && <MultiSelectFilter label="タグ" options={tagOptions} selected={filterTags} onChange={setFilterTags} />}
                     <MultiSelectFilter label="重要度" options={importanceOptions} selected={filterImportance} onChange={setFilterImportance} />
                     <MultiSelectFilter label="緊急度" options={urgencyOptions} selected={filterUrgency} onChange={setFilterUrgency} />
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                    <div className="today-sort-tools">
                         <button
                             className={`today-sort-toggle ${sortMode === 'manual' ? 'active' : ''}`}
                             onClick={toggleSortMode}
@@ -287,10 +290,10 @@ export default function TodayPage() {
                         </button>
                         {sortMode === 'auto' && (
                             <div className="today-filter">
-                                <label>並び順</label>
-                                <select value={sortKey} onChange={e => setSortKey(e.target.value)}>
-                                    <option value="priority">優先度順（デフォルト）</option>
-                                    <option value="status">ステータス順</option>
+
+                                <select aria-label="並び順" value={sortKey} onChange={e => setSortKey(e.target.value)}>
+                                    <option value="priority">優先度順</option>
+                                    <option value="status">状態順</option>
                                     <option value="tag">タグ順</option>
                                     <option value="due_asc">期限日（近い順）</option>
                                     <option value="due_desc">期限日（遠い順）</option>
@@ -308,6 +311,7 @@ export default function TodayPage() {
                 {!loading && !error && <TodayStats stats={stats} />}
                 {error && <div role="alert" className="work-error">{error}<button type="button" onClick={retry} disabled={loading}>再試行</button></div>}
 
+                <div className="today-columns" aria-hidden="true"><span /><span>タスク</span><span>状態</span><span>期限</span><span>プロジェクト</span><span>見積</span><span /></div>
                 {/* Task List */}
                 <div className="today-list" aria-busy={loading}>
                     {loading && tasks.length === 0 && <div className="today-placeholder"><span className="spinner" /> 読み込み中...</div>}
@@ -316,7 +320,7 @@ export default function TodayPage() {
                         <div className="today-empty">
                             <span className="today-empty-icon">{currentTab.isToday ? <Sun size={48} strokeWidth={1.2} /> : <CalendarDays size={48} strokeWidth={1.2} />}</span>
                             <span className="today-empty-title">{currentTab.isToday ? '今日やるタスクがありません' : `${currentTab.label}のタスクがありません`}</span>
-                            <span className="today-empty-hint">タスク一覧の「今日やる」ボタンでタスクをピックしましょう</span>
+                            <Link className="ui-button" href="/work">仕事を選ぶ</Link>
                         </div>
                     )}
 
@@ -386,6 +390,7 @@ export default function TodayPage() {
                     })}
                 </div>
 
+                </section>
                 <DragOverlay>
                     {activeTaskData ? (
                         <div className={`${activeTaskData.is_ghost_parent ? 'today-ghost-header' : 'today-card'} dnd-overlay-today`} style={{ animation: 'none' }}>
@@ -406,95 +411,6 @@ export default function TodayPage() {
                         </div>
                     ) : null}
                 </DragOverlay>
-
-                <style jsx global>{`
-        .today-root { max-width: 780px; animation: slideUp 0.3s var(--ease-out); }
-        .today-header { margin-bottom: 10px; }
-        .today-title-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-        .today-date { font-size: 0.72rem; color: var(--color-text-muted); font-weight: 500; }
-        .today-subtitle { color: var(--color-text-muted); font-size: 0.78rem; margin-top: -8px; }
-
-        /* Date Navigation Tabs — pill container */
-        .date-tabs {
-          display: flex; gap: 2px; margin-bottom: 20px;
-          overflow-x: auto;
-          background: var(--color-surface-hover); border-radius: var(--radius-pill); padding: 3px;
-        }
-        .date-tab {
-          flex: 1; min-width: 0;
-          display: flex; flex-direction: column; align-items: center;
-          gap: 2px; padding: 8px 4px;
-          border: none; background: transparent;
-          cursor: pointer;
-          transition: all 120ms var(--ease-out); font-family: inherit;
-          border-radius: var(--radius-pill);
-        }
-        .date-tab:hover { background: var(--color-surface); }
-        .date-tab.active {
-          background: var(--color-surface); color: var(--color-text);
-          box-shadow: var(--shadow-sm);
-        }
-        .date-tab-label {
-          font-size: 0.82rem; font-weight: 500;
-          color: var(--color-text-muted);
-        }
-        .date-tab.active .date-tab-label { color: var(--color-text); font-weight: 600; }
-        .date-tab-wd {
-          font-size: 0.62rem; font-weight: 500;
-          color: var(--color-text-disabled);
-        }
-        .date-tab.active .date-tab-wd { color: var(--color-text-secondary); }
-        .date-tab.weekend .date-tab-wd { color: var(--color-danger); }
-        .date-tab.weekend.active .date-tab-wd { color: var(--color-danger); }
-
-        /* Toolbar */
-        .today-toolbar {
-          display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-          margin-bottom: 14px; padding: 12px 16px;
-          background: var(--color-surface); border-radius: var(--radius-md);
-          box-shadow: var(--shadow-card);
-        }
-        .today-filter { display: flex; align-items: center; gap: 4px; }
-        .today-filter label { font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 500; white-space: nowrap; }
-
-        /* Parent-child grouping */
-        .today-parent-group { }
-        .today-children {
-          margin-left: 28px;
-          padding: 2px 0 6px 0;
-          border-left: 2px solid var(--border-color);
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        /* Task List */
-        .today-list { display: flex; flex-direction: column; gap: 6px; }
-        .today-placeholder { display: flex; align-items: center; gap: 6px; padding: 2rem 0; color: var(--color-text-muted); }
-        .today-empty {
-          display: flex; flex-direction: column; align-items: center; gap: 8px;
-          padding: 3rem 0 2rem; color: var(--color-text-muted);
-          text-align: center;
-        }
-        .today-empty-icon { color: var(--color-text-disabled); margin-bottom: 4px; }
-        .today-empty-title { font-size: .88rem; font-weight: 600; color: var(--color-text-secondary); }
-        .today-empty-hint { font-size: 0.75rem; color: var(--color-text-disabled); }
-
-        /* Sort mode toggle */
-        .today-sort-toggle {
-          padding: 4px 10px; border: 1px solid var(--border-color);
-          border-radius: var(--radius-pill); font-size: .75rem; font-weight: 600;
-          cursor: pointer; transition: all 120ms var(--ease-out); font-family: inherit;
-          background: transparent; color: var(--color-text-muted);
-          white-space: nowrap;
-        }
-        .today-sort-toggle:hover { border-color: var(--border-color-hover); color: var(--color-text); }
-        .today-sort-toggle.active {
-          background: var(--color-accent); color: #fff; border-color: var(--color-accent);
-        }
-        .today-sort-toggle.active:hover { background: var(--color-accent-hover); }
-
-      `}</style>
 
                 {editingTask && (
                     <WorkDetailPanel

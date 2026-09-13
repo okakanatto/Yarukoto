@@ -36,13 +36,13 @@ const chooseTag = id => {
 };
 
 describe('TaskInput local draft', () => {
-  it('FABを閉じても原文・出どころ・全詳細属性を同じcontextへ復元する', async () => {
+  it('FABを閉じても原文・関連リンク・全詳細属性を同じcontextへ復元する', async () => {
     const added = vi.fn();
     const first = render(<TaskInput draftKey="global" onTaskAdded={added} />);
     fireEvent.change(record(), { target: { value: '原文の一行目\n会議で見つけた背景' } });
     fireEvent.change(screen.getByRole('textbox', { name: '期限' }), { target: { value: '2026-12-20' } });
-    fireEvent.click(screen.getByRole('button', { name: '出どころ' }));
-    fireEvent.change(screen.getByPlaceholderText('メモ名・資料の場所'), { target: { value: '会議メモ.txt' } });
+    fireEvent.click(screen.getByRole('button', { name: '関連リンク' }));
+    fireEvent.change(screen.getByPlaceholderText('URLまたはファイルパス'), { target: { value: '会議メモ.txt' } });
     fireEvent.click(screen.getByRole('button', { name: '詳細', exact: true }));
     fireEvent.change(screen.getByPlaceholderText('メモを入力...'), { target: { value: '編集できるメモ' } });
     fireEvent.change(field('プロジェクト'), { target: { value: '2' } });
@@ -56,7 +56,7 @@ describe('TaskInput local draft', () => {
     render(<TaskInput draftKey="global" onTaskAdded={added} />);
     await waitFor(() => expect(record()).toHaveValue('原文の一行目\n会議で見つけた背景'));
     expect(screen.getByRole('textbox', { name: '期限' })).toHaveValue('2026-12-20');
-    expect(screen.getByPlaceholderText('メモ名・資料の場所')).toHaveValue('会議メモ.txt');
+    expect(screen.getByPlaceholderText('URLまたはファイルパス')).toHaveValue('会議メモ.txt');
     expect(screen.getByPlaceholderText('メモを入力...')).toHaveValue('編集できるメモ');
     expect(field('プロジェクト')).toHaveValue('2');
     expect(screen.getByRole('textbox', { name: '日付' })).toHaveValue('2026-12-15');

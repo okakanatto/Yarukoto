@@ -1,0 +1,56 @@
+/* Shared interface rhythm; screens differ in content, not in visual vocabulary. */
+:root { --font-sans:'Segoe UI',Meiryo,sans-serif; --font-heading:var(--font-sans); --color-text-muted:#78716c; --ui-control-height:32px; --ui-radius:8px; }
+:root[data-theme="dark"] { --color-text-muted:#a8a29e; }
+button,input,textarea,select { font-family:var(--font-sans); }
+button,a,input,textarea,select,summary { -webkit-tap-highlight-color:transparent; }
+button:disabled { cursor:default; }
+button:focus-visible,a:focus-visible,summary:focus-visible { outline:2px solid var(--color-accent); outline-offset:2px; }
+button svg,a svg { flex-shrink:0; }
+.page-heading,.work-heading h1,.desk-heading h1 { font-family:var(--font-heading); font-size:24px; line-height:1.4; font-weight:650; letter-spacing:-.025em; margin:0; }
+.task-page-heading { margin:0 0 20px; }
+.ui-button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:34px; padding:7px 12px; border:1px solid var(--border-color); border-radius:8px; background:var(--color-surface); color:var(--color-text); font:inherit; font-size:13px; cursor:pointer; white-space:nowrap; }
+.ui-button:hover { background:var(--color-surface-hover); border-color:var(--border-color-hover); }
+.content,.content.content-desk { padding:24px 32px; }
+.work-page { max-width:1440px; width:100%; margin:0 auto; }
+.work-heading { margin-bottom:20px; min-height:40px; }
+.work-heading > div { display:grid; gap:12px; }
+.work-text-link { font-size:12px; gap:6px; }
+.work-nav { width:208px; flex-basis:208px; padding:24px 12px 16px; gap:24px; scrollbar-width:thin; }
+.work-brand { padding:0 12px; font-size:21px; letter-spacing:-.045em; }
+.work-nav-capture { border-radius:8px; min-height:40px; box-shadow:none; font-size:13px; padding:9px 12px; }
+.work-nav-capture kbd { font-size:10px; }
+.work-nav-links { gap:3px; }
+.work-nav-links a,.work-nav-bottom a { min-height:40px; padding:9px 12px; font-size:13px; font-weight:400; }
+.work-nav-links a.active { font-weight:600; }
+.work-nav-projects { gap:2px; }
+.work-nav-projects a { padding:8px 12px; font-size:12px; }
+.work-nav-caption { font-size:11px; padding:0 12px 6px; letter-spacing:0; }
+.global-work-signals { max-width:1440px; width:100%; margin:0 auto 22px; }
+.project-context { padding:14px 18px; border-radius:10px; margin-bottom:20px; }
+.project-context.project-context-empty { padding:0; border:0; background:transparent; }
+.project-context-summary { gap:12px; }
+.project-context-summary p { font-size:14px; line-height:1.6; margin:3px 0 4px; }
+.project-context-summary small { font-size:12px; }
+.project-context-form { margin-top:16px; gap:12px; }
+.project-context-form label { font-size:12px; }
+.project-context-form input,.project-context-form textarea { font-size:14px; padding:9px 10px; border-radius:8px; line-height:1.6; }
+.project-overview-card { padding:20px; gap:12px; border-radius:10px; box-shadow:none; }
+.project-overview-card:hover { border-color:var(--border-color-hover); background:var(--color-surface-hover); }
+.project-overview-card h2 { font-size:16px; font-weight:600; }
+.project-overview-card p { font-size:13px; line-height:1.65; }
+.work-button { min-height:32px; border-radius:8px; font-size:12px; padding:6px 10px; }
+.work-row-meta { font-size:12px; gap:10px; }
+.work-row-meta > span { font-size:12px; }
+.desk { max-width:1440px; margin:0 auto; }
+.desk-heading { min-height:34px; }
+.desk-heading time { font-size:13px; }
+.desk-heading-actions { gap:16px; }
+.desk-heading-actions > button { border-radius:8px; padding:7px 12px; font-size:13px; }
+.desk-panes,.work-board { border-radius:10px; }
+.desk .work-row { padding:14px 16px; }
+.desk .work-row-main strong { font-size:14px; font-weight:500; }
+.desk .work-row-note { font-size:12px; line-height:1.6; }
+.fab[hidden] { display:none; }
+@media(max-width:1120px) { .content,.content.content-desk { padding:22px; } }
+@media(max-width:820px) { .work-nav { width:64px; flex-basis:64px; padding:22px 8px 12px; } .work-brand { padding:0 8px; } .work-nav-links a,.work-nav-bottom a { padding:12px; } }
+@media(max-width:600px) { .content,.content.content-desk { padding:18px 14px; } .page-heading,.work-heading h1,.desk-heading h1 { font-size:22px; } }

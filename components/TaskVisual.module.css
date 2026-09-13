@@ -1,0 +1,49 @@
+.mark {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    gap: 7px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: var(--marker-color);
+}
+
+.label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.done {
+    color: var(--color-text-muted);
+}
+
+.due,
+.effort,
+.unset {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.overdue {
+    color: var(--color-danger);
+    font-weight: 600;
+}
+
+.unset {
+    color: var(--color-text-muted);
+}
+
+.due { display:inline-flex; align-items:center; gap:5px; }
