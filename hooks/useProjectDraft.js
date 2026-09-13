@@ -1,33 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-
-const cache = new Map();
-const keyFor = id => `yarukoto:project-context-draft:${id}`;
-const validChanges = value => Object.fromEntries(['outcome', 'due_date']
-    .filter(field => typeof value?.[field] === 'string').map(field => [field, value[field]]));
-
-export function readProjectDraft(id) {
-    try {
-        const stored = typeof window !== 'undefined' && window.localStorage.getItem(keyFor(id));
-        if (stored) {
-            const changes = validChanges(JSON.parse(stored));
-            cache.set(id, changes);
-            return changes;
-        }
-    } catch { /* The in-process copy still protects ordinary navigation. */ }
-    return cache.get(id) || {};
-}
-
-function persist(id, changes) {
-    if (Object.keys(changes).length) cache.set(id, changes);
-    else cache.delete(id);
-    try {
-        if (Object.keys(changes).length) window.localStorage.setItem(keyFor(id), JSON.stringify(changes));
-        else window.localStorage.removeItem(keyFor(id));
-        return true;
-    } catch { return false; }
-}
+import { readProjectDraft, writeProjectDraft } from '@/lib/projectDrafts';
+export { readProjectDraft } from '@/lib/projectDrafts';
 
 // Mount with key={project.id}. Untouched fields always use fresh DB values.
 export function useProjectDraft(project) {
@@ -39,12 +14,12 @@ export function useProjectDraft(project) {
         if (value === (project[field] || '')) delete next[field];
         else next[field] = value;
         current.current = next;
-        setPersisted(persist(project.id, next));
+        setPersisted(writeProjectDraft(project.id, next));
         setChanges(next);
     };
     const clear = () => {
         current.current = {};
-        persist(project.id, {});
+        writeProjectDraft(project.id, {});
         setChanges({});
     };
     return {

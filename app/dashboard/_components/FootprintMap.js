@@ -5,7 +5,6 @@ import { heatmapQuartiles, heatLevel, groupIntoWeeks } from '@/lib/dashboardUtil
 
 const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-const HEAT_LEVEL_TIPS = ['—', '少し活動', '活動あり', 'かなり活発'];
 
 /* ================================================================
    [C] Footprint Map (あしあとマップ)
@@ -35,19 +34,18 @@ export default function FootprintMap({ heatmap }) {
         if (day.isFuture) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const parentRect = e.currentTarget.closest('.fm-grid').getBoundingClientRect();
-        const level = heatLevel(day.total, q1, q3);
         const d = new Date(day.dateStr + 'T00:00:00');
         const label = `${d.getMonth() + 1}/${d.getDate()}（${WEEKDAY_NAMES[d.getDay()]}）`;
         // BUG-16: Flip tooltip below when cell is near the top of the grid
         const relativeTop = rect.top - parentRect.top;
         const showBelow = relativeTop < 28;
         setTooltip({
-            text: `${label}: ${HEAT_LEVEL_TIPS[level]}${day.total > 0 ? `（${day.total}件）` : ''}`,
+            text: `${label}: 登録 ${day.total - day.completed}件 · 完了 ${day.completed}件`,
             x: rect.left - parentRect.left + rect.width / 2,
             y: showBelow ? rect.bottom - parentRect.top + 4 : relativeTop - 4,
             below: showBelow,
         });
-    }, [q1, q3]);
+    }, []);
 
     const handleCellLeave = useCallback(() => setTooltip(null), []);
 
@@ -56,7 +54,7 @@ export default function FootprintMap({ heatmap }) {
             <div className="fm-header">
                 <span className="fm-label">90日間のあしあと</span>
                 <div className="fm-stats">
-                    <span>90日中 <b className="fm-stat-num">{activeDays}</b> 日、手が動いた</span>
+                    <span>登録・完了の記録 <b className="fm-stat-num">{activeDays}</b> / 90日</span>
                     <span>完了 <b className="fm-stat-num">{totalCompleted}</b> 件</span>
                 </div>
             </div>
@@ -120,6 +118,7 @@ export default function FootprintMap({ heatmap }) {
 
             {/* Legend */}
             <div className="fm-legend">
+                <span>登録＋完了</span>
                 <span>少</span>
                 <div className="fm-cell fm-cell-lv0 fm-legend-cell" />
                 <div className="fm-cell fm-cell-lv1 fm-legend-cell" />

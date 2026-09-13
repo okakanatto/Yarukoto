@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowUpRight, CalendarDays, Check, Circle, FolderOpen, Play, RotateCcw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowUpRight, CalendarDays, Check, Circle, FolderOpen, Play, RotateCcw } from 'lucide-react';
 import TaskInput from '@/components/TaskInput';
 import TaskList from '@/components/TaskList';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -13,6 +13,7 @@ import styles from './projects.module.css';
 
 const openTask = id => window.dispatchEvent(new CustomEvent('yarukoto:openTask', { detail: { id } }));
 const isOpen = task => ![3, 5].includes(Number(task.status_code));
+const hasOpenWork = task => isOpen(task) || Number(task.openDescendants) > 0;
 const statusName = task => task.status_label || ({ 1: '未着手', 2: '着手中', 3: '完了', 4: '保留', 5: 'キャンセル' }[task.status_code]) || '未設定';
 const projectViews = [['progress', '進行'], ['tasks', 'タスク']];
 
@@ -59,8 +60,8 @@ function ProjectWorkspace({ project, tasks, reload }) {
     const [refreshKey, setRefreshKey] = useState(0);
     const refresh = () => { reload(); setRefreshKey(key => key + 1); };
     const milestones = project.milestones || tasks.filter(task => !task.parent_id);
-    const ongoing = milestones.filter(isOpen);
-    const finished = milestones.filter(task => !isOpen(task));
+    const ongoing = milestones.filter(hasOpenWork);
+    const finished = milestones.filter(task => !hasOpenWork(task));
     return <>
         <ProjectContext project={project} onChanged={reload} />
         <div className={styles.tabs} role="tablist" aria-label="プロジェクトの見方">
@@ -73,11 +74,16 @@ function ProjectWorkspace({ project, tasks, reload }) {
             }}>{label}</button>)}
         </div>
         {view === 'progress' ? <section id="project-panel" role="tabpanel" aria-labelledby="project-tab-progress">
+            <div className={project.recentEntries?.length ? styles.progressColumns : undefined}>
+            <RecentEntries entries={project.recentEntries || []} />
+            <div>
             {milestones.length ? <>
                 <h2 className={styles.sectionTitle}>主な仕事</h2>
                 <MilestoneList tasks={ongoing} />
                 {finished.length > 0 && <details className={styles.finishedWork} open={!ongoing.length || undefined}><summary>完了・キャンセル {finished.length}件</summary><MilestoneList tasks={finished} /></details>}
             </> : <div className={styles.empty}><FolderOpen size={24} /><p>まだ仕事がありません</p></div>}
+            </div>
+            </div>
             <div className={styles.progressFooter}><ProjectProgress progress={project.progress} /><button className="work-button" onClick={() => setView('tasks')}>タスクを管理 <ArrowUpRight size={14} /></button></div>
         </section> : <section id="project-panel" role="tabpanel" aria-labelledby="project-tab-tasks">
             <TaskInput onTaskAdded={refresh} defaultProjectId={project.id} />
@@ -86,14 +92,35 @@ function ProjectWorkspace({ project, tasks, reload }) {
     </>;
 }
 
+function RecentEntries({ entries }) {
+    const visible = entries.map(entry => ({ ...entry, text: entry.kind === 'note'
+        ? (entry.result || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ')
+        : (entry.result || entry.consumed_step || '').trim(),
+    })).filter(entry => entry.text).slice(0, 6);
+    if (!visible.length) return null;
+    return <section className={styles.recentWork} aria-label="最近の記録">
+        <h2 className={styles.sectionTitle}>最近の記録</h2>
+        <ul className={styles.entries}>{visible.map((entry, index) => <li key={`${entry.task_id}-${entry.id || entry.created_at}-${index}`}>
+            <button className={styles.entry} onClick={() => openTask(entry.task_id)}>
+                <span className={styles.entryBody}>
+                    <span className={styles.entryResult}>{entry.text}</span>
+                    <span className={styles.entrySource}>{entry.task_title}<span className={styles.meta}>{entry.kind === 'note' ? 'メモ' : entry.kind === 'step' ? '一歩完了' : entry.kind === 'pause' ? '中断' : '記録'}{entry.created_at && ` · ${entry.created_at.slice(0, 10)}`}{entry.archived_at && ' · アーカイブ'}</span></span>
+                </span>
+                <ArrowUpRight size={15} className={styles.openIcon} aria-hidden="true" />
+            </button>
+        </li>)}</ul>
+    </section>;
+}
+
 function MilestoneList({ tasks }) {
     if (!tasks.length) return null;
     return <ul className={styles.milestones}>{tasks.map(task => {
         const note = (task.notes || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ');
-        const Icon = Number(task.status_code) === 3 ? Check : Number(task.status_code) === 2 ? Play : Circle;
+        const inconsistent = !isOpen(task) && Number(task.openDescendants) > 0;
+        const Icon = inconsistent ? AlertCircle : Number(task.status_code) === 3 ? Check : Number(task.status_code) === 2 ? Play : Circle;
         return <li key={task.id}><button className={styles.milestone} onClick={() => openTask(task.id)}>
-            <Icon size={17} className={Number(task.status_code) === 3 ? styles.finishedIcon : styles.taskIcon} aria-hidden="true" />
-            <span className={styles.milestoneBody}><strong>{task.title}</strong>{note && <span className={styles.note}>{note}</span>}<span className={styles.meta}>{statusName(task)}{task.due_date && ` · 期限 ${task.due_date}`}{task.completed_at && ` · ${task.completed_at.slice(0, 10)}`}{task.archived_at && ' · アーカイブ'}</span></span>
+            <Icon size={17} className={inconsistent ? styles.unfinishedIcon : Number(task.status_code) === 3 ? styles.finishedIcon : styles.taskIcon} aria-hidden="true" />
+            <span className={styles.milestoneBody}><strong>{task.title}</strong>{note && <span className={styles.note}>{note}</span>}<span className={styles.meta}>{statusName(task)}{task.due_date && ` · 期限 ${task.due_date}`}{task.completed_at && ` · ${task.completed_at.slice(0, 10)}`}{task.archived_at && ' · アーカイブ'}</span>{inconsistent && <span className={styles.unfinished}>配下に未完了 {task.openDescendants}件</span>}</span>
             <ArrowUpRight size={15} className={styles.openIcon} aria-hidden="true" />
         </button></li>;
     })}</ul>;

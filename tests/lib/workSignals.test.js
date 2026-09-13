@@ -41,4 +41,30 @@ describe('全体の約束を見失わない注意集計', () => {
         ], today);
         expect(groups.map(g => [g.key, g.tasks.map(t => t.id)])).toEqual([['due', [1, 2]], ['review', [4]], ['waiting', [5]]]);
     });
+    it('子孫の再開時に完了親の実期限と状態の不整合を示し、完了状態を勝手に変えない', () => {
+        const tasks = [
+            task({ id: 1, status_code: 3, due_date: '2026-09-14', completed_at: today }),
+            task({ id: 2, status_code: 3, parent_id: 1, completed_at: today }),
+            task({ id: 3, parent_id: 2 }),
+            task({ id: 4, parent_id: 2 }),
+        ];
+        const before = structuredClone(tasks);
+        expect(collectWorkSignals(tasks, today).map(g => [g.key, g.tasks.map(t => t.id)])).toEqual([
+            ['due', [1]], ['completed-parent', [1, 2]],
+        ]);
+        expect(tasks).toEqual(before);
+    });
+    it('期限が遠い親や日付なしの完了親でも未完了子孫との不整合は確認できる', () => {
+        const tasks = [task({ id: 1, status_code: 3, due_date: '2026-11-01' }), task({ id: 2, parent_id: 1 })];
+        expect(keys(tasks)).toEqual(['completed-parent']);
+        expect(keys(tasks.map(t => ({ ...t, due_date: null })))).toEqual(['completed-parent']);
+    });
+    it('完了・取消・保管した子だけでは親の期限を戻さず、すべて完了すると確認が消える', () => {
+        const root = task({ id: 1, status_code: 3, due_date: '2026-09-01' });
+        const children = [task({ id: 2, parent_id: 1, status_code: 3 }), task({ id: 3, parent_id: 1, status_code: 5 }), task({ id: 4, parent_id: 1, archived_at: today })];
+        expect(keys([root, ...children])).toEqual([]);
+        const resumed = children.map(t => t.id === 2 ? { ...t, status_code: 1 } : t);
+        expect(keys([root, ...resumed])).toEqual(['overdue', 'completed-parent']);
+        expect(keys([root, ...children])).toEqual([]);
+    });
 });

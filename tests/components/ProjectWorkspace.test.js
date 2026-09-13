@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { createElement } from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ProjectPage from '@/app/projects/page';
 
@@ -34,6 +34,50 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('ProjectWorkspace keeps outcomes separate from task counts', () => {
+    it('shows child and archived grandchild results with their own source, without copying to the parent', () => {
+        state.data.projects[0].recentEntries = [
+            { id: 'result-child', kind: 'pause', task_id: 21, task_title: '費用を確認する', result: '追加費用なしと確認できた。', created_at: '2026-09-13 10:00:00' },
+            { id: 'result-grandchild', kind: 'step', task_id: 22, task_title: '旧部門コードを照合する', result: '5件中1件は変換表にない。', created_at: '2026-09-12 16:00:00', archived_at: '2026-09-12 18:00:00' },
+        ];
+        const dispatch = vi.spyOn(window, 'dispatchEvent');
+        render(createElement(ProjectPage));
+        const records = screen.getByRole('region', { name: '最近の記録' });
+        expect(within(records).getByText('追加費用なしと確認できた。')).toBeTruthy();
+        expect(within(records).getByText(/一歩完了 · 2026-09-12 · アーカイブ/)).toBeTruthy();
+        fireEvent.click(within(records).getByRole('button', { name: /5件中1件は変換表にない。.*旧部門コードを照合する/ }));
+        expect(dispatch.mock.calls.some(([event]) => event.type === 'yarukoto:openTask' && event.detail.id === 22)).toBe(true);
+        expect(state.save).not.toHaveBeenCalled();
+        dispatch.mockRestore();
+    });
+
+    it('keeps completed parents with unfinished descendants outside the collapsed history', () => {
+        state.data.projects[0].milestones[0].openDescendants = 2;
+        state.data.projects[0].milestones[0].due_date = '2026-09-14';
+        const dispatch = vi.spyOn(window, 'dispatchEvent');
+        render(createElement(ProjectPage));
+        const parent = screen.getByRole('button', { name: /方式を比較する/ });
+        expect(parent.closest('details')).toBeNull();
+        expect(within(parent).getByText('配下に未完了 2件')).toBeTruthy();
+        expect(within(parent).getByText(/期限 2026-09-14/)).toBeTruthy();
+        fireEvent.click(parent);
+        expect(dispatch.mock.calls.some(([event]) => event.type === 'yarukoto:openTask' && event.detail.id === 11)).toBe(true);
+        dispatch.mockRestore();
+    });
+
+    it('uses the completed step when no result was written and keeps legacy notes concise', () => {
+        state.data.projects[0].recentEntries = [
+            { id: 'empty-pause', kind: 'pause', task_id: 21, task_title: '結果のない中断', result: '', created_at: '2026-09-13 12:00:00' },
+            { id: 'step', kind: 'step', task_id: 21, task_title: '費用を確認する', result: '', consumed_step: '見積額を照合する', created_at: '2026-09-13 11:00:00' },
+            { id: 'legacy-note', kind: 'note', task_id: 22, task_title: '移行条件を調べる', result: '古い経緯。\n確認した条件。\n次回の論点。', created_at: '2026-09-12 15:00:00' },
+        ];
+        render(createElement(ProjectPage));
+        const records = screen.getByRole('region', { name: '最近の記録' });
+        expect(within(records).queryByText('結果のない中断')).toBeNull();
+        expect(within(records).getByText('見積額を照合する')).toBeTruthy();
+        expect(within(records).getByText('確認した条件。 次回の論点。')).toBeTruthy();
+        expect(within(records).queryByText(/古い経緯/)).toBeNull();
+    });
+
     it('keeps archived root work, its note and full-history counts visible', () => {
         const dispatch = vi.spyOn(window, 'dispatchEvent');
         render(createElement(ProjectPage));

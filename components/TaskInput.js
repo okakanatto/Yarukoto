@@ -584,7 +584,7 @@ function TaskInputForm({ onTaskAdded, predefinedParentId = null, defaultProjectI
         .task-title-input:focus { border-bottom-color: var(--color-accent); }
         .btn-add {
           width: 32px; height: 32px; border-radius: var(--radius-pill); border: none;
-          background: var(--color-accent); color: white; font-size: 1.1rem;
+          background: var(--color-accent); color: var(--color-on-accent); font-size: 1.1rem;
           cursor: pointer; display: flex; align-items: center; justify-content: center;
           transition: background var(--duration-fast) var(--ease-out); flex-shrink: 0;
         }
@@ -629,7 +629,7 @@ function TaskInputForm({ onTaskAdded, predefinedParentId = null, defaultProjectI
         }
         .btn-collapse:hover { color: var(--color-text); border-color: var(--border-color-hover); }
         .btn-submit {
-          background: var(--color-accent); border: none; color: #fff;
+          background: var(--color-accent); border: none; color: var(--color-on-accent);
           padding: 6px 16px; border-radius: var(--radius-pill);
           font-size: 0.82rem; font-weight: 500; cursor: pointer;
           transition: background var(--duration-fast) var(--ease-out); font-family: inherit;

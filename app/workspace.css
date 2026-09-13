@@ -135,3 +135,30 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media(max-width: 820px) { .work-nav { width: 64px; flex-basis: 64px; padding: 22px 8px 12px; } .work-brand { padding: 0 8px; } .work-brand > span:last-child, .work-nav-capture span, .work-nav-capture kbd, .work-nav-links a span, .work-nav-bottom span, .work-nav-bottom small, .work-nav-projects { display: none; } .work-nav-links a, .work-nav-bottom a { padding: 12px; } .work-nav-capture { justify-content: center; padding: 10px; } .work-nav-bottom { justify-content: center; } .work-heading { align-items: flex-start; } .work-heading h1 { font-size: 1.8rem; } .work-heading > a { font-size: .72rem; } }
 @media(max-width: 520px) { .content { padding: 22px 14px; } .work-heading { display: block; } .work-heading > a { margin-top: 14px; } .work-row { padding: 15px 13px; } .work-tabs { padding: 0 13px; gap: 14px; } .work-list-top { padding: 12px 13px; } .project-grid { grid-template-columns: minmax(0, 1fr); } }
 @media(prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* Entry is one piece of work. The full management list remains a deliberate view. */
+.desk-heading-actions { display:flex; align-items:center; gap:20px; }
+.desk-heading-actions > button { display:flex; align-items:center; gap:7px; padding:9px 12px; border:1px solid var(--border-color); border-radius:7px; background:var(--color-surface); color:var(--color-text); font:inherit; font-size:13px; cursor:pointer; }
+.launch-desk:not(.desk-has-selection) .desk-panes { grid-template-columns:minmax(0, 1fr); }
+.launch-desk:not(.desk-has-selection) .desk-list { border-right:0; }
+.desk-launch-scroll { flex:1; min-height:0; overflow:auto; background:var(--color-surface-hover); }
+.desk-home-panes .desk-list { background:var(--color-surface-hover); }
+.launch-desk:not(.desk-capture-open) .desk-capture { display:none; }
+.desk-back-home { display:flex; align-items:center; gap:7px; margin:12px 16px 2px; padding:7px 0; border:0; background:transparent; color:var(--color-text-secondary); font:inherit; font-size:12px; cursor:pointer; align-self:flex-start; }
+.desk-focused .desk-panes { grid-template-columns:minmax(0, 1fr); }
+.desk-focused .desk-list { display:none; }
+.desk-focused .desk-work { display:block; max-width:880px; width:100%; margin:0 auto; }
+.desk-focused.desk-capture-open .desk-list { display:flex; }
+.desk-focused.desk-capture-open .desk-work { display:none; }
+.desk-focused.desk-capture-open .desk-launch-scroll { display:none; }
+.work-row-step { display:flex; gap:6px; color:var(--color-text); font-size:13px; line-height:1.6; }
+.work-row-step svg { flex-shrink:0; margin-top:4px; color:var(--color-accent); }
+.desk .work-row-note { font-size:13px; -webkit-line-clamp:2; }
+.desk-tabs button { font-size:13px; }
+.desk-tabs button span { font-size:12px; }
+.desk-list-tools input { font-size:13px; }
+.work-nav-caption { font-size:11px; letter-spacing:.035em; }
+.work-nav-projects a { font-size:12px; }
+@media(min-width:961px) { .desk-has-selection .desk-home-panes { grid-template-columns:minmax(250px,.75fr) minmax(390px,1.4fr); } }
+@media(max-width:960px) { .launch-desk.desk-has-selection .desk-work { display:block; } .launch-desk.desk-has-selection .desk-list { display:none; } .launch-desk.desk-capture-open .desk-list { display:flex; } .launch-desk.desk-capture-open .desk-work { display:none; } }
+.desk-focused .desk-home-panes { grid-template-columns:minmax(0, 1fr); }

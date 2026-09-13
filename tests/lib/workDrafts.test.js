@@ -5,6 +5,24 @@ beforeEach(() => { localStorage.clear(); vi.resetModules(); });
 afterEach(() => vi.restoreAllMocks());
 
 describe('work drafts across app restarts', () => {
+    it('restores an inline title and unfinished pause result without marking that result completed', async () => {
+        const draft = {
+            fields: { title: '移行方式を決める', notes: '調査中' }, childText: '',
+            checkpoint: { result: '例外11件\n方式比較は未着手', next_step: '方式Aだけ比較する', stepCompleted: false },
+        };
+        const initial = await import('@/lib/workDrafts');
+        expect(initial.writeWorkDraft(506, draft)).toBe(true);
+        vi.resetModules();
+        const restarted = await import('@/lib/workDrafts');
+        expect(restarted.readWorkDraft(506)).toEqual(draft);
+    });
+    it('does not trust unrelated properties or wrong types in a stored pause checkpoint', async () => {
+        localStorage.setItem('yarukoto:work-draft:v1:507', JSON.stringify({
+            fields: { title: 123 }, checkpoint: { result: '判明したこと', next_step: 5, stepCompleted: 'true', status_code: 3 },
+        }));
+        const drafts = await import('@/lib/workDrafts');
+        expect(drafts.readWorkDraft(507)).toEqual({ fields: {}, childText: '', checkpoint: { result: '判明したこと' } });
+    });
     it('restores changed fields after the module is loaded in a new session', async () => {
         const initial = await import('@/lib/workDrafts');
         expect(initial.writeWorkDraft(501, { fields: { next_step: '例外を5件見る', notes: '通常分は確認済み' }, childText: '作成途中の子' })).toBe(true);

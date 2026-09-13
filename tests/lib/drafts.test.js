@@ -2,16 +2,53 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DRAFT_BACKUP_PREFIX, retireDraftsForDatabaseRestore } from '@/lib/drafts';
 import { clearWorkDraftCache, readWorkDraft, writeWorkDraft } from '@/lib/workDrafts';
+import { clearProjectDraftCache, readProjectDraft, writeProjectDraft } from '@/lib/projectDrafts';
 
 const taskKey = 'yarukoto:task-input-draft:v1:work';
 const projectKey = 'yarukoto:project-context-draft:1';
 const timestamp = '2026-09-12T12:00:00.000Z';
 const original = '{"title":"一行目\\n背景","pendingTask":{"id":1}}';
 
-beforeEach(() => { localStorage.clear(); clearWorkDraftCache(); });
+beforeEach(() => { localStorage.clear(); clearWorkDraftCache(); clearProjectDraftCache(); });
 afterEach(() => vi.restoreAllMocks());
 
 describe('復元前DBに属する下書きの退避', () => {
+    it('再起動に失敗しても旧プロジェクトの成果・期限を復元DBの同じIDへ適用しない', () => {
+        const draft = { outcome: '旧案件の合意', due_date: '2026-09-30' };
+        expect(writeProjectDraft(1, draft)).toBe(true);
+        expect(readProjectDraft(1)).toEqual(draft);
+        const result = retireDraftsForDatabaseRestore(localStorage, timestamp);
+        expect(JSON.parse(localStorage.getItem(result.backupKey)).entries).toEqual([{ key: projectKey, value: JSON.stringify(draft) }]);
+        expect(localStorage.getItem(projectKey)).toBeNull();
+        expect(readProjectDraft(1)).toEqual({});
+        writeProjectDraft(1, { outcome: '復元した案件の合意' });
+        expect(readProjectDraft(1)).toEqual({ outcome: '復元した案件の合意' });
+    });
+    it('プロジェクト下書きの保存失敗後の最新値も退避し、失敗中に古い保存値へ戻さない', () => {
+        const old = { outcome: '保存された成果' };
+        const latest = { outcome: '最新の成果', due_date: '2026-10-01' };
+        writeProjectDraft(1, old);
+        const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
+        expect(writeProjectDraft(1, latest)).toBe(false);
+        expect(readProjectDraft(1)).toEqual(latest);
+        set.mockRestore();
+        const result = retireDraftsForDatabaseRestore(localStorage, timestamp);
+        const snapshot = JSON.parse(localStorage.getItem(result.backupKey));
+        expect(snapshot.entries).toEqual([{ key: projectKey, value: JSON.stringify(old) }]);
+        expect(snapshot.memoryEntries).toEqual([{ key: projectKey, value: JSON.stringify(latest) }]);
+        expect(readProjectDraft(1)).toEqual({});
+    });
+    it('プロジェクトのメモリだけの下書きも退避し、退避に失敗したらキャッシュを保つ', () => {
+        const draft = { outcome: 'メモリだけの成果' };
+        const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+        expect(writeProjectDraft(1, draft)).toBe(false);
+        expect(() => retireDraftsForDatabaseRestore(localStorage, timestamp)).toThrow('quota');
+        expect(readProjectDraft(1)).toEqual(draft);
+        set.mockRestore();
+        const result = retireDraftsForDatabaseRestore(localStorage, timestamp);
+        expect(JSON.parse(localStorage.getItem(result.backupKey)).entries).toEqual([{ key: projectKey, value: JSON.stringify(draft) }]);
+        expect(readProjectDraft(1)).toEqual({});
+    });
     it('仕事メモと選択IDを退避し、再起動に失敗しても同じIDへ旧キャッシュを復活させない', () => {
         const workKey = 'yarukoto:work-draft:v1:1';
         const oldDraft = { fields: { notes: '旧DBの仕事の背景\n次の確認', next_step: '旧案件の一歩' }, childText: '作成途中' };

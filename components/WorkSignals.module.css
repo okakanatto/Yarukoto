@@ -21,5 +21,11 @@
 .planActions button { cursor:pointer; border:1px solid var(--border-color); background:var(--color-surface-hover); color:var(--color-text); font:inherit; font-size:12px; padding:7px 10px; border-radius:5px; }
 .error { padding:10px; color:var(--color-danger); }
 .empty { padding:16px; color:var(--color-text-secondary); }
+.deadlinePeek { display:flex; flex-wrap:wrap; gap:6px 22px; padding:0 12px 10px; }
+.deadlinePeek:empty { display:none; }
+.deadlinePeek button,.deadlinePeek a { display:flex; align-items:center; gap:8px; max-width:100%; border:0; background:transparent; color:var(--color-text); font:inherit; font-size:12px; cursor:pointer; padding:3px 0; text-align:left; }
+.deadlinePeek span { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:240px; }
+.deadlinePeek time { flex-shrink:0; color:var(--color-danger); font-size:11px; }
+.deadlinePeek button:hover span,.deadlinePeek a:hover span { text-decoration:underline; }
 @media(max-width:700px) { .bar { align-items:flex-start; gap:9px; } .groups { gap:4px 10px; } .row { align-items:flex-start; flex-wrap:wrap; gap:0; } .planActions { padding-bottom:10px; } }
 @media(pointer:coarse) { .signals button { min-height:44px; } }

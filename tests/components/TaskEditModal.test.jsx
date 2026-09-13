@@ -43,6 +43,7 @@ describe('TaskEditModal save failure recovery', () => {
         fireEvent.change(titleInput, { target: { value: 'New Title' } });
         const notesInput = screen.getByDisplayValue('背景メモ');
         fireEvent.change(notesInput, { target: { value: '方式の判断理由を残す' } });
+        fireEvent.click(screen.getByRole('button', { name: '×' }));
 
         // Production uses individually committed SQL statements (Tauri pool).
         // Check observable recovery, not unsupported cross-call rollback semantics.
@@ -75,7 +76,7 @@ describe('TaskEditModal save failure recovery', () => {
         const rows = await db.select('SELECT title, notes FROM tasks WHERE id = $1', [taskId]);
         expect(rows[0]).toMatchObject({ title: 'New Title', notes: '方式の判断理由を残す' });
         const tags = await db.select('SELECT tag_id FROM task_tags WHERE task_id = $1', [taskId]);
-        expect(tags.map(tag => tag.tag_id)).toEqual([tagId]);
+        expect(tags.map(tag => tag.tag_id)).toEqual([]);
     });
 
     it('records an explicit start from attributes and preserves it on a later edit', async () => {
@@ -118,5 +119,42 @@ describe('TaskEditModal save failure recovery', () => {
 
         const rows = await db.select('SELECT title FROM tasks WHERE id = $1', [taskId]);
         expect(rows[0].title).toBe('New Title');
+    });
+
+    it.each(['escape', 'close', 'backdrop'])('saves edited attributes when closing by %s', async method => {
+        const [id] = await seedTasks(db, [{ title: 'Old Title', notes: '背景', project_id: 1 }]);
+        const onClose = vi.fn();
+        render(<TaskEditModal task={{ id, title: 'Old Title', notes: '背景', project_id: 1, tags: [], status_code: 1 }} onClose={onClose} onSaved={vi.fn()} />);
+        fireEvent.change(await screen.findByDisplayValue('Old Title'), { target: { value: '判断する仕事' } });
+        if (method === 'escape') fireEvent.keyDown(window, { key: 'Escape' });
+        else if (method === 'close') fireEvent.click(screen.getByRole('button', { name: '保存して閉じる' }));
+        else fireEvent.click(document.querySelector('.te-backdrop'));
+        await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+        expect((await db.select('SELECT title FROM tasks WHERE id = $1', [id]))[0].title).toBe('判断する仕事');
+    });
+
+    it('only explicit cancel discards changes', async () => {
+        const [id] = await seedTasks(db, [{ title: 'Old Title', project_id: 1 }]);
+        const onClose = vi.fn(), onSaved = vi.fn();
+        render(<TaskEditModal task={{ id, title: 'Old Title', project_id: 1, status_code: 1 }} onClose={onClose} onSaved={onSaved} />);
+        fireEvent.change(await screen.findByDisplayValue('Old Title'), { target: { value: '破棄する変更' } });
+        fireEvent.click(screen.getByRole('button', { name: 'キャンセル' }));
+        expect(onClose).toHaveBeenCalledOnce();
+        expect(onSaved).not.toHaveBeenCalled();
+        expect((await db.select('SELECT title FROM tasks WHERE id = $1', [id]))[0].title).toBe('Old Title');
+    });
+
+    it('preserves external updates to attributes the user did not edit', async () => {
+        const [id] = await seedTasks(db, [{ title: 'Old Title', notes: '元のメモ', project_id: 1 }]);
+        const [tagId] = await seedTags(db, [{ name: 'TagA' }]);
+        const onClose = vi.fn();
+        render(<TaskEditModal task={{ id, title: 'Old Title', notes: '元のメモ', project_id: 1, tags: [], status_code: 1 }} onClose={onClose} onSaved={vi.fn()} />);
+        fireEvent.change(await screen.findByDisplayValue('Old Title'), { target: { value: '名前だけ変更' } });
+        await db.execute("UPDATE tasks SET notes = '外部で更新した作業文脈', status_code = 2, due_date = '2026-10-01' WHERE id = $1", [id]);
+        await linkTaskTags(db, id, [tagId]);
+        fireEvent.click(screen.getByRole('button', { name: '保存して閉じる' }));
+        await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+        expect((await db.select('SELECT title, notes, status_code, due_date FROM tasks WHERE id = $1', [id]))[0]).toEqual({ title: '名前だけ変更', notes: '外部で更新した作業文脈', status_code: 2, due_date: '2026-10-01' });
+        expect((await db.select('SELECT tag_id FROM task_tags WHERE task_id = $1', [id])).map(row => row.tag_id)).toEqual([tagId]);
     });
 });

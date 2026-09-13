@@ -62,8 +62,8 @@ describe('仕事の記録と再開', () => {
     expect(created.status_code).toBe(1);
     expect(created.project_name).toBe('Inbox');
 
-    await db.execute('UPDATE tasks SET title = $1 WHERE id = $2', ['集計条件を確認する', id]);
-    await saveWorkContext(id, { notes: '旧版を確認済み。次は新版の条件を見る。', capture_text: '上書き禁止', title: '変更禁止' });
+    await saveWorkContext(id, { title: '集計条件を確認する' });
+    await saveWorkContext(id, { notes: '旧版を確認済み。次は新版の条件を見る。', capture_text: '上書き禁止' });
     const saved = (await loadTaskContext(id)).task;
     expect(saved.capture_text).toBe(original);
     expect(saved.title).toBe('集計条件を確認する');
@@ -276,7 +276,7 @@ describe('v7からv8への追加移行', () => {
     expect((await db.select('SELECT title, notes FROM tasks WHERE id = $1', [id]))[0])
       .toEqual({ title: '失ってはいけない仕事', notes: '移行前のメモ' });
     await getDb();
-    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('9');
+    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('10');
     expect((await loadTaskContext(id)).task).toMatchObject({ title: '失ってはいけない仕事', notes: '移行前のメモ', capture_text: '', source_ref: '' });
   });
 
@@ -308,7 +308,7 @@ describe('v7からv8への追加移行', () => {
     }
     expect(await db.select('SELECT * FROM task_tags')).toEqual(previousLinks);
     expect((await db.select("SELECT value FROM app_settings WHERE key = 'show_overdue_in_today'"))[0].value).toBe('0');
-    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('9');
+    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('10');
     expect((await db.select('SELECT outcome, due_date FROM projects'))[0]).toEqual({ outcome: '', due_date: null });
     // Reinitialization is idempotent, including a DB copied back from a backup.
     globalThis.__yarukoto_db_promise = null;
@@ -344,7 +344,7 @@ describe('v8からv9への非破壊移行', () => {
     await expect(getDb()).rejects.toThrow('migration interrupted');
     expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('8');
     await getDb();
-    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('9');
+    expect((await db.select("SELECT value FROM app_settings WHERE key = 'db_schema_version'"))[0].value).toBe('10');
     const migratedTasks = await db.select('SELECT * FROM tasks ORDER BY id');
     expect(migratedTasks).toEqual(previousTasks.map(t => ({ ...t, next_step: '', work_started_at: null })));
     expect(await db.select('SELECT * FROM projects ORDER BY id')).toEqual(previousProjects.map(p => ({ ...p, completed_at: null })));

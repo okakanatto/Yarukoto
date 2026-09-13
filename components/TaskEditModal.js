@@ -1,12 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import CalendarPicker from './CalendarPicker';
 import TagSelect from './TagSelect';
 import { useMasterData } from '../hooks/useMasterData';
 import { useDbOperation } from '../hooks/useDbOperation';
 import { fetchDb } from '@/lib/utils';
 import { descendantIds, ancestorPath, validateParent, reparentTask, autoCompleteAncestors, clearInvalidNextTasks, restoreTaskTree, notifyTasksChanged } from '@/lib/taskHierarchy';
+import { useWorkNavigationGuard } from '@/hooks/useWorkNavigationGuard';
+
+const valuesFrom = task => ({
+    title: task.title || '', startDate: task.start_date || '', dueDate: task.due_date || '',
+    importance: task.importance_level == null ? '' : String(task.importance_level),
+    urgency: task.urgency_level == null ? '' : String(task.urgency_level),
+    estimatedMinutes: task.estimated_hours == null ? '' : String(task.estimated_hours),
+    notes: task.notes || '', statusCode: String(task.status_code || 1),
+    parentId: task.parent_id || '', projectId: task.project_id == null ? '' : String(task.project_id),
+    selectedTags: task.tags?.map(tag => tag.id) || [],
+});
 
 export default function TaskEditModal({ task, onClose, onSaved }) {
     const [title, setTitle] = useState(task.title || '');
@@ -22,6 +33,14 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
     const [parentId, setParentId] = useState(task.parent_id || '');
     const [parentOptions, setParentOptions] = useState([]);
     const [projectId, setProjectId] = useState(task.project_id != null ? String(task.project_id) : '');
+    const [saveError, setSaveError] = useState('');
+    const initial = useRef(valuesFrom(task));
+    const values = { title, startDate, dueDate, importance, urgency, estimatedMinutes, notes, statusCode, selectedTags, parentId, projectId };
+    const valuesRef = useRef(values);
+    valuesRef.current = values;
+    const pending = useRef(null);
+    const saveRef = useRef(null);
+    const dirty = Object.keys(values).some(key => JSON.stringify(values[key]) !== JSON.stringify(initial.current[key]));
 
     const { masters, tags: allTags, projects } = useMasterData();
     const dbOp = useDbOperation();
@@ -53,21 +72,35 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
         return () => { cancelled = true; };
     }, [task.id, task.parent_id]);
 
-    // Close on Escape
+    // Closing commits; only the explicit Cancel action discards changes.
     useEffect(() => {
-        const handler = (e) => { if (e.key === 'Escape') onClose(); };
+        const handler = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); void saveRef.current(); } };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [onClose]);
+    }, []);
 
-    const handleSave = async () => {
-        if (!title.trim() || saving) return;
+    useEffect(() => {
+        const handler = event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [dirty]);
+
+    const handleSave = () => {
+        if (pending.current) return pending.current;
+        const changes = Object.fromEntries(Object.entries(valuesRef.current).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(initial.current[key])));
+        if (!Object.keys(changes).length) { onClose(); return Promise.resolve(true); }
+        if (!valuesRef.current.title.trim()) { setSaveError('タスク名を入力してください。'); return Promise.resolve(false); }
         setSaving(true);
+        setSaveError('');
+        pending.current = (async () => {
         try {
             const saved = await dbOp(async (db) => {
-                const unchangedArchivedParent = task.archived_at && Number(parentId) === task.parent_id;
+                const current = (await db.select('SELECT * FROM tasks WHERE id = $1', [task.id]))[0];
+                if (!current) throw new Error('タスクが見つかりません。');
+                const { title, startDate, dueDate, importance, urgency, estimatedMinutes, notes, statusCode, parentId, projectId, selectedTags } = { ...valuesFrom(current), ...changes };
+                const unchangedArchivedParent = current.archived_at && Number(parentId) === current.parent_id;
                 const parent = unchangedArchivedParent
-                    ? (await db.select('SELECT * FROM tasks WHERE id = $1', [task.parent_id]))[0]
+                    ? (await db.select('SELECT * FROM tasks WHERE id = $1', [current.parent_id]))[0]
                     : await validateParent(db, task.id, parentId);
 
                 // Resolve project_id: use selected, or default project
@@ -77,8 +110,8 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     resolvedProjectId = defaultProj[0]?.id || null;
                 }
                 if (parent) resolvedProjectId = parent.project_id;
-                const relationshipChanged = (Number(parentId) || null) !== (task.parent_id || null);
-                if (!unchangedArchivedParent && (relationshipChanged || resolvedProjectId !== task.project_id)) {
+                const relationshipChanged = (Number(parentId) || null) !== (current.parent_id || null);
+                if (!unchangedArchivedParent && (relationshipChanged || resolvedProjectId !== current.project_id)) {
                     await reparentTask(db, task.id, parentId, resolvedProjectId);
                 }
 
@@ -116,10 +149,11 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 ]);
 
                 if (parseInt(statusCode) === 3) await autoCompleteAncestors(db, task.id);
-                if (task.archived_at && ![3, 5].includes(parseInt(statusCode))) await restoreTaskTree(db, task.id);
+                if (current.archived_at && ![3, 5].includes(parseInt(statusCode))) await restoreTaskTree(db, task.id);
                 await clearInvalidNextTasks(db);
 
                 // Update tags (delete existing, insert new ones)
+                if ('selectedTags' in changes) {
                 await db.execute('DELETE FROM task_tags WHERE task_id = $1', [task.id]);
 
                 if (selectedTags && selectedTags.length > 0) {
@@ -127,31 +161,41 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                         await db.execute('INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2)', [task.id, tagId]);
                     }
                 }
+                }
                 notifyTasksChanged();
                 return true;
             }, { error: '保存に失敗しました' });
 
             if (saved) {
-                onSaved();
+                await onSaved?.();
                 onClose();
+                return true;
             }
-        } catch {
-            // error handled by dbOp
+            return false;
+        } catch (failure) {
+            setSaveError(`保存できませんでした。入力は残っています。${failure.message ? ` ${failure.message}` : ''}`);
+            return false;
         } finally {
+            pending.current = null;
             setSaving(false);
         }
+        })();
+        return pending.current;
     };
+    saveRef.current = handleSave;
+    useWorkNavigationGuard(handleSave);
 
     return (
         <>
-            <div className="te-backdrop" onClick={onClose} />
-            <div className="te-modal">
+            <div className="te-backdrop" onClick={handleSave} />
+            <div className="te-modal" role="dialog" aria-modal="true" aria-labelledby="task-edit-heading">
                 <div className="te-header">
-                    <h3>タスクの編集</h3>
-                    <button className="te-close" onClick={onClose}>✕</button>
+                    <h3 id="task-edit-heading">タスクの編集</h3>
+                    <button className="te-close" onClick={handleSave} aria-label="保存して閉じる" disabled={saving}>✕</button>
                 </div>
 
-                <div className="te-body">
+                {saveError && <p className="te-error" role="alert">{saveError}</p>}
+                <fieldset className="te-body" disabled={saving}>
                     {/* 1. タスク名 */}
                     <div className="te-field">
                         <input
@@ -276,10 +320,10 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                             <input type="text" className="te-input" value={task.completed_at.split(' ')[0]} readOnly disabled />
                         </div>
                     )}
-                </div>
+                </fieldset>
 
                 <div className="te-footer">
-                    <button className="te-btn-cancel" onClick={onClose}>キャンセル</button>
+                    <button className="te-btn-cancel" onClick={onClose} disabled={saving}>キャンセル</button>
                     <button className="te-btn-save" onClick={handleSave} disabled={!title.trim() || saving}>
                         {saving ? '保存中...' : '保存'}
                     </button>
@@ -314,7 +358,8 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                     border-radius: var(--radius-pill); transition: color var(--duration-fast) var(--ease-out);
                 }
                 .te-close:hover { color: var(--color-text); }
-                .te-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+                .te-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; border: 0; margin: 0; min-width: 0; }
+                .te-error { margin: 12px 20px 0; color: var(--color-danger, #b42318); font-size: 0.8rem; }
                 .te-field { display: flex; flex-direction: column; gap: 4px; }
                 .te-row { display: flex; gap: 10px; }
                 .te-label {
@@ -351,7 +396,7 @@ export default function TaskEditModal({ task, onClose, onSaved }) {
                 }
                 .te-btn-cancel:hover { color: var(--color-text); border-color: var(--border-color-hover); }
                 .te-btn-save {
-                    background: var(--color-accent); color: #fff; border: none;
+                    background: var(--color-accent); color: var(--color-on-accent); border: none;
                     padding: 6px 16px; border-radius: var(--radius-pill); font-size: 0.82rem;
                     font-weight: 500; cursor: pointer; transition: background var(--duration-fast) var(--ease-out); font-family: inherit;
                 }

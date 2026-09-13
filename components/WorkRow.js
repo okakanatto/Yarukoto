@@ -3,16 +3,18 @@
 import { CalendarDays, CornerDownRight, Hourglass, Sun, Repeat, ArrowRight } from 'lucide-react';
 import StatusCheckbox from './StatusCheckbox';
 import { formatMin } from '@/lib/utils';
+import { workSummary } from '@/lib/workEntries';
 
 export default function WorkRow({ task, onOpen, onStatus, onToday, disabled = false, selected = false }) {
     const today = new Date().toLocaleDateString('sv-SE');
-    const note = task.next_step || (task.notes || '').trim().split(/\r?\n/).filter(Boolean).slice(-1).join('');
+    const summary = workSummary(task);
     return <div className={`work-row ${selected ? 'work-row-selected' : ''}`}>
         {onStatus && <StatusCheckbox statusCode={task.status_code} disabled={disabled} onChange={code => onStatus(task.id, code)} />}
         <button className="work-row-main" onClick={() => onOpen(task.id)} aria-pressed={selected}>
             {task.parent_title && <span className="work-row-parent"><CornerDownRight size={12} />{task.parent_title}</span>}
             <strong>{task.title}</strong>
-            {note && note !== task.title && <span className="work-row-note">{task.next_step && <ArrowRight size={13} />}{note}</span>}
+            {summary.step && <span className="work-row-step"><ArrowRight size={13} />{summary.step}</span>}
+            {summary.context && summary.context !== task.title && summary.context !== summary.step && <span className="work-row-note">{summary.context}</span>}
             <span className="work-row-meta">
                 {task.is_routine && <span><Repeat size={12} />ルーティン</span>}
                 {task.project_name && <span><i style={{ background: task.project_color || 'var(--color-accent)' }} />{task.project_name}</span>}

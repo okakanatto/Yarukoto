@@ -1,17 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronRight, Paperclip, Pause, Pencil, Play, Plus, Save, Settings2, Sun, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronRight, Clock3, Paperclip, Pause, Pencil, Play, Plus, Save, Settings2, Sun, X } from 'lucide-react';
 import TaskEditModal from './TaskEditModal';
 import { useStatusActions } from '@/hooks/useStatusActions';
-import { createCapturedTask, loadTaskContext, rememberTask, resolveWaiting, saveWorkContext, setTaskPlan } from '@/lib/workspace';
+import { createCapturedTask, finishWorkStep, loadTaskContext, rememberTask, resolveWaiting, saveWorkContext, setTaskPlan, stampWorkStarted } from '@/lib/workspace';
+import { useWorkNavigationGuard } from '@/hooks/useWorkNavigationGuard';
 import { classifyWorkReference, openWorkReference } from '@/lib/workReferences';
 import { clearWorkDraft, readWorkDraft, writeWorkDraft } from '@/lib/workDrafts';
 import styles from './WorkDetailPanel.module.css';
 
 // Navigation saves first; a local recovery copy also survives an unexpected close.
 const fieldsFrom = task => ({
-    notes: task.notes || '', source_ref: task.source_ref || '', next_step: task.next_step || '',
+    title: task.title || '', notes: task.notes || '', source_ref: task.source_ref || '', next_step: task.next_step || '',
     waiting_on: task.waiting_on || '', review_date: task.review_date || '',
     next_task_id: task.next_task_id == null ? '' : String(task.next_task_id),
 });
@@ -24,19 +25,20 @@ export default function WorkDetailPanel(props) {
     return <WorkDetailSession key={props.taskId} {...props} />;
 }
 
-function WorkDetailSession({ taskId, onClose, onChanged, onOpenTask, embedded = false, navigationRef }) {
+function WorkDetailSession({ taskId, onClose, onChanged, onOpenTask, embedded = false, navigationRef, ...props }) {
     const [currentId, setCurrentId] = useState(taskId);
     return <WorkDetailContent key={currentId} taskId={currentId} onClose={onClose} onChanged={onChanged}
-        onOpenTask={onOpenTask || setCurrentId} embedded={embedded} navigationRef={navigationRef} />;
+        onOpenTask={onOpenTask || setCurrentId} embedded={embedded} navigationRef={navigationRef} {...props} />;
 }
 
-function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, navigationRef }) {
+function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, navigationRef, onWorkStarted, onFocusChange, startRequested }) {
     const [context, setContext] = useState(null);
     const [draft, setDraft] = useState(null);
     const [baseline, setBaseline] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
+    const [autosaving, setAutosaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [childText, setChildText] = useState(() => readWorkDraft(taskId)?.childText || '');
@@ -44,6 +46,13 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     const [draftWarning, setDraftWarning] = useState('');
     const [selectedText, setSelectedText] = useState('');
     const [sourceEditing, setSourceEditing] = useState(false);
+    const [titleEditing, setTitleEditing] = useState(false);
+    const [focused, setFocused] = useState(false);
+    const [sessionStarted, setSessionStarted] = useState(null);
+    const [sessionMinutes, setSessionMinutes] = useState(null);
+    const [elapsed, setElapsed] = useState(0);
+    const [checkpoint, setCheckpoint] = useState(() => readWorkDraft(taskId)?.checkpoint || null);
+    const [checkpointSaving, setCheckpointSaving] = useState(false);
     const [today, setToday] = useState(() => new Date().toLocaleDateString('sv-SE'));
     const panelRef = useRef(null);
     const notesRef = useRef(null);
@@ -51,6 +60,18 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     const attributesRef = useRef(null);
     const wasEditing = useRef(false);
     const pendingRef = useRef(false);
+    const savePromiseRef = useRef(null);
+    const checkpointSaveRef = useRef(null);
+    const checkpointClosesRef = useRef(false);
+    const checkpointInputRef = useRef(null);
+    const bodyRef = useRef(null);
+    const autosaveTimer = useRef(null);
+    const persistRef = useRef(null);
+    const childTextRef = useRef(childText);
+    const checkpointRef = useRef(checkpoint);
+    childTextRef.current = childText;
+    checkpointRef.current = checkpoint;
+    const startTokenRef = useRef(null);
     const reloadQueuedRef = useRef(false);
     const loadRequestRef = useRef(0);
     const draftRef = useRef(draft);
@@ -60,8 +81,8 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     const statusFailedRef = useRef(false);
     const closeRef = useRef(null);
     const aliveRef = useRef(true);
-    const callbacks = useRef({ onClose, onChanged, onOpenTask });
-    useEffect(() => { callbacks.current = { onClose, onChanged, onOpenTask }; }, [onClose, onChanged, onOpenTask]);
+    const callbacks = useRef({ onClose, onChanged, onOpenTask, onWorkStarted, onFocusChange });
+    useEffect(() => { callbacks.current = { onClose, onChanged, onOpenTask, onWorkStarted, onFocusChange }; }, [onClose, onChanged, onOpenTask, onWorkStarted, onFocusChange]);
 
     const dirty = Object.keys(changedFields(draft, baseline)).length > 0;
     const task = context?.task;
@@ -80,7 +101,7 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
         try {
             const result = await loadTaskContext(taskId);
             if (!aliveRef.current || request !== loadRequestRef.current) return;
-            if (external && pendingRef.current) { reloadQueuedRef.current = true; return; }
+            if (external && (pendingRef.current || savePromiseRef.current)) { reloadQueuedRef.current = true; return; }
             if (!result?.task) throw new Error('仕事が見つかりません。削除されている可能性があります。');
             setContext(result);
             const fields = fieldsFrom(result.task);
@@ -114,12 +135,12 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
         Promise.resolve().then(() => rememberTask(taskId)).catch(() => {
             // Opening the work remains useful if recording its recent position fails.
         });
-        return () => { aliveRef.current = false; };
+        return () => { aliveRef.current = false; clearTimeout(autosaveTimer.current); callbacks.current.onFocusChange?.(false); };
     }, [taskId, load]);
 
     useEffect(() => {
         const refresh = () => {
-            if (pendingRef.current) { reloadQueuedRef.current = true; return; }
+            if (pendingRef.current || savePromiseRef.current) { reloadQueuedRef.current = true; return; }
             load(false, true);
         };
         window.addEventListener('yarukoto:tasksChanged', refresh);
@@ -155,24 +176,46 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
 
     useEffect(() => {
         const beforeUnload = event => {
-            if (!dirty && !childText.trim()) return;
+            if (!dirty && !childText.trim() && !checkpoint) return;
             event.preventDefault();
             event.returnValue = '';
         };
         window.addEventListener('beforeunload', beforeUnload);
         return () => window.removeEventListener('beforeunload', beforeUnload);
-    }, [dirty, childText]);
+    }, [dirty, childText, checkpoint]);
 
-    function changeField(key, value) {
-        const next = { ...draftRef.current, [key]: value };
+    useEffect(() => {
+        if (!sessionStarted) return;
+        const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - sessionStarted) / 1000)));
+        tick();
+        const timer = setInterval(tick, 1000);
+        return () => clearInterval(timer);
+    }, [sessionStarted]);
+
+    const checkpointOpen = !!checkpoint;
+    useEffect(() => {
+        if (!checkpointOpen) return;
+        if (bodyRef.current) bodyRef.current.scrollTop = 0;
+        checkpointInputRef.current?.focus({ preventScroll: true });
+        callbacks.current.onFocusChange?.(true);
+    }, [checkpointOpen]);
+
+    function changeFields(values) {
+        const next = { ...draftRef.current, ...values };
         draftRef.current = next;
         setDraft(next);
         setSaved(false);
-        storeDraft({ fields: changedFields(next, baseline), childText });
+        storeDraft({ fields: changedFields(next, baselineRef.current), childText: childTextRef.current, checkpoint: checkpointRef.current });
+        clearTimeout(autosaveTimer.current);
+        autosaveTimer.current = setTimeout(() => persistRef.current?.(), 650);
     }
 
+    function changeField(key, value) { changeFields({ [key]: value }); }
+
     function storeDraft(value) {
-        const stored = writeWorkDraft(taskId, value);
+        const recovery = { ...value };
+        if (!recovery.checkpoint) delete recovery.checkpoint;
+        const stored = writeWorkDraft(taskId, recovery);
         setDraftWarning(stored ? '' : '下書きの控えを保存できません。終了前に保存してください。');
     }
 
@@ -182,46 +225,70 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     }
 
     function changeChild(value) {
+        childTextRef.current = value;
         setChildText(value);
-        storeDraft({ fields: changedFields(draft, baseline), childText: value });
+        storeDraft({ fields: changedFields(draftRef.current, baselineRef.current), childText: value, checkpoint: checkpointRef.current });
     }
 
-    async function persist() {
-        if (pendingRef.current) return false;
-        const changes = changedFields(draftRef.current, baselineRef.current);
-        if (!Object.keys(changes).length) return true;
-        const snapshot = { ...draftRef.current };
-        if ('next_task_id' in changes) changes.next_task_id = changes.next_task_id ? Number(changes.next_task_id) : null;
-        pendingRef.current = true;
-        setSaving(true);
+    function persist() {
+        clearTimeout(autosaveTimer.current);
+        if (savePromiseRef.current) return savePromiseRef.current;
+        if (pendingRef.current) return Promise.resolve(false);
+        if (!Object.keys(changedFields(draftRef.current, baselineRef.current)).length) return Promise.resolve(true);
+        setAutosaving(true);
         setError('');
-        try {
-            await saveWorkContext(taskId, changes);
-            if (!aliveRef.current) return true;
-            setBaseline(snapshot);
-            baselineRef.current = snapshot;
-            setContext(current => ({ ...current, task: { ...current.task, ...snapshot } }));
-            if (childText.trim()) storeDraft({ fields: {}, childText });
-            else clearDraft();
-            setSaved(true);
-            callbacks.current.onChanged?.();
-            return true;
-        } catch (failure) {
-            if (aliveRef.current) setError(`保存できませんでした。入力はこの画面に残っています。${failure.message ? ` ${failure.message}` : ''}`);
-            return false;
-        } finally {
-            finishPending();
-        }
+        savePromiseRef.current = (async () => {
+            try {
+                // An edit made during an IPC write belongs to the next write, never
+                // to the saved baseline. Navigation joins this loop through its end.
+                while (true) {
+                    const changes = changedFields(draftRef.current, baselineRef.current);
+                    if (!Object.keys(changes).length) break;
+                    if ('title' in changes && !changes.title.trim()) throw new Error('仕事の名前を入力してください。');
+                    const payload = { ...changes };
+                    if ('next_task_id' in payload) payload.next_task_id = payload.next_task_id ? Number(payload.next_task_id) : null;
+                    await saveWorkContext(taskId, payload);
+                    baselineRef.current = { ...baselineRef.current, ...changes };
+                    if (aliveRef.current) {
+                        setBaseline(baselineRef.current);
+                        setContext(current => ({ ...current, task: { ...current.task, ...payload } }));
+                    }
+                    const remainder = changedFields(draftRef.current, baselineRef.current);
+                    if (Object.keys(remainder).length || childTextRef.current.trim() || checkpointRef.current) {
+                        storeDraft({ fields: remainder, childText: childTextRef.current, checkpoint: checkpointRef.current });
+                    } else clearDraft();
+                }
+                if (aliveRef.current) { setSaved(true); callbacks.current.onChanged?.(); }
+                return true;
+            } catch (failure) {
+                if (aliveRef.current) setError(`保存できませんでした。入力は残っています。${failure.message ? ` ${failure.message}` : ''}`);
+                return false;
+            } finally {
+                savePromiseRef.current = null;
+                if (aliveRef.current) { setAutosaving(false); finishPending(); }
+            }
+        })();
+        return savePromiseRef.current;
     }
+    persistRef.current = persist;
 
     async function canLeave() {
+        if (checkpointSaveRef.current) {
+            const closes = checkpointClosesRef.current;
+            return await checkpointSaveRef.current && !closes;
+        }
         if (pendingRef.current) return false;
         if (childText.trim()) {
             setError('子タスクが未追加です。追加または取消を選んでください。');
             return false;
         }
+        if (checkpointRef.current) {
+            return saveCheckpoint(false);
+        }
         return persist();
     }
+
+    useWorkNavigationGuard(canLeave, !editOpen);
 
     async function leave(action) {
         if (await canLeave()) action();
@@ -266,6 +333,7 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     }
 
     function startChild(text = '') {
+        if (checkpointRef.current || pendingRef.current) return;
         changeChild(text);
         setChildOpen(true);
         setError('');
@@ -273,8 +341,8 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
 
     async function addChild(event) {
         event.preventDefault();
-        if (!childText.trim() || pendingRef.current || !task) return;
-        if (!await persist()) return;
+        if (!childText.trim() || pendingRef.current || checkpointRef.current || !task) return;
+        if (!await persist() || pendingRef.current || checkpointRef.current) return;
         pendingRef.current = true;
         setSaving(true);
         setError('');
@@ -295,7 +363,7 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     }
 
     async function openAttributes() {
-        if (pendingRef.current || !await persist()) return;
+        if (pendingRef.current || checkpointRef.current || !await persist() || pendingRef.current || checkpointRef.current) return;
         setEditOpen(true);
     }
 
@@ -313,7 +381,8 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
     }
 
     async function changeStatus(code) {
-        if (!task || pendingRef.current || !await persist()) return;
+        if (!task || pendingRef.current || checkpointRef.current || !await persist() || pendingRef.current || checkpointRef.current) return false;
+        if (code === 3 && unfinished.length) { setError('未完了の子タスクがあります。子タスクを確認してください。'); return false; }
         pendingRef.current = true;
         statusFailedRef.current = false;
         setSaving(true);
@@ -334,15 +403,18 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
             else clearDraft();
             callbacks.current.onChanged?.();
             if (statusFailedRef.current || Number(result.task.status_code) !== code) throw new Error('状態の更新を確認できませんでした。');
+            return true;
         } catch (failure) {
             if (aliveRef.current) setError(`状態の更新中にエラーが発生しました。保存済みのメモは保持しています。${failure.message ? ` ${failure.message}` : ''}`);
+            return false;
         } finally {
             finishPending();
         }
     }
 
-    async function updateWork(action) {
-        if (!task || pendingRef.current || !await persist()) return;
+    async function updateWork(action, { allowCheckpoint = false } = {}) {
+        if (!task || pendingRef.current || (!allowCheckpoint && checkpointRef.current)) return false;
+        if (!await persist() || pendingRef.current || (!allowCheckpoint && checkpointRef.current)) return false;
         pendingRef.current = true;
         setSaving(true);
         setError('');
@@ -351,22 +423,121 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
             if (!aliveRef.current) return;
             await load(true);
             callbacks.current.onChanged?.();
+            return true;
         } catch (failure) {
             if (aliveRef.current) setError(`変更できませんでした。${failure.message || ''}`);
+            return false;
         } finally {
             finishPending();
         }
     }
 
     async function openReference() {
-        if (!await persist()) return;
+        if (checkpointRef.current || !await persist() || checkpointRef.current) return;
         try { await openWorkReference(draft.source_ref); }
         catch (failure) { setError(`資料を開けませんでした。${failure.message || ''}`); }
     }
 
     function useSelectionAsStep() {
-        changeField('next_step', selectedText);
+        if (checkpointRef.current || pendingRef.current) return;
+        changeFields({ next_step: selectedText, next_task_id: '' });
         setSelectedText('');
+    }
+
+    function chooseChild(value) {
+        if (checkpointRef.current) return;
+        const fields = draftRef.current;
+        // A reference is the step itself. Keep an earlier free step as a note,
+        // rather than displaying two conflicting instructions for the same work.
+        const previousStep = fields.next_step.trim();
+        const notes = value && previousStep && !fields.notes.split('\n').includes(previousStep)
+            ? `${fields.notes.trimEnd()}${fields.notes.trim() ? '\n\n' : ''}${previousStep}` : fields.notes;
+        changeFields({ next_task_id: value, ...(value ? { next_step: '', notes } : {}) });
+    }
+
+    async function selectedTextToChild() {
+        if (!selectedText || pendingRef.current || checkpointRef.current || !await persist() || pendingRef.current || checkpointRef.current) return;
+        pendingRef.current = true;
+        setSaving(true);
+        try {
+            const child = await createCapturedTask({ text: selectedText, source_ref: draftRef.current.source_ref, parent_id: taskId, project_id: task.project_id });
+            const childId = child?.id ?? child;
+            if (!Number.isInteger(Number(childId)) || Number(childId) <= 0) throw new Error('追加した子タスクを確認できませんでした。');
+            chooseChild(String(childId));
+            setSelectedText('');
+            callbacks.current.onChanged?.();
+            await load();
+        } catch (failure) { setError(`子タスクを追加できませんでした。${failure.message || ''}`); }
+        finally { finishPending(); }
+        await persist();
+    }
+
+    async function startWork(minutes = null, openMaterial = false) {
+        if (!active || pendingRef.current || checkpointRef.current) return false;
+        if (draftRef.current.next_task_id && draftRef.current.next_step) chooseChild(draftRef.current.next_task_id);
+        if (!await persist() || pendingRef.current || checkpointRef.current) return false;
+        const started = Number(task.status_code) === 2
+            ? await updateWork(() => stampWorkStarted(taskId)) : await changeStatus(2);
+        if (!started || !aliveRef.current) return false;
+        setFocused(true);
+        setSessionMinutes(minutes);
+        setSessionStarted(Date.now());
+        setElapsed(0);
+        callbacks.current.onWorkStarted?.(taskId);
+        callbacks.current.onFocusChange?.(true);
+        notesRef.current?.focus();
+        if (openMaterial && ['url', 'file'].includes(classifyWorkReference(draftRef.current.source_ref).kind)) await openReference();
+        return true;
+    }
+
+    const startRef = useRef(startWork);
+    startRef.current = startWork;
+    useEffect(() => {
+        if (!task || !startRequested || startTokenRef.current === startRequested.token) return;
+        startTokenRef.current = startRequested.token;
+        void startRef.current(startRequested.minutes || null, !!startRequested.openReference);
+    }, [task, startRequested]);
+
+    function editCheckpoint(value) {
+        checkpointRef.current = value;
+        setCheckpoint(value);
+        const fields = changedFields(draftRef.current, baselineRef.current);
+        if (value || Object.keys(fields).length || childTextRef.current.trim()) storeDraft({ fields, childText: childTextRef.current, checkpoint: value });
+        else clearDraft();
+        setError('');
+    }
+
+    function openCheckpoint(stepCompleted = false) {
+        if (pendingRef.current || checkpointRef.current) return;
+        editCheckpoint({ result: '', next_step: stepCompleted ? '' : draftRef.current.next_step, stepCompleted });
+    }
+
+    function saveCheckpoint(close = true) {
+        if (checkpointSaveRef.current) return checkpointSaveRef.current;
+        const value = checkpointRef.current;
+        if (!value) return Promise.resolve(true);
+        checkpointClosesRef.current = close;
+        setCheckpointSaving(true);
+        checkpointSaveRef.current = (async () => {
+            try {
+                const success = await updateWork(() => finishWorkStep(taskId, {
+                    result: value.result, stepCompleted: value.stepCompleted,
+                    ...(draftRef.current.next_task_id ? {} : { next_step: value.next_step }),
+                }), { allowCheckpoint: true });
+                if (!success) return false;
+                editCheckpoint(null);
+                setSessionStarted(null);
+                setFocused(false);
+                callbacks.current.onFocusChange?.(false);
+                if (close) callbacks.current.onClose?.();
+                return true;
+            } finally {
+                checkpointSaveRef.current = null;
+                checkpointClosesRef.current = false;
+                if (aliveRef.current) setCheckpointSaving(false);
+            }
+        })();
+        return checkpointSaveRef.current;
     }
 
     function renderOriginal() {
@@ -378,33 +549,35 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
 
     return <>
         {!embedded && <div className={styles.backdrop} onClick={() => leave(() => callbacks.current.onClose?.())} aria-hidden="true" />}
-        <section className={`${styles.panel} ${embedded ? styles.embedded : ''}`} ref={panelRef} role={embedded ? 'region' : 'dialog'} aria-modal={embedded ? undefined : true} aria-labelledby={`work-heading-${taskId}`} aria-hidden={editOpen || undefined}>
+        <section className={`${styles.panel} ${embedded ? styles.embedded : ''} ${focused ? styles.focused : ''} ${checkpoint ? styles.checkpointMode : ''}`} ref={panelRef} role={embedded ? 'region' : 'dialog'} aria-modal={embedded ? undefined : true} aria-labelledby={`work-heading-${taskId}`} aria-hidden={editOpen || undefined}
+            onBlur={event => { if (event.target.matches('input, textarea, select')) void persist(); }}>
+            <span id={`work-heading-${taskId}`} className={styles.srOnly}>{draft?.title || task?.title || '仕事'}</span>
             <header className={styles.header}>
                 <nav className={styles.breadcrumb} aria-label="仕事の階層">
                     <span>{task?.project_name || '仕事'}</span>
                     {ancestors.map(parent => <span className={styles.crumb} key={parent.id}><ChevronRight size={12} /><button type="button" disabled={saving} onClick={() => leave(() => callbacks.current.onOpenTask(parent.id))}>{parent.title}</button></span>)}
                 </nav>
-                <button ref={closeRef} type="button" className={styles.iconButton} aria-label="仕事の内容を閉じる" disabled={saving} onClick={() => leave(() => callbacks.current.onClose?.())}><X size={20} /></button>
+                <button ref={closeRef} type="button" className={styles.iconButton} aria-label="仕事の内容を閉じる" disabled={saving || checkpointSaving} onClick={() => leave(() => callbacks.current.onClose?.())}><X size={20} /></button>
             </header>
-            <div className={styles.body}>
+            <div className={styles.body} ref={bodyRef}>
                 {loading && <p role="status" className={styles.muted}>読み込み中…</p>}
                 {error && <div className={styles.error} role="alert">{error}{!task && <button type="button" onClick={() => load()}>再読み込み</button>}</div>}
                 {draftWarning && <p className={styles.warning} role="alert">{draftWarning}</p>}
                 {task && draft && <>
-                    <div className={styles.titleRow}><h2 id={`work-heading-${taskId}`} className={styles.title}>{task.title}</h2><button ref={attributesRef} type="button" className={styles.iconButton} aria-label="属性を編集" title="属性を編集" onClick={openAttributes} disabled={saving}><Settings2 size={18} /></button></div>
+                    <div className={styles.titleRow}>{checkpoint ? <h2 className={styles.title}>{draft.title}</h2> : <>{titleEditing ? <input className={styles.titleInput} aria-label="仕事の名前" value={draft.title} autoFocus onChange={event => changeField('title', event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && draft.title.trim()) { void persist(); setTitleEditing(false); } }} onBlur={() => { if (draft.title.trim()) setTitleEditing(false); }} /> : <h2 className={styles.title} aria-label={draft.title}><button type="button" aria-label="仕事の名前を編集" onClick={() => setTitleEditing(true)}>{draft.title}<Pencil size={14} /></button></h2>}<button ref={attributesRef} type="button" className={styles.iconButton} aria-label="属性を編集" title="属性を編集" onClick={openAttributes} disabled={saving}><Settings2 size={18} /></button></>}</div>
                     <div className={styles.metadata}>
                         <span className={styles.status}>{statusName(task)}</span>
                         {task.due_date && <span className={styles.deadline}><CalendarDays size={13} />期限 {task.due_date}</span>}
                         {task.today_date && task.today_date !== today && <span className={styles.status}>予定 {task.today_date}</span>}
                         {Number(task.importance_level) >= 3 && <span className={styles.status}>重要</span>}
+                        {task.waiting_on && <span className={styles.status}>待ち · {task.waiting_on}</span>}
                     </div>
                     {ancestors.some(parent => parent.due_date) && <div className={styles.ancestorDates}>{ancestors.filter(parent => parent.due_date).map(parent => <div key={parent.id}><CalendarDays size={13} /><span>{parent.title}：{parent.due_date}</span></div>)}</div>}
-                    {active && <div className={styles.workActions}>
-                        {Number(task.status_code) !== 2 ? <button type="button" className={styles.primaryButton} disabled={saving} onClick={() => changeStatus(2)}><Play size={14} />着手</button> : <button type="button" className={styles.secondaryButton} disabled={saving} onClick={() => leave(() => callbacks.current.onClose?.())}><Pause size={14} />保存して中断</button>}
-                        <button type="button" className={`${styles.secondaryButton} ${task.today_date === today ? styles.selected : ''}`} aria-pressed={task.today_date === today} disabled={saving} onClick={() => updateWork(() => setTaskPlan(taskId, task.today_date === today ? null : today))}><Sun size={14} />{task.today_date === today ? '今日から外す' : '今日やる'}</button>
-                        <button type="button" className={styles.completionButton} disabled={saving} onClick={() => changeStatus(3)}><Check size={14} />完了</button>
+                    {!checkpoint && <>{active && !focused && <div className={styles.workActions}>
+                        <button type="button" className={styles.primaryButton} disabled={saving || !!checkpoint} onClick={() => startWork(null, reference.kind !== 'text')}><Play size={14} />{reference.kind !== 'text' ? '資料を開いて始める' : Number(task.status_code) === 2 ? '再開する' : '取りかかる'}</button>
+                        <button type="button" className={styles.secondaryButton} disabled={saving || !!checkpoint} onClick={() => startWork(5)}><Clock3 size={14} />5分だけ</button>
                     </div>}
-                    {active && unfinished.length > 0 && <p className={styles.childCount}>子タスク 未完了 {unfinished.length}件</p>}
+                    {focused && <div className={styles.focusBar}><span><span className={styles.liveDot} />作業中{sessionMinutes && <time aria-label="作業の経過時間">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')} / {sessionMinutes}:00</time>}</span><button type="button" className={styles.secondaryButton} disabled={saving || !!checkpoint} onClick={() => openCheckpoint()}><Pause size={14} />区切る</button></div>}
 
                     <div className={styles.referenceLine}>
                         <Paperclip size={15} aria-hidden="true" />
@@ -412,18 +585,28 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
                     </div>
 
                     <section className={styles.nextStep}>
-                        <label htmlFor={`work-step-${taskId}`}>今する一歩</label>
-                        <textarea id={`work-step-${taskId}`} rows={1} value={draft.next_step} placeholder="次にすること" disabled={saving} onChange={event => changeField('next_step', event.target.value)} />
-                        {nextTask && <button type="button" className={styles.nextTaskLink} disabled={saving} onClick={() => leave(() => callbacks.current.onOpenTask(nextTask.id))}><span>次の子タスク</span>{nextTask.title}<ArrowRight size={16} /></button>}
-                    </section>
+                        {nextTask ? <><span className={styles.stepLabel}>今する一歩</span><button type="button" className={styles.nextTaskLink} disabled={saving} onClick={() => { if (draftRef.current.next_step) chooseChild(String(nextTask.id)); void leave(() => callbacks.current.onOpenTask(nextTask.id)); }}>{nextTask.title}<ArrowRight size={16} /></button><button type="button" className={styles.textButton} disabled={saving} onClick={() => chooseChild('')}>一歩を変更</button></> : <><label htmlFor={`work-step-${taskId}`}>今する一歩</label><textarea id={`work-step-${taskId}`} rows={1} value={draft.next_step} placeholder="最初の一歩（任意）" disabled={saving} onChange={event => changeField('next_step', event.target.value)} /></>}
+                        {focused && !nextTask && draft.next_step.trim() && <button type="button" className={styles.stepDone} disabled={saving || !!checkpoint} onClick={() => openCheckpoint(true)}><Check size={15} />一歩を終える</button>}
+                    </section></>}
 
-                    {!task.notes && renderOriginal()}
+                    {checkpoint && <form className={styles.checkpoint} onSubmit={event => { event.preventDefault(); void saveCheckpoint(); }}><h3>{checkpoint.stepCompleted ? '一歩を終える' : '区切る'}</h3><label>進んだこと（任意）<textarea ref={checkpointInputRef} rows={2} value={checkpoint.result} disabled={saving || checkpointSaving} onChange={event => editCheckpoint({ ...checkpoint, result: event.target.value })} autoFocus /></label>{!nextTask && <label>次の一歩（任意）<input value={checkpoint.next_step} disabled={saving || checkpointSaving} onChange={event => editCheckpoint({ ...checkpoint, next_step: event.target.value })} /></label>}<div className={styles.childActions}><button type="submit" className={styles.primaryButton} disabled={saving || checkpointSaving}>{checkpointSaving ? '保存中…' : checkpoint.stepCompleted ? '記録する' : '保存して中断'}</button><button type="button" className={styles.textButton} disabled={saving || checkpointSaving} onClick={() => { editCheckpoint(null); callbacks.current.onFocusChange?.(focused); }}>戻る</button></div></form>}
+
+                    {!checkpoint && <>{!task.notes && renderOriginal()}
                     <section className={styles.notesSection}>
                         <label htmlFor={`work-notes-${taskId}`}>作業メモ</label>
                         <textarea id={`work-notes-${taskId}`} ref={notesRef} rows={Math.min(14, Math.max(4, (draft.notes.match(/\n/g)?.length || 0) + 2))} value={draft.notes} placeholder="メモ…" onChange={event => changeField('notes', event.target.value)} onSelect={selectNotes} disabled={saving} />
-                        {selectedText && <div className={styles.selectionActions}><span>選択した文</span><button type="button" className={styles.textButton} disabled={saving} onClick={useSelectionAsStep}><ArrowRight size={13} />今する一歩に</button><button type="button" className={styles.textButton} disabled={saving} onClick={() => startChild(selectedText)}><Plus size={13} />子タスクにする</button></div>}
+                        {selectedText && <div className={styles.selectionActions}><span>選択した文</span><button type="button" className={styles.textButton} disabled={saving} onClick={useSelectionAsStep}><ArrowRight size={13} />今する一歩に</button><button type="button" className={styles.textButton} disabled={saving} onClick={selectedTextToChild}><Plus size={13} />子タスクにする</button></div>}
                     </section>
                     {task.notes && renderOriginal()}
+                    {nextTask && draft.next_step && <details className={styles.originalSection}><summary>以前の一歩</summary><p className={styles.original}>{draft.next_step}</p></details>}
+                    {context.entries?.length > 0 && <details className={styles.section}><summary>作業の記録<span className={styles.summaryHint}>{context.entries.length}</span></summary><ol className={styles.entries}>{context.entries.map(entry => <li key={entry.id}><time>{entry.created_at?.slice(0, 16)}</time>{entry.consumed_step && <p><Check size={13} />{entry.consumed_step}</p>}{entry.result && <p>{entry.result}</p>}{!entry.result && !entry.consumed_step && <p>中断</p>}</li>)}</ol></details>}
+
+                    <details className={styles.management} open={!focused || undefined}><summary>管理</summary>
+                    {active && <div className={styles.workActions}>
+                        <button type="button" className={`${styles.secondaryButton} ${task.today_date === today ? styles.selected : ''}`} aria-pressed={task.today_date === today} disabled={saving} onClick={() => updateWork(() => setTaskPlan(taskId, task.today_date === today ? null : today))}><Sun size={14} />{task.today_date === today ? '今日から外す' : '今日やる'}</button>
+                        <button type="button" className={styles.completionButton} disabled={saving} onClick={() => changeStatus(3)}><Check size={14} />仕事全体を完了</button>
+                        {unfinished.length > 0 && <span className={styles.childCount}>子タスク 未完了 {unfinished.length}件</span>}
+                    </div>}
 
                     <details className={styles.section} open={!!task.waiting_on || !!task.review_date || Number(task.status_code) === 4 || undefined}>
                         <summary>待ち{task.waiting_on && <span className={styles.summaryHint}>{task.waiting_on}</span>}</summary>
@@ -434,7 +617,7 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
                     <details className={styles.section} open={childOpen || undefined}>
                         <summary>子タスク{descendants.length > 0 && <span className={styles.summaryHint}>{unfinished.length} / {descendants.length} 未完了</span>}</summary>
                         <div className={styles.childTools}>{!childOpen && <button type="button" className={styles.textButton} aria-label="子タスクを追加" disabled={saving || !!task.archived_at} onClick={() => startChild()}><Plus size={14} />追加</button>}</div>
-                        {(descendants.length > 0 || draft.next_task_id) && <div className={styles.nextRow}><label htmlFor={`work-next-${taskId}`}>次の子タスク</label><select id={`work-next-${taskId}`} value={draft.next_task_id} disabled={saving} onChange={event => changeField('next_task_id', event.target.value)}>
+                        {(descendants.length > 0 || draft.next_task_id) && <div className={styles.nextRow}><label htmlFor={`work-next-${taskId}`}>一歩にする子タスク</label><select id={`work-next-${taskId}`} value={draft.next_task_id} disabled={saving} onChange={event => chooseChild(event.target.value)}>
                             <option value="">未選択</option>
                             {draft.next_task_id && !nextTask && <option value={draft.next_task_id}>参照先なし</option>}
                             {descendants.filter(item => !item.archived_at || String(item.id) === draft.next_task_id).map(item => <option value={item.id} key={item.id} disabled={!!item.archived_at || [3, 5].includes(Number(item.status_code))}>{'› '.repeat(Math.min(Math.max((item.depth || 1) - 1, 0), 5))}{item.title}{Number(item.status_code) === 3 ? '（完了）' : Number(item.status_code) === 5 ? '（キャンセル）' : item.archived_at ? '（アーカイブ済み）' : ''}</option>)}
@@ -442,9 +625,11 @@ function WorkDetailContent({ taskId, onClose, onChanged, onOpenTask, embedded, n
                         {descendants.length > 0 && <ul className={styles.tree}>{descendants.map(item => <li key={item.id} style={{ '--work-depth': Math.min(Math.max((item.depth || 1) - 1, 0), 5) }}><button type="button" disabled={saving} onClick={() => leave(() => callbacks.current.onOpenTask(item.id))}><span className={styles.treeTitle}>{item.title}</span><span className={styles.treeMeta}>{statusName(item)}{item.due_date && ` · 期限 ${item.due_date}`}{item.waiting_on && ` · 待ち ${item.waiting_on}`}</span><ChevronRight size={14} /></button></li>)}</ul>}
                         {childOpen && <form className={styles.childForm} onSubmit={addChild}><label htmlFor={`work-child-${taskId}`}>子タスク</label><textarea id={`work-child-${taskId}`} rows={3} value={childText} onChange={event => changeChild(event.target.value)} disabled={saving} /><div className={styles.childActions}><button type="submit" disabled={!childText.trim() || saving} className={styles.primaryButton}>追加</button><button type="button" className={styles.textButton} disabled={saving} onClick={() => { changeChild(''); setChildOpen(false); setError(''); }}>取消</button></div></form>}
                     </details>
+                    </details>
+                    </>}
                 </>}
             </div>
-            <footer className={styles.footer}><span role="status" className={dirty ? styles.unsaved : styles.muted}>{saving ? '保存中…' : dirty ? '未保存' : saved ? '保存しました' : ''}</span><button type="button" className={styles.saveButton} disabled={!dirty || saving || !task} onClick={persist}><Save size={14} />保存</button></footer>
+            {!checkpoint && <footer className={styles.footer}><span role="status" className={dirty ? styles.unsaved : styles.muted}>{saving || autosaving ? '保存中…' : dirty ? '未保存' : saved ? '保存済み' : ''}</span><button type="button" className={styles.saveButton} disabled={!dirty || saving || !task} onClick={persist}><Save size={14} />保存</button></footer>}
         </section>
         {editOpen && task && <TaskEditModal task={{ ...task, ...draft }} onClose={() => setEditOpen(false)} onSaved={attributesSaved} />}
     </>;
